@@ -163,75 +163,37 @@ public class DataSyncRepositoryCentral {
 			String masterType, Timestamp lastDownloadDate, Integer vanID, Integer psmID) throws Exception {
 
 		jdbcTemplate = getJdbcTemplate();
-		List<Map<String, Object>> resultSetList;
-
-		StringBuilder queryBuilder = new StringBuilder("SELECT ");
-
-		List<Object> params = new ArrayList<>();
-
-		StringBuilder whereClause = new StringBuilder();
+		List<Map<String, Object>> resultSetList = new ArrayList<>();
+		String baseQuery = "";
 
 		if (masterType != null) {
-
-			if (masterType.equalsIgnoreCase("A")) {
-				queryBuilder.append("?");
-				params.add(columnNames);
-				queryBuilder.append(" FROM ");
-				queryBuilder.append(schema + "." + table);
-//				queryBuilder.append("?.?");
-//				params.add(schema);
-//				params.add(table);
-				if (lastDownloadDate != null) {
-					whereClause.append(" WHERE ");
-					whereClause.append("Date(LastModDate) >= ?");
-					params.add(lastDownloadDate);
-				}
-			} else if (masterType.equalsIgnoreCase("V")) {
-				queryBuilder.append("?");
-				params.add(columnNames);
-				queryBuilder.append(" FROM ");
-				queryBuilder.append(schema + "." + table);
-//				queryBuilder.append("?.?");
-//				params.add(schema);
-//				params.add(table);
-				whereClause.append(" WHERE ");
-				if (lastDownloadDate != null) {
-					whereClause.append("Date(LastModDate) >= ?");
-					params.add(lastDownloadDate);
-					whereClause.append(" AND ");
-				}
-				whereClause.append("VanID = ?");
-				params.add(vanID);
-			} else if (masterType.equalsIgnoreCase("P")) {
-				queryBuilder.append("?");
-				params.add(columnNames);
-				queryBuilder.append(" FROM ");
-				queryBuilder.append(schema + "." + table);
-//				queryBuilder.append("?.?");
-//				params.add(schema);
-//				params.add(table);
-				whereClause.append(" WHERE ");
-				if (lastDownloadDate != null) {
-					whereClause.append("Date(LastModDate) >= ?");
-					params.add(lastDownloadDate);
-					whereClause.append(" AND ");
-				}
-				whereClause.append("ProviderServiceMapID = ?");
-				params.add(psmID);
+			if (lastDownloadDate != null) {
+			
+				if (masterType.equalsIgnoreCase("A"))
+					baseQuery += " SELECT " + columnNames + " FROM " + schema + "." + table
+							+ " WHERE Date(LastModDate) >= '" + lastDownloadDate + "' ";
+				else if (masterType.equalsIgnoreCase("V"))
+					baseQuery += " SELECT " + columnNames + " FROM " + schema + "." + table
+							+ " WHERE Date(LastModDate) >= '" + lastDownloadDate + "' AND VanID = " + vanID;
+				else if (masterType.equalsIgnoreCase("P"))
+					baseQuery += " SELECT " + columnNames + " FROM " + schema + "." + table
+							+ " WHERE Date(LastModDate) >= '" + lastDownloadDate + "' AND ProviderServiceMapID = "
+							+ psmID;
+			} else {
+				if (masterType.equalsIgnoreCase("A"))
+					baseQuery += " SELECT " + columnNames + " FROM " + schema + "." + table;
+				else if (masterType.equalsIgnoreCase("V"))
+					baseQuery += " SELECT " + columnNames + " FROM " + schema + "." + table + " WHERE VanID = " + vanID;
+				else if (masterType.equalsIgnoreCase("P"))
+					baseQuery += " SELECT " + columnNames + " FROM " + schema + "." + table
+							+ " WHERE ProviderServiceMapID = " + psmID;
 			}
 		}
-		queryBuilder.append(whereClause);
-
-		// Use PreparedStatement to avoid SQL injection and improve performance
-		String query = queryBuilder.toString();
-		Object[] queryParams = params.toArray();
-
 		   
 		// Use PreparedStatement for the entire query
-		resultSetList = jdbcTemplate.queryForList(query, queryParams);
+		String query = baseQuery.replace("date_format(CreatedDate,%Y-%m-%d %H:%i:%s) as ", "").replace("date_format(LastModDate,%Y-%m-%d %H:%i:%s) as ", "");
+		resultSetList = jdbcTemplate.queryForList(query);
 		logger.info("resultSetLists"+ resultSetList);
 		return resultSetList;
-	}
-
-	// End of Data Download Repository
+	}	// End of Data Download Repository
 }
