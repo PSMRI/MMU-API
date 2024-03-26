@@ -162,76 +162,58 @@ public class DataSyncRepositoryCentral {
 	public List<Map<String, Object>> getMasterDataFromTable(String schema, String table, String columnNames,
 			String masterType, Timestamp lastDownloadDate, Integer vanID, Integer psmID) throws Exception {
 
+
 		jdbcTemplate = getJdbcTemplate();
-		List<Map<String, Object>> resultSetList;
+		List<Map<String, Object>> resultSetList =new ArrayList<>();
+        String baseQuery = "";
+        
 
-		StringBuilder queryBuilder = new StringBuilder("SELECT ");
-
-		List<Object> params = new ArrayList<>();
-
-		StringBuilder whereClause = new StringBuilder();
 
 		if (masterType != null) {
 
-			if (masterType.equalsIgnoreCase("A")) {
-				queryBuilder.append("?");
-				params.add(columnNames);
-				queryBuilder.append(" FROM ");
-				queryBuilder.append(schema + "." + table);
-//				queryBuilder.append("?.?");
-//				params.add(schema);
-//				params.add(table);
-				if (lastDownloadDate != null) {
-					whereClause.append(" WHERE ");
-					whereClause.append("Date(LastModDate) >= ?");
-					params.add(lastDownloadDate);
+			if (lastDownloadDate != null) {
+				if (masterType.equalsIgnoreCase("A")) {
+					baseQuery += " SELECT " + columnNames + " FROM " + schema + "." + table
+							+ " WHERE Date(LastModDate) >= ? ";
+					resultSetList = jdbcTemplate.queryForList(baseQuery,lastDownloadDate);
+					
 				}
-			} else if (masterType.equalsIgnoreCase("V")) {
-				queryBuilder.append("?");
-				params.add(columnNames);
-				queryBuilder.append(" FROM ");
-				queryBuilder.append(schema + "." + table);
-//				queryBuilder.append("?.?");
-//				params.add(schema);
-//				params.add(table);
-				whereClause.append(" WHERE ");
-				if (lastDownloadDate != null) {
-					whereClause.append("Date(LastModDate) >= ?");
-					params.add(lastDownloadDate);
-					whereClause.append(" AND ");
+				else if (masterType.equalsIgnoreCase("V")) {
+					baseQuery += " SELECT " + columnNames + " FROM " + schema + "." + table
+							+ " WHERE Date(LastModDate) >= ? AND VanID = ? ";
+					resultSetList = jdbcTemplate.queryForList(baseQuery,lastDownloadDate,vanID);
 				}
-				whereClause.append("VanID = ?");
-				params.add(vanID);
-			} else if (masterType.equalsIgnoreCase("P")) {
-				queryBuilder.append("?");
-				params.add(columnNames);
-				queryBuilder.append(" FROM ");
-				queryBuilder.append(schema + "." + table);
-//				queryBuilder.append("?.?");
-//				params.add(schema);
-//				params.add(table);
-				whereClause.append(" WHERE ");
-				if (lastDownloadDate != null) {
-					whereClause.append("Date(LastModDate) >= ?");
-					params.add(lastDownloadDate);
-					whereClause.append(" AND ");
+				else if (masterType.equalsIgnoreCase("P")) {
+					baseQuery += " SELECT " + columnNames + " FROM " + schema + "." + table
+							+ " WHERE Date(LastModDate) >= ? AND ProviderServiceMapID = ? ";
+					resultSetList = jdbcTemplate.queryForList(baseQuery,lastDownloadDate,psmID);
 				}
-				whereClause.append("ProviderServiceMapID = ?");
-				params.add(psmID);
+			} else {
+				if (masterType.equalsIgnoreCase("A")) {
+					baseQuery += " SELECT " + columnNames + " FROM " + schema + "." + table;
+					resultSetList = jdbcTemplate.queryForList(baseQuery);
+				}
+				else if (masterType.equalsIgnoreCase("V")) {
+					baseQuery += " SELECT " + columnNames + " FROM " + schema + "." + table + " WHERE VanID = ? ";
+					resultSetList = jdbcTemplate.queryForList(baseQuery,vanID);
+				}
+				else if (masterType.equalsIgnoreCase("P")) {
+					baseQuery += " SELECT " + columnNames + " FROM " + schema + "." + table
+							+ " WHERE ProviderServiceMapID = ? ";
+					resultSetList = jdbcTemplate.queryForList(baseQuery,psmID);
+					
+				}
+
 			}
 		}
-		queryBuilder.append(whereClause);
 
-		// Use PreparedStatement to avoid SQL injection and improve performance
-		String query = queryBuilder.toString();
-		Object[] queryParams = params.toArray();
+		
+//		resultSetList = jdbcTemplate.queryForList(baseQuery);
 
-		   
-		// Use PreparedStatement for the entire query
-		resultSetList = jdbcTemplate.queryForList(query, queryParams);
-		logger.info("resultSetLists"+ resultSetList);
+		logger.info("Select query central: " + baseQuery);
+		logger.info("Last Downloaded Date " + lastDownloadDate);
+		logger.info("Result set Details: " + resultSetList);
 		return resultSetList;
 	}
-
 	// End of Data Download Repository
 }
