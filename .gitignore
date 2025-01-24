@@ -54,5 +54,6 @@ replay_pid8684.log
 mvnw.cmd
 replay_pid15072.log
 /logs
+command_output.log
 # Properties
 src/main/environment/common_local.properties
