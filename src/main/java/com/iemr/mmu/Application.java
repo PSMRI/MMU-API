@@ -25,11 +25,16 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
 
+import com.iemr.mmu.data.login.Users;
 import com.iemr.mmu.utils.IEMRApplBeans;
 
 @SpringBootApplication
-public class Application{
+public class Application {
 
 	public static void main(String[] args) {
 		SpringApplication.run(Application.class, args);
@@ -38,6 +43,21 @@ public class Application{
 	@Bean
 	public IEMRApplBeans instantiateBeans() {
 		return new IEMRApplBeans();
+	}
+
+	@Bean
+	public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
+		RedisTemplate<String, Object> template = new RedisTemplate<>();
+		template.setConnectionFactory(factory);
+
+		// Use StringRedisSerializer for keys (userId)
+		template.setKeySerializer(new StringRedisSerializer());
+
+		// Use Jackson2JsonRedisSerializer for values (Users objects)
+		Jackson2JsonRedisSerializer<Users> serializer = new Jackson2JsonRedisSerializer<>(Users.class);
+		template.setValueSerializer(serializer);
+
+		return template;
 	}
 
 }
