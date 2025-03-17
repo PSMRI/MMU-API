@@ -40,6 +40,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
@@ -49,6 +51,9 @@ import com.iemr.mmu.data.syncActivity_syncLayer.SyncUtilityClass;
 import com.iemr.mmu.repo.login.MasterVanRepo;
 import com.iemr.mmu.repo.syncActivity_syncLayer.DataSyncGroupsRepo;
 import com.iemr.mmu.repo.syncActivity_syncLayer.SyncUtilityClassRepo;
+import com.iemr.mmu.utils.CookieUtil;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 /***
  * 
@@ -79,6 +84,8 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 
 	@Autowired
 	private SyncUtilityClassRepo syncutilityClassRepo;
+	@Autowired
+	private CookieUtil cookieUtil;
 
 	// batch size for data upload
 	// private static final int BATCH_SIZE = 30;
@@ -342,6 +349,9 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 				vanID, schemaName, tableName, vanAutoIncColumnName, serverColumns, user);
 
 		RestTemplate restTemplate = new RestTemplate();
+		HttpServletRequest requestHeader = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes())
+				.getRequest();
+		String jwtTokenFromCookie = cookieUtil.getJwtTokenFromCookie(requestHeader);
 
 		Integer facilityID = masterVanRepo.getFacilityID(vanID);
 		logger.debug("Fetched facilityID for vanID {}: {}", vanID, facilityID);
@@ -367,6 +377,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 		MultiValueMap<String, String> headers = new LinkedMultiValueMap<String, String>();
 		headers.add("Content-Type", "application/json");
 		headers.add("AUTHORIZATION", Authorization);
+		headers.add("Cookie", "Jwttoken=" + jwtTokenFromCookie);
 		HttpEntity<Object> request = new HttpEntity<Object>(requestOBJ, headers);
 		logger.info("Before Data sync upload Url" + dataSyncUploadUrl);
 		ResponseEntity<String> response = restTemplate.exchange(dataSyncUploadUrl, HttpMethod.POST, request,
