@@ -43,6 +43,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.google.gson.Gson;
 import com.iemr.mmu.data.syncActivity_syncLayer.MasterDownloadDataDigester;
@@ -50,7 +52,10 @@ import com.iemr.mmu.data.syncActivity_syncLayer.SyncDownloadMaster;
 import com.iemr.mmu.data.syncActivity_syncLayer.TempVan;
 import com.iemr.mmu.repo.syncActivity_syncLayer.SyncDownloadMasterRepo;
 import com.iemr.mmu.repo.syncActivity_syncLayer.TempVanRepo;
+import com.iemr.mmu.utils.CookieUtil;
 import com.iemr.mmu.utils.mapper.InputMapper;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @Service
 @PropertySource("classpath:application.properties")
@@ -65,6 +70,8 @@ public class DownloadDataFromServerImpl implements DownloadDataFromServer {
 	private DataSyncRepository dataSyncRepository;
 	@Autowired
 	private TempVanRepo tempVanRepo;
+	@Autowired
+	private CookieUtil cookieUtil;
 
 	// ben gen URL
 	@Value("${benGenUrlCentral}")
@@ -178,11 +185,15 @@ public class DownloadDataFromServerImpl implements DownloadDataFromServer {
 
 		// initializing RestTemplate
 		RestTemplate restTemplate = new RestTemplate();
+		HttpServletRequest requestHeader = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes())
+				.getRequest();
+		String jwtTokenFromCookie = cookieUtil.getJwtTokenFromCookie(requestHeader);
 
 		// Multivalue map for headers with content-type and auth key
 		MultiValueMap<String, String> headers = new LinkedMultiValueMap<String, String>();
 		headers.add("Content-Type", "application/json");
 		headers.add("AUTHORIZATION", ServerAuthorization);
+		headers.add("Cookie", "Jwttoken=" + jwtTokenFromCookie);
 		HttpEntity<Object> request = new HttpEntity<Object>(syncDownloadMaster, headers);
 
 		// Call rest-template to call API to download master data for given table
@@ -331,11 +342,15 @@ public class DownloadDataFromServerImpl implements DownloadDataFromServer {
 		int i = 0;
 		// Rest template
 		RestTemplate restTemplate = new RestTemplate();
+		HttpServletRequest requestHeader = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes())
+				.getRequest();
+		String jwtTokenFromCookie = cookieUtil.getJwtTokenFromCookie(requestHeader);
 
 		// Multivalue map for headers with content-type and auth key
 		MultiValueMap<String, String> headers = new LinkedMultiValueMap<String, String>();
 		headers.add("Content-Type", "application/json");
 		headers.add("AUTHORIZATION", ServerAuthorization);
+		headers.add("Cookie", "Jwttoken=" + jwtTokenFromCookie);
 		HttpEntity<Object> request = new HttpEntity<Object>(requestOBJ, headers);
 
 		// Call rest-template to call central API to generate UNIQUE ID at central

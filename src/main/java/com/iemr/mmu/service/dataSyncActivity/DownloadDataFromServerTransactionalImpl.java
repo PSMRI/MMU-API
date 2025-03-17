@@ -36,6 +36,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.iemr.mmu.data.syncActivity_syncLayer.Indent;
 import com.iemr.mmu.data.syncActivity_syncLayer.IndentIssue;
@@ -49,7 +51,10 @@ import com.iemr.mmu.repo.syncActivity_syncLayer.IndentOrderRepo;
 import com.iemr.mmu.repo.syncActivity_syncLayer.IndentRepo;
 import com.iemr.mmu.repo.syncActivity_syncLayer.ItemStockEntryRepo;
 import com.iemr.mmu.repo.syncActivity_syncLayer.StockTransferRepo;
+import com.iemr.mmu.utils.CookieUtil;
 import com.iemr.mmu.utils.mapper.InputMapper;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @Service
 @PropertySource("classpath:application.properties")
@@ -73,6 +78,8 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 	private StockTransferRepo stockTransferRepo;
 	@Autowired
 	private ItemStockEntryRepo itemStockEntryRepo;
+	@Autowired
+	private CookieUtil cookieUtil;
 
 	public int downloadTransactionalData(int vanID, String ServerAuthorization) throws Exception {
 		JSONObject obj;
@@ -233,6 +240,9 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 		if (facilityID != null) {
 
 			RestTemplate restTemplate = new RestTemplate();
+			HttpServletRequest requestHeader = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes())
+					.getRequest();
+			String jwtTokenFromCookie = cookieUtil.getJwtTokenFromCookie(requestHeader);
 			SyncUploadDataDigester syncUploadDataDigester = new SyncUploadDataDigester(schemaName, tableName,
 					facilityID);
 
@@ -240,6 +250,7 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 			MultiValueMap<String, String> headers = new LinkedMultiValueMap<String, String>();
 			headers.add("Content-Type", "application/json");
 			headers.add("AUTHORIZATION", ServerAuthorization);
+			headers.add("Cookie", "Jwttoken=" + jwtTokenFromCookie);
 			HttpEntity<Object> request = new HttpEntity<Object>(syncUploadDataDigester, headers);
 
 			// Call rest-template to call API to download master data for given table
@@ -263,12 +274,16 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 
 		int result = 0;
 		RestTemplate restTemplate = new RestTemplate();
+		HttpServletRequest requestHeader = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes())
+				.getRequest();
+		String jwtTokenFromCookie = cookieUtil.getJwtTokenFromCookie(requestHeader);
 		SyncUploadDataDigester syncUploadDataDigester = new SyncUploadDataDigester(schemaName, tableName, ids);
 
 		// Multivalue map for headers with content-type and auth key
 		MultiValueMap<String, String> headers = new LinkedMultiValueMap<String, String>();
 		headers.add("Content-Type", "application/json");
 		headers.add("AUTHORIZATION", ServerAuthorization);
+		headers.add("Cookie", "Jwttoken=" + jwtTokenFromCookie);
 		HttpEntity<Object> request = new HttpEntity<Object>(syncUploadDataDigester, headers);
 
 		// Call rest-template to call API to download master data for given table
