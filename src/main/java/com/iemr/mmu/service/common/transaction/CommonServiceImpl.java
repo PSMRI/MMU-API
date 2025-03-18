@@ -44,6 +44,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -67,9 +69,12 @@ import com.iemr.mmu.service.ncdCare.NCDCareServiceImpl;
 import com.iemr.mmu.service.ncdscreening.NCDScreeningServiceImpl;
 import com.iemr.mmu.service.pnc.PNCServiceImpl;
 import com.iemr.mmu.service.quickConsultation.QuickConsultationServiceImpl;
+import com.iemr.mmu.utils.CookieUtil;
 import com.iemr.mmu.utils.AESEncryption.AESEncryptionDecryption;
 import com.iemr.mmu.utils.exception.IEMRException;
 import com.iemr.mmu.utils.mapper.InputMapper;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @Service
 @PropertySource("classpath:application.properties")
@@ -115,6 +120,8 @@ public class CommonServiceImpl implements CommonService {
 
 	@Autowired
 	private EmployeeSignatureRepo employeeSignatureRepo;
+	@Autowired
+	private CookieUtil cookieUtil;
 
 	@Autowired
 	public void setNcdScreeningServiceImpl(NCDScreeningServiceImpl ncdScreeningServiceImpl) {
@@ -536,6 +543,12 @@ public class CommonServiceImpl implements CommonService {
 		tmReqObj.put("beneficiaryRegID", String.valueOf(TmBenFlowOBJ.getBeneficiaryRegID()));
 
 		logger.info("TM print data request obj - " + new Gson().toJson(tmReqObj));
+		HttpServletRequest requestHeader = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes())
+				.getRequest();
+		String jwtTokenFromCookie = cookieUtil.getJwtTokenFromCookie(requestHeader);
+		MultiValueMap<String, String> headers = new LinkedMultiValueMap<String, String>();
+
+		headers.add("Cookie", "Jwttoken=" + jwtTokenFromCookie);
 
 		// get TM case sheet by passing TM details
 		ResponseEntity<String> response = restTemplatePost(tmCentralServer, Authorization, new Gson().toJson(tmReqObj));
@@ -601,6 +614,11 @@ public class CommonServiceImpl implements CommonService {
 		String suspectedDisease = null;
 		int updated = 0;
 		int allDataUpdated = 0;
+		HttpServletRequest requestHeader = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes())
+				.getRequest();
+		String jwtTokenFromCookie = cookieUtil.getJwtTokenFromCookie(requestHeader);
+		MultiValueMap<String, String> headers = new LinkedMultiValueMap<String, String>();
+		headers.add("Cookie", "Jwttoken=" + jwtTokenFromCookie);
 
 		ResponseEntity<String> response = restTemplatePost(mmuCentralServer, authCentralServer, mmuBenFlowReq);
 
