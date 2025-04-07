@@ -122,6 +122,10 @@ public class ANCServiceImpl implements ANCService {
 	}
 */
 	@Autowired
+	public void setTeleConsultationServiceImpl(TeleConsultationServiceImpl teleConsultationServiceImpl) {
+		this.teleConsultationServiceImpl = teleConsultationServiceImpl;
+	}
+	@Autowired
 	public void setANCDoctorServiceImpl(ANCDoctorServiceImpl ancDoctorServiceImpl) {
 		this.ancDoctorServiceImpl = ancDoctorServiceImpl;
 	}
