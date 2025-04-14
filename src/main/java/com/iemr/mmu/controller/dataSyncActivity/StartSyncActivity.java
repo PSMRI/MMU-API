@@ -44,7 +44,7 @@ import io.swagger.v3.oas.annotations.Operation;
 /***
  * @purpose Class used for data sync from van-to-server & server-to-van
  */
-@CrossOrigin
+
 @RestController
 @RequestMapping(value = "/dataSyncActivity", headers = "Authorization", consumes = "application/json", produces = "application/json")
 public class StartSyncActivity {
@@ -59,7 +59,7 @@ public class StartSyncActivity {
 	private static final String GROUP_ID = "groupID";
 	private static final String PROVIDER_SERVICE_MAP_ID = "providerServiceMapID";
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Start data sync from van to Server")
 	@PostMapping(value = { "/van-to-server" })
 	public String dataSyncToServer(@RequestBody String requestOBJ,
@@ -85,7 +85,7 @@ public class StartSyncActivity {
 		return response.toStringWithSerialization();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Get data sync group details")
 	@GetMapping(value = { "/getSyncGroupDetails" })
 	public String getSyncGroupDetails() {
@@ -106,7 +106,7 @@ public class StartSyncActivity {
 	/**
 	 * @return Masters download in van from central server
 	 */
-	@CrossOrigin()
+	
 	@Operation(summary = "Data sync master download")
 	@PostMapping(value = { "/startMasterDownload" })
 	public String startMasterDownload(@RequestBody String requestOBJ,
@@ -139,7 +139,7 @@ public class StartSyncActivity {
 		return response.toString();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Data sync master download progress check")
 	@GetMapping(value = { "/checkMastersDownloadProgress" })
 	public String checkMastersDownloadProgress() {
@@ -153,7 +153,7 @@ public class StartSyncActivity {
 		return response.toString();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Get van details for master download")
 	@GetMapping(value = { "/getVanDetailsForMasterDownload" })
 	public String getVanDetailsForMasterDownload() {
@@ -171,7 +171,7 @@ public class StartSyncActivity {
 		return response.toString();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Call central API to generate beneficiary id and import to local")
 	@PostMapping(value = { "/callCentralAPIToGenerateBenIDAndimportToLocal" })
 	public String callCentralAPIToGenerateBenIDAndimportToLocal(@RequestBody String requestOBJ,
@@ -196,7 +196,7 @@ public class StartSyncActivity {
 		return response.toString();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Call central API to download transaction data to local")
 	@PostMapping(value = { "/downloadTransactionToLocal" })
 	public String downloadTransactionToLocal(@RequestBody String requestOBJ,

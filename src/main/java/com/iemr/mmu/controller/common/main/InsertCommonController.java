@@ -40,7 +40,7 @@ import com.iemr.mmu.utils.response.OutputResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 
-@CrossOrigin
+
 @RestController
 @RequestMapping(value = "/commonInsert", headers = "Authorization")
 public class InsertCommonController {
@@ -48,7 +48,6 @@ public class InsertCommonController {
 	@Autowired
 	private CommonServiceImpl commonServiceImpl;
 
-	@CrossOrigin()
 	@Operation(summary = "Save beneficairy documents locally")
 	@PostMapping(value = { "/saveFiles" }, consumes = "application/json", produces = "application/json")
 	public String saveFiles(@RequestBody String request) {

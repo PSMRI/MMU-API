@@ -44,7 +44,7 @@ import io.swagger.v3.oas.annotations.Operation;
 /***
  * @operation Class used for data sync from van-to-server & server-to-van
  */
-@CrossOrigin
+
 @RestController
 @RequestMapping(value = "/dataSync", headers = "Authorization")
 public class MMUDataSyncVanToServer {
@@ -57,7 +57,7 @@ public class MMUDataSyncVanToServer {
 	@Autowired
 	private FetchDownloadDataImpl fetchDownloadDataImpl;
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Sync data from van-to-server")
 	@PostMapping(value = { "/van-to-server" }, consumes = "application/json", produces = "application/json")
 	public String dataSyncToServer(@RequestBody String requestOBJ,
@@ -76,7 +76,7 @@ public class MMUDataSyncVanToServer {
 		return response.toString();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Download data from server-to-van")
 	@PostMapping(value = { "/server-to-van" }, consumes = "application/json", produces = "application/json")
 	public String dataDownloadFromServer(@RequestBody SyncDownloadMaster syncDownloadMaster,
@@ -99,7 +99,7 @@ public class MMUDataSyncVanToServer {
 		return response.toStringWithSerialization();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Download data from server-to-van transactional")
 	@PostMapping(value = { "/server-to-van-transactional" }, consumes = "application/json", produces = "application/json")
 	public String dataDownloadFromServerTransactional(@RequestBody SyncUploadDataDigester syncUploadDataDigester,
@@ -126,7 +126,7 @@ public class MMUDataSyncVanToServer {
 		return response.toStringWithSerialization();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Update processed flag at central post successfull download")
 	@PostMapping(value = { "/updateProcessedFlagPostDownload" }, consumes = "application/json", produces = "application/json")
 	public String updateProcessedFlagPostDownload(@RequestBody SyncUploadDataDigester syncUploadDataDigester,

@@ -40,7 +40,7 @@ import com.iemr.mmu.utils.response.OutputResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 
-@CrossOrigin
+
 @RestController
 @RequestMapping(value = "/location", headers = "Authorization")
 public class LocationController {
@@ -136,7 +136,7 @@ public class LocationController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Get location details based on SP id and PSM id")
 	@PostMapping(value = "/getLocDetailsBasedOnSpIDAndPsmID", consumes = "application/json", produces = "application/json")
 	public String getLocDetailsBasedOnSpIDAndPsmIDNew(@RequestBody String comingRequest) {
@@ -162,7 +162,7 @@ public class LocationController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Get district taluk master")
 	@GetMapping(value = "/get/DistrictTalukMaster/{districtBranchID}", consumes = "application/json", produces = "application/json")
 	public String getDistrictTalukMaster(@PathVariable("districtBranchID") Integer districtBranchID) {

@@ -51,7 +51,7 @@ import com.iemr.mmu.utils.response.OutputResponse;
 import io.swagger.annotations.ApiParam;
 import io.swagger.v3.oas.annotations.Operation;
 
-@CrossOrigin
+
 @RestController
 @RequestMapping(value = "/registrar", headers = "Authorization", consumes = "application/json", produces = "application/json")
 /**
@@ -81,7 +81,7 @@ public class RegistrarController {
 		this.nurseServiceImpl = nurseServiceImpl;
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Get registrar worklist data")
 	@PostMapping(value = { "/registrarWorkListData" })
 	public String getRegistrarWorkList(@ApiParam(value = "{\"spID\": \"Integer\"}") @RequestBody String comingRequest)
@@ -100,7 +100,7 @@ public class RegistrarController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Search for the beneficiary by beneficiary id")
 	@PostMapping(value = { "/quickSearch" })
 	public String quickSearchBeneficiary(
@@ -119,7 +119,7 @@ public class RegistrarController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Search for the beneficiary based on provided data")
 	@PostMapping(value = { "/advanceSearch" })
 	public String advanceSearch(
@@ -140,7 +140,7 @@ public class RegistrarController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Get beneficiary details of given beneficiary registration id")
 	@PostMapping(value = { "/get/benDetailsByRegID" })
 	public String getBenDetailsByRegID(
@@ -170,7 +170,7 @@ public class RegistrarController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Get beneficiary details")
 	@PostMapping(value = { "/get/beneficiaryDetails" })
 	public String getBeneficiaryDetails(
@@ -205,7 +205,7 @@ public class RegistrarController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Get beneficiary image")
 	@PostMapping(value = { "/get/beneficiaryImage" })
 	public String getBeneficiaryImage(
@@ -231,7 +231,7 @@ public class RegistrarController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Search beneficiary for beneficiary id or beneficiary phone no")
 	@PostMapping(value = { "/quickSearchNew" })
 	public String quickSearchNew(@RequestBody String requestObj,
@@ -254,7 +254,7 @@ public class RegistrarController {
 
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Search beneficiary advance search new")
 	@PostMapping(value = { "/advanceSearchNew" })
 	public String advanceSearchNew(@RequestBody String requestObj,
@@ -277,7 +277,7 @@ public class RegistrarController {
 
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Get beneficiary details for left side panel of given beneficiary registration id")
 	@PostMapping(value = { "/get/benDetailsByRegIDForLeftPanelNew" })
 	public String getBenDetailsForLeftSidePanelByRegID(
@@ -308,7 +308,7 @@ public class RegistrarController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Get beneficiary image")
 	@PostMapping(value = { "/getBenImage" })
 	public String getBenImage(@RequestBody String requestObj,
@@ -324,7 +324,7 @@ public class RegistrarController {
 
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Register a new beneficiary")
 	@PostMapping(value = { "/registrarBeneficaryRegistration" })
 	public String createBeneficiary(
@@ -387,7 +387,7 @@ public class RegistrarController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Register a new beneficiary API")
 	@PostMapping(value = { "/registrarBeneficaryRegistrationNew" })
 	public String registrarBeneficaryRegistrationNew(@RequestBody String comingReq,
@@ -405,7 +405,7 @@ public class RegistrarController {
 
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Update registered beneficiary data")
 	@PostMapping(value = { "/update/BeneficiaryDetails" })
 	public String updateBeneficiary(
@@ -508,7 +508,7 @@ public class RegistrarController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Get master data for registrar")
 	@PostMapping(value = { "/registrarMasterData" })
 	public String masterDataForRegistration(

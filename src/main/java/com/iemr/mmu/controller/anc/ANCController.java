@@ -47,7 +47,7 @@ import io.swagger.v3.oas.annotations.Operation;
  * @Objective Saving ANC data for Nurse and Doctor.
  */
 
-@CrossOrigin
+
 @RestController
 @RequestMapping(value = "/ANC", headers = "Authorization", consumes = "application/json", produces = "application/json")
 public class ANCController {
@@ -62,8 +62,6 @@ public class ANCController {
 	 * @param JSON requestObj
 	 * @return success or failure response
 	 */
-
-	@CrossOrigin
 	@Operation(summary = "Save ANC nurse data")
 	@PostMapping(value = { "/save/nurseData" })
 	public String saveBenANCNurseData(@RequestBody String requestObj) {
@@ -96,7 +94,6 @@ public class ANCController {
 	 * @param JSON requestObj
 	 * @return success or failure response
 	 */
-	@CrossOrigin
 	@Operation(summary = "Save ANC doctor data")
 	@PostMapping(value = { "/save/doctorData" })
 	public String saveBenANCDoctorData(@RequestBody String requestObj,
@@ -122,7 +119,6 @@ public class ANCController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Get beneficiary visit details from nurse ANC")
 	@PostMapping(value = { "/getBenVisitDetailsFrmNurseANC" })
 	@Transactional(rollbackFor = Exception.class)
@@ -153,7 +149,6 @@ public class ANCController {
 	 * @param benRegID and benVisitID
 	 * @return anc care details in JSON format
 	 */
-	@CrossOrigin()
 	@Operation(summary = "Get beneficiary ANC care details from nurse ANC")
 	@PostMapping(value = { "/getBenANCDetailsFrmNurseANC" })
 	@Transactional(rollbackFor = Exception.class)
@@ -186,10 +181,8 @@ public class ANCController {
 	 * @param benRegID and benVisitID
 	 * @return history details in JSON format
 	 */
-	@CrossOrigin()
 	@Operation(summary = "Get beneficiary ANC history details from nurse to doctor ")
 	@PostMapping(value = { "/getBenANCHistoryDetails" })
-
 	public String getBenANCHistoryDetails(
 			@Param(value = "{\"benRegID\":\"Long\", \"visitCode\":\"Long\"}") @RequestBody String comingRequest) {
 		OutputResponse response = new OutputResponse();
@@ -218,7 +211,6 @@ public class ANCController {
 	 * @param benRegID and benVisitID
 	 * @return vital details in JSON format
 	 */
-	@CrossOrigin()
 	@Operation(summary = "Get beneficiary ANC vital details from nurse ANC")
 	@PostMapping(value = { "/getBenANCVitalDetailsFrmNurseANC" })
 	public String getBenANCVitalDetailsFrmNurseANC(
@@ -250,7 +242,6 @@ public class ANCController {
 	 * @param benRegID and benVisitID
 	 * @return examination details in JSON format
 	 */
-	@CrossOrigin()
 	@Operation(summary = "Get beneficiary ANC examination details from nurse to doctor ")
 	@PostMapping(value = { "/getBenExaminationDetailsANC" })
 
@@ -282,7 +273,7 @@ public class ANCController {
 	 * @param benRegID and benVisitID
 	 * @return doctor entered details in JSON format
 	 */
-	@CrossOrigin()
+
 	@Operation(summary = "Get beneficiary doctor entered details")
 	@PostMapping(value = { "/getBenCaseRecordFromDoctorANC" })
 	@Transactional(rollbackFor = Exception.class)
@@ -309,7 +300,7 @@ public class ANCController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
+
 	@Operation(summary = "Check high risk pregnancy status for ANC beneficiary")
 	@PostMapping(value = { "/getHRPStatus" })
 	@Transactional(rollbackFor = Exception.class)
@@ -339,7 +330,7 @@ public class ANCController {
 		return response.toString();
 	}
 
-	@CrossOrigin
+	
 	@Operation(summary = "Update ANC care data in doctor screen")
 	@PostMapping(value = { "/update/ANCScreen" })
 	public String updateANCCareNurse(@RequestBody String requestObj) {
@@ -371,7 +362,7 @@ public class ANCController {
 	 *            by Doctor
 	 */
 
-	@CrossOrigin
+	
 	@Operation(summary = "Update ANC history data in doctor screen")
 	@PostMapping(value = { "/update/historyScreen" })
 	public String updateANCHistoryNurse(@RequestBody String requestObj) {
@@ -402,7 +393,7 @@ public class ANCController {
 	 *            by Doctor
 	 */
 
-	@CrossOrigin
+	
 	@Operation(summary = "Update ANC vital data in doctor screen")
 	@PostMapping(value = { "/update/vitalScreen" })
 	public String updateANCVitalNurse(@RequestBody String requestObj) {
@@ -434,7 +425,7 @@ public class ANCController {
 	 *            by Doctor
 	 */
 
-	@CrossOrigin
+	
 	@Operation(summary = "Update ANC examination data in doctor screen")
 	@PostMapping(value = { "/update/examinationScreen" })
 	public String updateANCExaminationNurse(@RequestBody String requestObj) {
@@ -465,7 +456,7 @@ public class ANCController {
 	 * @objective Replace ANC doctor data for the doctor next visit
 	 * 
 	 */
-	@CrossOrigin
+	
 	@Operation(summary = "Update ANC doctor data")
 	@PostMapping(value = { "/update/doctorData" })
 	public String updateANCDoctorData(@RequestBody String requestObj,

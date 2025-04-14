@@ -40,7 +40,7 @@ import com.iemr.mmu.utils.response.OutputResponse;
 import io.swagger.v3.oas.annotations.Operation;
 
 
-@CrossOrigin
+
 @RestController
 @RequestMapping(value = "/report", headers = "Authorization")
 public class ReportGateway {
@@ -49,7 +49,7 @@ public class ReportGateway {
 	@Autowired
 	private ReportCheckPostImpl reportCheckPostImpl;
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Get report")
 	@PostMapping(value = { "/getReport" }, consumes = "application/json", produces = "application/json")
 	public String getReportByReportID(@RequestBody String requestOBJ) {
@@ -71,7 +71,7 @@ public class ReportGateway {
 	@Autowired
 	private ReportCheckPostImplNew reportCheckPostImplNew;
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Get report by report id")
 	@PostMapping(value = { "/getReportNew" }, consumes = "application/json", produces = "application/json")
 	public String getReportByReportID1(@RequestBody String requestOBJ) {
@@ -90,7 +90,7 @@ public class ReportGateway {
 		return response.toStringWithSerialization();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Get report master")
 	@GetMapping(value = { "/getReportMaster/{serviceID}" }, consumes = "application/json", produces = "application/json")
 	public String getReportMaster(@PathVariable("serviceID") Integer serviceID) {

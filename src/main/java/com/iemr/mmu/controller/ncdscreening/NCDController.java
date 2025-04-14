@@ -50,7 +50,7 @@ import io.swagger.v3.oas.annotations.Operation;
 /**
  * @Objective Saving NCD Screening nurse data.
  */
-@CrossOrigin
+
 @RestController
 @RequestMapping(value = "/NCD", headers = "Authorization", consumes = "application/json", produces = "application/json")
 public class NCDController {
@@ -74,7 +74,7 @@ public class NCDController {
 	 * @ApiParam JSON requestObj
 	 * @return success or failure response
 	 */
-	@CrossOrigin
+	
 	@Operation(summary = "Save beneficiary NCD screening details")
 
 	@PostMapping(value = { "/save/nurseData" })
@@ -110,7 +110,7 @@ public class NCDController {
 	 * @ApiParam JSON requestObj
 	 * @return success or failure response
 	 */
-	@CrossOrigin
+	
 	@Operation(summary = "Save NCD screening doctor data")
 	@PostMapping(value = { "/save/doctorData" })
 	public String saveBenNCDScreeningDoctorData(@RequestBody String requestObj,
@@ -138,7 +138,7 @@ public class NCDController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Get NCD screening visit details")
 
 	@PostMapping(value = { "/get/nurseData" })
@@ -165,7 +165,7 @@ public class NCDController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Get NCD screening visit count for beneficiary registration id")
 	@GetMapping(value = { "/getNcdScreeningVisitCount/{beneficiaryRegID}" })
 	public String getNcdScreeningVisitCount(@PathVariable("beneficiaryRegID") Long beneficiaryRegID) {
@@ -188,7 +188,7 @@ public class NCDController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Get beneficiary visit details from nurse NCD screening")
 	@PostMapping(value = { "/getBenVisitDetailsFrmNurseNCDScreening" })
 	@Transactional(rollbackFor = Exception.class)
@@ -216,7 +216,7 @@ public class NCDController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Get beneficiary general OPD history details from nurse to doctor ")
 	@PostMapping(value = { "/getBenHistoryDetails" })
 
@@ -243,7 +243,7 @@ public class NCDController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Get beneficiary vital details from nurse general OPD")
 	@PostMapping(value = { "/getBenVitalDetailsFrmNurse" })
 	public String getBenVitalDetailsFrmNurse(
@@ -270,7 +270,7 @@ public class NCDController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Get beneficiary vital details from nurse general OPD")
 	@PostMapping(value = { "/getBenIdrsDetailsFrmNurse" })
 	public String getBenIdrsDetailsFrmNurse(
@@ -302,7 +302,7 @@ public class NCDController {
 	 * @ApiParam comingRequest
 	 * @return visit details in JSON format
 	 */
-	@CrossOrigin()
+	
 	@Operation(summary = "Get beneficiary doctor entered details")
 	@PostMapping(value = { "/getBenCaseRecordFromDoctorNCDScreening" })
 	@Transactional(rollbackFor = Exception.class)
@@ -330,7 +330,7 @@ public class NCDController {
 		return response.toString();
 	}
 
-	@CrossOrigin
+	
 	@Operation(summary = "Update beneficiary NCD screening details")
 	@PostMapping(value = { "/update/nurseData" })
 	public String updateBeneficiaryNCDScreeningDetails(@RequestBody String requestObj) {
@@ -358,7 +358,7 @@ public class NCDController {
 		return response.toString();
 	}
 
-	@CrossOrigin
+	
 	@Operation(summary = "Update history data in doctor screen")
 	@PostMapping(value = { "/update/historyScreen" })
 	public String updateHistoryNurse(@RequestBody String requestObj) {
@@ -383,7 +383,7 @@ public class NCDController {
 		return response.toString();
 	}
 
-	@CrossOrigin
+	
 	@Operation(summary = "Update NCD screening vital data in doctor screen")
 	@PostMapping(value = { "/update/vitalScreen" })
 	public String updateVitalNurse(@RequestBody String requestObj) {
@@ -407,7 +407,7 @@ public class NCDController {
 		return response.toString();
 	}
 
-	@CrossOrigin
+	
 	@Operation(summary = "Update history data in doctor screen")
 	@PostMapping(value = { "/update/idrsScreen" })
 	public String updateIDRSScreen(@RequestBody String requestObj) {
@@ -431,7 +431,7 @@ public class NCDController {
 		return response.toString();
 	}
 
-	@CrossOrigin
+	
 	@Operation(summary = "Update doctor data")
 	@PostMapping(value = { "/update/doctorData" })
 	public String updateDoctorData(@RequestBody String requestObj) {
