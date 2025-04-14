@@ -45,7 +45,7 @@ public class FileSyncController {
 	@Autowired
 	FileSyncService fileSyncService;
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Get server credential")
 	@GetMapping(value = "/getServerCredential", headers = "Authorization", consumes = "application/json", produces = "application/json")
 	public String getServerCredential() {
@@ -65,7 +65,7 @@ public class FileSyncController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
+	
 	@Operation(summary = "Sync files")
 	@GetMapping(value = "/syncFiles", headers = "Authorization", consumes = "application/json", produces = "application/json")
 	public String syncFiles(@RequestHeader(value = "ServerAuthorization") String ServerAuthorization) {

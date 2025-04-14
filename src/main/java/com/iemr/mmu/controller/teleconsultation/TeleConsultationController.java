@@ -47,7 +47,7 @@ public class TeleConsultationController {
 	@Autowired
 	private TeleConsultationServiceImpl teleConsultationServiceImpl;
 
-	@CrossOrigin
+	
 	@Operation(summary = "Update beneficiary arrival status based on request")
 	@PostMapping(value = { "/update/benArrivalStatus" })
 	public String benArrivalStatusUpdater(@RequestBody String requestOBJ) {
@@ -68,7 +68,7 @@ public class TeleConsultationController {
 		return response.toString();
 	}
 
-	@CrossOrigin
+	
 	@Operation(summary = "Update beneficiary status based on request")
 	@PostMapping(value = { "/cancel/benTCRequest" })
 	public String updateBeneficiaryStatusToCancelTCRequest(@RequestBody String requestOBJ,
@@ -91,7 +91,7 @@ public class TeleConsultationController {
 		return response.toString();
 	}
 
-	@CrossOrigin
+	
 	@Operation(summary = "Check if specialist can proceed with beneficiary")
 	@PostMapping(value = { "/check/benTCRequestStatus" })
 	public String checkBeneficiaryStatusToProceedWithSpecialist(@RequestBody String requestOBJ) {
@@ -112,7 +112,7 @@ public class TeleConsultationController {
 		return response.toString();
 	}
 
-	@CrossOrigin
+	
 	@Operation(summary = "Create TC request for beneficiary whose visit is created")
 	@PostMapping(value = { "/create/benTCRequestWithVisitCode" })
 	public String createTCRequestForBeneficiary(@RequestBody String requestOBJ, @RequestHeader String Authorization) {
@@ -135,7 +135,7 @@ public class TeleConsultationController {
 		return response.toString();
 	}
 
-	@CrossOrigin
+	
 	@Operation(summary = "Get TC request list for a specialist")
 	@PostMapping(value = { "/getTCRequestList" })
 	public String getTCSpecialistWorkListNew(@RequestBody String requestOBJ) {

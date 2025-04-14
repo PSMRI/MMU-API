@@ -36,7 +36,7 @@ import com.iemr.mmu.utils.response.OutputResponse;
 import io.swagger.v3.oas.annotations.Operation;
 
 
-@CrossOrigin
+
 @RestController
 @RequestMapping(value = "/master", headers = "Authorization")
 /** Objective: provides master data based on given visitCategory */
