@@ -85,6 +85,9 @@ public class HttpInterceptor implements HandlerInterceptor {
 				case "ui":
 				case "swagger-resources":
 				case "api-docs":
+				case "index.html":
+				case "swagger-initializer.js":
+				case "swagger-config":
 
 					break;
 				case "error":
