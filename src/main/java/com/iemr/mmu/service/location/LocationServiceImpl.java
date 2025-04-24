@@ -23,8 +23,10 @@ package com.iemr.mmu.service.location;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -304,16 +306,36 @@ public class LocationServiceImpl implements LocationService {
 
 	private Map<String, Object> getUserServiceroleMapping(List<Object[]> userServiceroleMapping) {
 		Map<String, Object> returnObj = new HashMap<>();
+		ArrayList<Map<String, Object>> districtList = new ArrayList<>();
 		ArrayList<Map<String, Object>> blockList = new ArrayList<>();
 		ArrayList<Map<String, Object>> villageList = new ArrayList<>();
+		Map<String, Object> districtMap = new HashMap<>();
 		Map<String, Object> blockMap = new HashMap<>();
 		Map<String, Object> villageMap = new HashMap<>();
+		
+		Set<String> districtIdSet = new HashSet<>();
+		
 		if (userServiceroleMapping != null && userServiceroleMapping.size() > 0) {
 			returnObj.put("stateID", userServiceroleMapping.get(0)[0]);
 			returnObj.put("stateName", userServiceroleMapping.get(0)[1]);
-			returnObj.put("districtID", userServiceroleMapping.get(0)[2]);
-			returnObj.put("districtName", userServiceroleMapping.get(0)[3]);
+			
 			for (Object[] objArray : userServiceroleMapping) {
+				
+				if (null != objArray[2]) {
+						String[] districtIds = objArray[2].toString().split(",");
+						String[] districtNames = objArray[3].toString().split(",");
+						int districtLength = districtIds.length;
+						for (int i = 0; i < districtLength; i++) {
+							if (!districtIdSet.contains(districtIds[i])) {
+							districtMap = new HashMap<>();
+							districtMap.put("districtID", districtIds[i]);
+							districtMap.put("districtName", districtNames[i]);
+							districtList.add(districtMap);
+							districtIdSet.add(districtIds[i]);
+						}
+					}
+				}
+				
 				if (null != objArray[4]) {
 					String[] blockIds = objArray[4].toString().split(",");
 					String[] blockName = objArray[5].toString().split(",");
@@ -337,6 +359,7 @@ public class LocationServiceImpl implements LocationService {
 					}
 				}
 			}
+			returnObj.put("districtList", districtList);
 			returnObj.put("blockList", blockList);
 			returnObj.put("villageList", villageList);
 
