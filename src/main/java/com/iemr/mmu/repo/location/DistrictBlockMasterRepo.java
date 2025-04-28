@@ -36,7 +36,7 @@ public interface DistrictBlockMasterRepo extends CrudRepository<DistrictBlock, I
 	@Query(" SELECT blockID, blockName FROM DistrictBlock WHERE districtID = :districtID AND deleted != true ")
 	public ArrayList<Object[]> getDistrictBlockMaster(@Param("districtID") Integer districtID);
 	
-	@Query(value = " SELECT distinct StateID, StateName,WorkingDistrictID,WorkingDistrictName,blockid,blockname,villageid,villagename FROM db_iemr.v_userservicerolemapping WHERE UserID = :userId",nativeQuery = true)
+	@Query(value = " SELECT distinct StateID, StateName,WorkingDistrictID,WorkingDistrictName,blockid,blockname,villageid,villagename FROM db_iemr.v_userservicerolemapping WHERE UserID = :userId and UserServciceRoleDeleted is false",nativeQuery = true)
 	public List<Object[]> getUserservicerolemapping(@Param("userId") Integer userId);
 
 }
