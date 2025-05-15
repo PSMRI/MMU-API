@@ -168,18 +168,18 @@ public class DataSyncRepositoryCentral {
 			if (lastDownloadDate != null) {
 				if (masterType.equalsIgnoreCase("A")) {
 					baseQuery += " SELECT " + columnNames + " FROM " + schema + "." + table
-							+ " WHERE Date(LastModDate) >= ? ";
+							+ " WHERE LastModDate >= ? ";
 					resultSetList = jdbcTemplate.queryForList(baseQuery,lastDownloadDate);
 					
 				}
 				else if (masterType.equalsIgnoreCase("V")) {
 					baseQuery += " SELECT " + columnNames + " FROM " + schema + "." + table
-							+ " WHERE Date(LastModDate) >= ? AND VanID = ? ";
+							+ " WHERE LastModDate >= ? AND VanID = ? ";
 					resultSetList = jdbcTemplate.queryForList(baseQuery,lastDownloadDate,vanID);
 				}
 				else if (masterType.equalsIgnoreCase("P")) {
 					baseQuery += " SELECT " + columnNames + " FROM " + schema + "." + table
-							+ " WHERE Date(LastModDate) >= ? AND ProviderServiceMapID = ? ";
+							+ " WHERE LastModDate >= ? AND ProviderServiceMapID = ? ";
 					resultSetList = jdbcTemplate.queryForList(baseQuery,lastDownloadDate,psmID);
 				}
 			} else {

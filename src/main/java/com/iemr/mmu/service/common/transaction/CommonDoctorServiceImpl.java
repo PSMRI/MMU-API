@@ -40,6 +40,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -69,9 +71,12 @@ import com.iemr.mmu.repo.quickConsultation.PrescribedDrugDetailRepo;
 import com.iemr.mmu.repo.quickConsultation.PrescriptionDetailRepo;
 import com.iemr.mmu.service.benFlowStatus.CommonBenStatusFlowServiceImpl;
 import com.iemr.mmu.service.snomedct.SnomedServiceImpl;
+import com.iemr.mmu.utils.CookieUtil;
 import com.iemr.mmu.utils.exception.IEMRException;
 import com.iemr.mmu.utils.mapper.InputMapper;
 import com.iemr.mmu.utils.mapper.OutputMapper;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 /***
  * 
@@ -106,6 +111,8 @@ public class CommonDoctorServiceImpl {
 	private CommonBenStatusFlowServiceImpl commonBenStatusFlowServiceImpl;
 
 	private BeneficiaryFlowStatusRepo beneficiaryFlowStatusRepo;
+	@Autowired
+	private CookieUtil cookieUtil;
 
 	@Autowired
 	public void setSnomedServiceImpl(SnomedServiceImpl snomedServiceImpl) {
@@ -899,9 +906,13 @@ public class CommonDoctorServiceImpl {
 		String requestOBJ = OutputMapper.gson().toJson(tcSpecialistSlotBookingRequestOBJ);
 
 		RestTemplate restTemplate = new RestTemplate();
+		HttpServletRequest requestHeader = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes())
+				.getRequest();
+		String jwtTokenFromCookie = cookieUtil.getJwtTokenFromCookie(requestHeader);
 		MultiValueMap<String, String> headers = new LinkedMultiValueMap<String, String>();
 		headers.add("Content-Type", "application/json");
 		headers.add("AUTHORIZATION", Authorization);
+		headers.add("Cookie", "Jwttoken=" + jwtTokenFromCookie);
 		HttpEntity<Object> request = new HttpEntity<Object>(requestOBJ, headers);
 		ResponseEntity<String> response = restTemplate.exchange(tcSpecialistSlotBook, HttpMethod.POST, request,
 				String.class);
