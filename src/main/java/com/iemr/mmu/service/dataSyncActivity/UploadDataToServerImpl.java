@@ -52,6 +52,7 @@ import com.iemr.mmu.repo.login.MasterVanRepo;
 import com.iemr.mmu.repo.syncActivity_syncLayer.DataSyncGroupsRepo;
 import com.iemr.mmu.repo.syncActivity_syncLayer.SyncUtilityClassRepo;
 import com.iemr.mmu.utils.CookieUtil;
+import com.iemr.mmu.utils.RestTemplateUtil;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -349,9 +350,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 				vanID, schemaName, tableName, vanAutoIncColumnName, serverColumns, user);
 
 		RestTemplate restTemplate = new RestTemplate();
-		HttpServletRequest requestHeader = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes())
-				.getRequest();
-		String jwtTokenFromCookie = cookieUtil.getJwtTokenFromCookie(requestHeader);
+		
 
 		Integer facilityID = masterVanRepo.getFacilityID(vanID);
 		logger.debug("Fetched facilityID for vanID {}: {}", vanID, facilityID);
@@ -374,11 +373,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 		String requestOBJ = gson.toJson(dataMap);
 		logger.debug("Serialized request object: {}", requestOBJ);
 
-		MultiValueMap<String, String> headers = new LinkedMultiValueMap<String, String>();
-		headers.add("Content-Type", "application/json");
-		headers.add("AUTHORIZATION", Authorization);
-		headers.add("Cookie", "Jwttoken=" + jwtTokenFromCookie);
-		HttpEntity<Object> request = new HttpEntity<Object>(requestOBJ, headers);
+		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestOBJ, Authorization);
 		logger.info("Before Data sync upload Url" + dataSyncUploadUrl);
 		ResponseEntity<String> response = restTemplate.exchange(dataSyncUploadUrl, HttpMethod.POST, request,
 				String.class);

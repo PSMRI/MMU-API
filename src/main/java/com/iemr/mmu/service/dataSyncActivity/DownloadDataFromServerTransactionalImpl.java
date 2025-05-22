@@ -52,6 +52,7 @@ import com.iemr.mmu.repo.syncActivity_syncLayer.IndentRepo;
 import com.iemr.mmu.repo.syncActivity_syncLayer.ItemStockEntryRepo;
 import com.iemr.mmu.repo.syncActivity_syncLayer.StockTransferRepo;
 import com.iemr.mmu.utils.CookieUtil;
+import com.iemr.mmu.utils.RestTemplateUtil;
 import com.iemr.mmu.utils.mapper.InputMapper;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -240,19 +241,10 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 		if (facilityID != null) {
 
 			RestTemplate restTemplate = new RestTemplate();
-			HttpServletRequest requestHeader = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes())
-					.getRequest();
-			String jwtTokenFromCookie = cookieUtil.getJwtTokenFromCookie(requestHeader);
 			SyncUploadDataDigester syncUploadDataDigester = new SyncUploadDataDigester(schemaName, tableName,
 					facilityID);
 
-			// Multivalue map for headers with content-type and auth key
-			MultiValueMap<String, String> headers = new LinkedMultiValueMap<String, String>();
-			headers.add("Content-Type", "application/json");
-			headers.add("AUTHORIZATION", ServerAuthorization);
-			headers.add("Cookie", "Jwttoken=" + jwtTokenFromCookie);
-			HttpEntity<Object> request = new HttpEntity<Object>(syncUploadDataDigester, headers);
-
+			HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(syncUploadDataDigester, ServerAuthorization);
 			// Call rest-template to call API to download master data for given table
 			ResponseEntity<String> response = restTemplate.exchange(dataSyncTransactionDownloadUrl, HttpMethod.POST,
 					request, String.class);
@@ -274,18 +266,9 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 
 		int result = 0;
 		RestTemplate restTemplate = new RestTemplate();
-		HttpServletRequest requestHeader = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes())
-				.getRequest();
-		String jwtTokenFromCookie = cookieUtil.getJwtTokenFromCookie(requestHeader);
 		SyncUploadDataDigester syncUploadDataDigester = new SyncUploadDataDigester(schemaName, tableName, ids);
 
-		// Multivalue map for headers with content-type and auth key
-		MultiValueMap<String, String> headers = new LinkedMultiValueMap<String, String>();
-		headers.add("Content-Type", "application/json");
-		headers.add("AUTHORIZATION", ServerAuthorization);
-		headers.add("Cookie", "Jwttoken=" + jwtTokenFromCookie);
-		HttpEntity<Object> request = new HttpEntity<Object>(syncUploadDataDigester, headers);
-
+		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(syncUploadDataDigester, ServerAuthorization);
 		// Call rest-template to call API to download master data for given table
 		ResponseEntity<String> response = restTemplate.exchange(dataSyncProcessedFlagUpdate, HttpMethod.POST, request,
 				String.class);
