@@ -32,7 +32,6 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -55,8 +54,6 @@ import io.swagger.annotations.ApiParam;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
-
-
 
 @RestController
 @RequestMapping(value = "/common", headers = "Authorization", consumes = "application/json", produces = "application/json")
@@ -87,9 +84,9 @@ public class CommonController {
 	public void setCommonNurseServiceImpl(CommonNurseServiceImpl commonNurseServiceImpl) {
 		this.commonNurseServiceImpl = commonNurseServiceImpl;
 	}
+
 	private static final String BENEFICIARY_REG_ID = "beneficiaryRegID";
-	
-	
+
 	@Operation(summary = "Provides doctor worklist")
 	@GetMapping(value = { "/getDocWorklistNew/{providerServiceMapID}/{serviceID}/{vanID}" })
 	public String getDocWorkListNew(@PathVariable("providerServiceMapID") Integer providerServiceMapID,
@@ -113,7 +110,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Provides doctor worklist future scheduled for TM")
 	@GetMapping(value = { "/getDocWorkListNewFutureScheduledForTM/{providerServiceMapID}/{serviceID}" })
 	public String getDocWorkListNewFutureScheduledForTM(
@@ -139,7 +135,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get nurse worklist new")
 	@GetMapping(value = { "/getNurseWorklistNew/{providerServiceMapID}/{serviceID}/{vanID}" })
 	public String getNurseWorkListNew(@PathVariable("providerServiceMapID") Integer providerServiceMapID,
@@ -163,7 +158,7 @@ public class CommonController {
 	 * @ApiParam vanID
 	 * @return
 	 */
-	
+
 	@Operation(summary = "Get nurse worklist TM referred")
 	@GetMapping(value = { "/getNurseWorklistTMreferred/{providerServiceMapID}/{serviceID}/{vanID}" })
 	public String getNurseWorklistTMreferred(@PathVariable("providerServiceMapID") Integer providerServiceMapID,
@@ -182,7 +177,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get doctor entered previous significant Ffindings")
 	@PostMapping(value = { "/getDoctorPreviousSignificantFindings" })
 	public String getDoctorPreviousSignificantFindings(
@@ -207,7 +201,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get lab technician worklist new")
 	@GetMapping(value = { "/getLabWorklistNew/{providerServiceMapID}/{serviceID}/{vanID}" })
 	public String getLabWorkListNew(@PathVariable("providerServiceMapID") Integer providerServiceMapID,
@@ -226,7 +219,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get radiologist worklist new")
 	@GetMapping(value = { "/getRadiologist-worklist-New/{providerServiceMapID}/{serviceID}/{vanID}" })
 	public String getRadiologistWorklistNew(@PathVariable("providerServiceMapID") Integer providerServiceMapID,
@@ -245,7 +237,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get oncologist worklist new")
 	@GetMapping(value = { "/getOncologist-worklist-New/{providerServiceMapID}/{serviceID}/{vanID}" })
 	public String getOncologistWorklistNew(@PathVariable("providerServiceMapID") Integer providerServiceMapID,
@@ -264,7 +255,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get pharma worklist new")
 	@GetMapping(value = { "/getPharma-worklist-New/{providerServiceMapID}/{serviceID}/{vanID}" })
 	public String getPharmaWorklistNew(@PathVariable("providerServiceMapID") Integer providerServiceMapID,
@@ -283,7 +273,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get case-sheet print data for beneficiary.")
 	@PostMapping(value = { "/get/Case-sheet/printData" })
 	public String getCasesheetPrintData(@RequestBody String comingReq,
@@ -303,7 +292,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get beneficiary past history")
 	@PostMapping(value = { "/getBenPastHistory" })
 	public String getBenPastHistory(@ApiParam(value = "{\"benRegID\":\"Long\"}") @RequestBody String comingRequest) {
@@ -328,7 +316,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get beneficiary tobacco history")
 	@PostMapping(value = { "/getBenTobaccoHistory" })
 	public String getBenTobaccoHistory(@ApiParam(value = "{\"benRegID\":\"Long\"}") @RequestBody String comingRequest) {
@@ -353,7 +340,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get beneficiary alcohol history")
 	@PostMapping(value = { "/getBenAlcoholHistory" })
 	public String getBenAlcoholHistory(@ApiParam(value = "{\"benRegID\":\"Long\"}") @RequestBody String comingRequest) {
@@ -378,7 +364,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get beneficiary allergy history")
 	@PostMapping(value = { "/getBenAllergyHistory" })
 	public String getBenANCAllergyHistory(
@@ -404,7 +389,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get beneficiary medication history")
 	@PostMapping(value = { "/getBenMedicationHistory" })
 	public String getBenMedicationHistory(
@@ -430,7 +414,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get beneficiary family history")
 	@PostMapping(value = { "/getBenFamilyHistory" })
 	public String getBenFamilyHistory(@ApiParam(value = "{\"benRegID\":\"Long\"}") @RequestBody String comingRequest) {
@@ -455,7 +438,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get beneficiary menstrual history")
 	@PostMapping(value = { "/getBenMenstrualHistory" })
 	public String getBenMenstrualHistory(
@@ -481,7 +463,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get beneficiary past obstetric history")
 	@PostMapping(value = { "/getBenPastObstetricHistory" })
 	public String getBenPastObstetricHistory(
@@ -507,7 +488,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get beneficiary comorbidity condition details")
 	@PostMapping(value = { "/getBenComorbidityConditionHistory" })
 	public String getBenANCComorbidityConditionHistory(
@@ -533,7 +513,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get beneficiary optional vaccine details")
 	@PostMapping(value = { "/getBenOptionalVaccineHistory" })
 	public String getBenOptionalVaccineHistory(
@@ -559,7 +538,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get beneficiary child vaccine(Immunization) details")
 	@PostMapping(value = { "/getBenChildVaccineHistory" })
 	public String getBenImmunizationHistory(
@@ -585,7 +563,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get beneficiary perinatal history details")
 	@PostMapping(value = { "/getBenPerinatalHistory" })
 	public String getBenPerinatalHistory(
@@ -611,7 +588,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get beneficiary child feeding history details")
 	@PostMapping(value = { "/getBenFeedingHistory" })
 	public String getBenFeedingHistory(@ApiParam(value = "{\"benRegID\":\"Long\"}") @RequestBody String comingRequest) {
@@ -636,7 +612,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get beneficiary child development history details")
 	@PostMapping(value = { "/getBenDevelopmentHistory" })
 	public String getBenDevelopmentHistory(
@@ -665,7 +640,7 @@ public class CommonController {
 	/***
 	 * fetch ben previous visit details for history case-record(Platform).
 	 */
-	
+
 	@Operation(summary = "Get casesheet history of beneficiary")
 	@PostMapping(value = { "/getBeneficiaryCaseSheetHistory" })
 	public String getBeneficiaryCaseSheetHistory(
@@ -684,7 +659,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "TC specialist")
 	@GetMapping(value = { "/getTCSpecialistWorklist/{providerServiceMapID}/{serviceID}/{userID}" })
 	public String getTCSpecialistWorkListNew(@PathVariable("providerServiceMapID") Integer providerServiceMapID,
@@ -709,10 +683,8 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "TC specialist future scheduled")
-	@GetMapping(value = {
-			"/getTCSpecialistWorklistFutureScheduled/{providerServiceMapID}/{serviceID}/{userID}" })
+	@GetMapping(value = { "/getTCSpecialistWorklistFutureScheduled/{providerServiceMapID}/{serviceID}/{userID}" })
 	public String getTCSpecialistWorklistFutureScheduled(
 			@PathVariable("providerServiceMapID") Integer providerServiceMapID, @PathVariable("userID") Integer userID,
 			@PathVariable("serviceID") Integer serviceID) {
@@ -736,7 +708,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Download file from file system")
 	@PostMapping(value = { "/downloadFile" })
 	public ResponseEntity<InputStreamResource> downloadFile(@RequestBody String requestOBJ, HttpServletRequest request)
@@ -767,7 +738,6 @@ public class CommonController {
 
 	}
 
-	
 	@Operation(summary = "Get beneficiary physical history")
 	@PostMapping(value = { "/getBenPhysicalHistory" })
 	public String getBenPhysicalHistory(
@@ -793,7 +763,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get beneficiary symptomatic questionnaire answer details")
 	@PostMapping(value = { "/getBenSymptomaticQuestionnaireDetails" })
 	public String getBenSymptomaticQuestionnaireDetails(
@@ -819,7 +788,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get beneficiary previous diabetes history")
 	@PostMapping(value = { "/getBenPreviousDiabetesHistoryDetails" })
 	public String getBenPreviousDiabetesHistoryDetails(
@@ -850,7 +818,7 @@ public class CommonController {
 	 * @ApiParam Authorization
 	 * @return
 	 */
-	
+
 	@Operation(summary = "Get beneficiary TM case record")
 	@PostMapping(value = { "/get/Case-sheet/TMReferredprintData" })
 	public String getTMReferredPrintData(@RequestBody String comingRequest,
@@ -888,7 +856,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get beneficiary previous referral history")
 	@PostMapping(value = { "/getBenPreviousReferralHistoryDetails" })
 	public String getBenPreviousReferralHistoryDetails(
@@ -915,7 +882,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get beneficiary TM case record")
 	@PostMapping(value = { "/get/Case-sheet/centralServerTMCaseSheet" })
 	public String getTMCaseSheetFromCentralServer(@RequestBody String comingRequest,
@@ -953,7 +919,7 @@ public class CommonController {
 	 * @ApiParam comingRequest
 	 * @return ProviderSpecificMasterData
 	 */
-	
+
 	@Operation(summary = "Calculate beneficiary BMI status")
 	@PostMapping(value = { "/calculateBMIStatus" })
 	public String calculateBMIStatus(
@@ -971,7 +937,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Update beneficiary status flag")
 	@PostMapping(value = { "/update/benDetailsAndSubmitToNurse" })
 	public String saveBeneficiaryVisitDetail(
@@ -1006,7 +971,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Extend redis session for 30 minutes")
 	@PostMapping(value = { "/extend/redisSession" })
 	public String extendRedisSession() {
@@ -1019,7 +983,6 @@ public class CommonController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Soft delete prescribed medicine")
 	@PostMapping(value = { "/doctor/delete/prescribedMedicine" })
 	public String deletePrescribedMedicine(@RequestBody String requestOBJ) {

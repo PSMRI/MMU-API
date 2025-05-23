@@ -25,7 +25,6 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -59,7 +58,6 @@ public class StartSyncActivity {
 	private static final String GROUP_ID = "groupID";
 	private static final String PROVIDER_SERVICE_MAP_ID = "providerServiceMapID";
 
-	
 	@Operation(summary = "Start data sync from van to Server")
 	@PostMapping(value = { "/van-to-server" })
 	public String dataSyncToServer(@RequestBody String requestOBJ,
@@ -72,7 +70,7 @@ public class StartSyncActivity {
 				String s = uploadDataToServerImpl.getDataToSyncToServer(obj.getInt("vanID"), obj.getString("user"),
 						serverAuthorization);
 //				if (s != null)
-					response.setResponse(s);
+				response.setResponse(s);
 //				else
 //					response.setError(5000, "Error in data sync");
 			} else {
@@ -85,7 +83,6 @@ public class StartSyncActivity {
 		return response.toStringWithSerialization();
 	}
 
-	
 	@Operation(summary = "Get data sync group details")
 	@GetMapping(value = { "/getSyncGroupDetails" })
 	public String getSyncGroupDetails() {
@@ -106,7 +103,7 @@ public class StartSyncActivity {
 	/**
 	 * @return Masters download in van from central server
 	 */
-	
+
 	@Operation(summary = "Data sync master download")
 	@PostMapping(value = { "/startMasterDownload" })
 	public String startMasterDownload(@RequestBody String requestOBJ,
@@ -139,7 +136,6 @@ public class StartSyncActivity {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Data sync master download progress check")
 	@GetMapping(value = { "/checkMastersDownloadProgress" })
 	public String checkMastersDownloadProgress() {
@@ -153,7 +149,6 @@ public class StartSyncActivity {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get van details for master download")
 	@GetMapping(value = { "/getVanDetailsForMasterDownload" })
 	public String getVanDetailsForMasterDownload() {
@@ -171,7 +166,6 @@ public class StartSyncActivity {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Call central API to generate beneficiary id and import to local")
 	@PostMapping(value = { "/callCentralAPIToGenerateBenIDAndimportToLocal" })
 	public String callCentralAPIToGenerateBenIDAndimportToLocal(@RequestBody String requestOBJ,
@@ -196,7 +190,6 @@ public class StartSyncActivity {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Call central API to download transaction data to local")
 	@PostMapping(value = { "/downloadTransactionToLocal" })
 	public String downloadTransactionToLocal(@RequestBody String requestOBJ,

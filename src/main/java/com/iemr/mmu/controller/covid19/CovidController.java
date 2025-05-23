@@ -29,7 +29,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -45,7 +44,6 @@ import com.iemr.mmu.utils.response.OutputResponse;
 
 import io.swagger.annotations.ApiParam;
 import io.swagger.v3.oas.annotations.Operation;
-
 
 /**
  * 
@@ -64,7 +62,7 @@ public class CovidController {
 	private Covid19Service covid19Service;
 	@Autowired
 	private Covid19ServiceImpl covid19ServiceImpl;
-	
+
 	@Operation(summary = "Save covid nurse data")
 	@PostMapping(value = { "/save/nurseData" })
 	public String saveBenCovid19NurseData(@RequestBody String requestObj,
@@ -100,7 +98,7 @@ public class CovidController {
 	 * @ApiParam Authorization
 	 * @return
 	 */
-	
+
 	@Operation(summary = "Save covid doctor data")
 	@PostMapping(value = { "/save/doctorData" })
 	public String saveBenCovidDoctorData(@RequestBody String requestObj,
@@ -126,7 +124,7 @@ public class CovidController {
 		}
 		return response.toString();
 	}
-	
+
 	@Operation(summary = "Get beneficiary visit details from nurse covid 19")
 	@PostMapping(value = { "/getBenVisitDetailsFrmNurseCovid" })
 	@Transactional(rollbackFor = Exception.class)
@@ -159,7 +157,7 @@ public class CovidController {
 	 * @ApiParam comingRequest
 	 * @return visit details in JSON format
 	 */
-	
+
 	@Operation(summary = "Get beneficiary covid 19 history details from nurse to doctor ")
 	@PostMapping(value = { "/getBenCovid19HistoryDetails" })
 
@@ -192,7 +190,6 @@ public class CovidController {
 	 * @return visit details in JSON format
 	 */
 
-	
 	@Operation(summary = "Get beneficiary covid 19 vital details from nurse NCD care")
 	@PostMapping(value = { "/getBenVitalDetailsFrmNurseCovid" })
 	public String getBenVitalDetailsFrmNurseNCDCare(
@@ -220,7 +217,6 @@ public class CovidController {
 
 	}
 
-	
 	@Operation(summary = "Get beneficiary doctor entered details")
 	@PostMapping(value = { "/getBenCaseRecordFromDoctorCovid" })
 	@Transactional(rollbackFor = Exception.class)
@@ -247,7 +243,7 @@ public class CovidController {
 		}
 		return response.toString();
 	}
-	
+
 	@Operation(summary = "Update history data in doctor screen")
 	@PostMapping(value = { "/update/historyScreen" })
 	public String updateHistoryNurse(@RequestBody String requestObj) {
@@ -281,7 +277,6 @@ public class CovidController {
 	 *            entered by Doctor
 	 */
 
-	
 	@Operation(summary = "Update covid vital data in doctor screen")
 	@PostMapping(value = { "/update/vitalScreen" })
 	public String updateVitalNurse(@RequestBody String requestObj) {
@@ -311,7 +306,7 @@ public class CovidController {
 	 * @return success or failure response
 	 * @objective Replace covid 19 doctor data for the doctor next visit
 	 */
-	
+
 	@Operation(summary = "Update covid 19 doctor data")
 	@PostMapping(value = { "/update/doctorData" })
 	public String updateCovid19DoctorData(@RequestBody String requestObj,
@@ -335,8 +330,9 @@ public class CovidController {
 
 		return response.toString();
 	}
+
 	private JsonObject parseJsonRequest(String requestObj) {
-        JsonElement jsonElement = JsonParser.parseString(requestObj);
-        return jsonElement.getAsJsonObject();
-    }
+		JsonElement jsonElement = JsonParser.parseString(requestObj);
+		return jsonElement.getAsJsonObject();
+	}
 }

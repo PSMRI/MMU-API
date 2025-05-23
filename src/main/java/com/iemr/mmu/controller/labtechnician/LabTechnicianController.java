@@ -24,7 +24,6 @@ package com.iemr.mmu.controller.labtechnician;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,7 +36,6 @@ import com.iemr.mmu.service.labtechnician.LabTechnicianServiceImpl;
 import com.iemr.mmu.utils.response.OutputResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
-
 
 /***
  * @Objective Saving lab test results given by LabTechnician
@@ -55,14 +53,16 @@ public class LabTechnicianController {
 	public void setLabTechnicianServiceImpl(LabTechnicianServiceImpl labTechnicianServiceImpl) {
 		this.labTechnicianServiceImpl = labTechnicianServiceImpl;
 	}
+
 	private static final String BENEFICIARY_REG_ID = "beneficiaryRegID";
 	private static final String VISIT_CODE = "visitCode";
+
 	/**
 	 * @Objective Save lab test results given by LabTechnician
 	 * @param JSON requestObj
 	 * @return success or failure response
 	 */
-	
+
 	@Operation(summary = "Save lab test result entered by lab technician")
 	@PostMapping(value = { "/save/LabTestResult" })
 	public String saveLabTestResult(@RequestBody String requestObj) {
@@ -87,7 +87,6 @@ public class LabTechnicianController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get beneficiary prescribed procedure")
 	@PostMapping(value = { "/get/prescribedProceduresList" })
 	public String getBeneficiaryPrescribedProcedure(@RequestBody String requestOBJ) {
@@ -114,7 +113,6 @@ public class LabTechnicianController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get lab test result for a visitcode.")
 	@PostMapping(value = { "/get/labResultForVisitcode" })
 	public String getLabResultForVisitCode(@RequestBody String requestOBJ) {
@@ -132,13 +130,14 @@ public class LabTechnicianController {
 			} else
 				response.setError(5000, "Invalid request");
 		} catch (Exception e) {
-			logger.error("Error while getting lab result for requested data {} " , requestOBJ);
+			logger.error("Error while getting lab result for requested data {} ", requestOBJ);
 			response.setError(5000, "Error while getting lab report");
 		}
 		return response.toString();
 	}
+
 	private JsonObject parseJsonRequest(String requestObj) {
-        JsonElement jsonElement = JsonParser.parseString(requestObj);
-        return jsonElement.getAsJsonObject();
-    }
+		JsonElement jsonElement = JsonParser.parseString(requestObj);
+		return jsonElement.getAsJsonObject();
+	}
 }

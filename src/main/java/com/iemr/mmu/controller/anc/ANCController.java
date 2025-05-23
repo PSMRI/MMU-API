@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -42,11 +41,9 @@ import com.iemr.mmu.utils.response.OutputResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 
-
 /**
  * @Objective Saving ANC data for Nurse and Doctor.
  */
-
 
 @RestController
 @RequestMapping(value = "/ANC", headers = "Authorization", consumes = "application/json", produces = "application/json")
@@ -54,8 +51,6 @@ public class ANCController {
 	private Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 	@Autowired
 	private ANCService ancService;
-
-	
 
 	/**
 	 * @Objective Save ANC data for nurse.
@@ -300,7 +295,6 @@ public class ANCController {
 		return response.toString();
 	}
 
-
 	@Operation(summary = "Check high risk pregnancy status for ANC beneficiary")
 	@PostMapping(value = { "/getHRPStatus" })
 	@Transactional(rollbackFor = Exception.class)
@@ -330,7 +324,6 @@ public class ANCController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Update ANC care data in doctor screen")
 	@PostMapping(value = { "/update/ANCScreen" })
 	public String updateANCCareNurse(@RequestBody String requestObj) {
@@ -362,7 +355,6 @@ public class ANCController {
 	 *            by Doctor
 	 */
 
-	
 	@Operation(summary = "Update ANC history data in doctor screen")
 	@PostMapping(value = { "/update/historyScreen" })
 	public String updateANCHistoryNurse(@RequestBody String requestObj) {
@@ -393,7 +385,6 @@ public class ANCController {
 	 *            by Doctor
 	 */
 
-	
 	@Operation(summary = "Update ANC vital data in doctor screen")
 	@PostMapping(value = { "/update/vitalScreen" })
 	public String updateANCVitalNurse(@RequestBody String requestObj) {
@@ -425,7 +416,6 @@ public class ANCController {
 	 *            by Doctor
 	 */
 
-	
 	@Operation(summary = "Update ANC examination data in doctor screen")
 	@PostMapping(value = { "/update/examinationScreen" })
 	public String updateANCExaminationNurse(@RequestBody String requestObj) {
@@ -456,7 +446,7 @@ public class ANCController {
 	 * @objective Replace ANC doctor data for the doctor next visit
 	 * 
 	 */
-	
+
 	@Operation(summary = "Update ANC doctor data")
 	@PostMapping(value = { "/update/doctorData" })
 	public String updateANCDoctorData(@RequestBody String requestObj,
@@ -480,8 +470,9 @@ public class ANCController {
 
 		return response.toString();
 	}
+
 	private JsonObject parseJsonRequest(String requestObj) {
-        JsonElement jsonElement = JsonParser.parseString(requestObj);
-        return jsonElement.getAsJsonObject();
-    }
+		JsonElement jsonElement = JsonParser.parseString(requestObj);
+		return jsonElement.getAsJsonObject();
+	}
 }
