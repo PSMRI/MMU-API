@@ -48,7 +48,6 @@ import io.swagger.v3.oas.annotations.Operation;
 /**
  * @Objective Saving NCD Screening nurse data.
  */
-
 @RestController
 @RequestMapping(value = "/NCD", headers = "Authorization", consumes = "application/json", produces = "application/json")
 public class NCDController {
@@ -72,7 +71,6 @@ public class NCDController {
 	 * @ApiParam JSON requestObj
 	 * @return success or failure response
 	 */
-
 	@Operation(summary = "Save beneficiary NCD screening details")
 
 	@PostMapping(value = { "/save/nurseData" })

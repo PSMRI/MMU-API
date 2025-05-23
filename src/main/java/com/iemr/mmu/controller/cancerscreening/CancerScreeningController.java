@@ -26,7 +26,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -45,7 +44,6 @@ import com.iemr.mmu.utils.response.OutputResponse;
 
 import io.swagger.annotations.ApiParam;
 import io.swagger.v3.oas.annotations.Operation;
-
 
 /**
  * @Objective Saving Cancer screening data for Nurse and Doctor both.
@@ -68,7 +66,6 @@ public class CancerScreeningController {
 	 * @return success or failure response
 	 */
 
-	
 	@Operation(summary = "Save cancer screening nurse data")
 	@PostMapping(value = { "/save/nurseData" })
 	public String saveBenCancerScreeningNurseData(@RequestBody String requestObj,
@@ -109,7 +106,6 @@ public class CancerScreeningController {
 	 * @return success or failure response
 	 */
 
-	
 	@Operation(summary = "Save cancer screening doctor data")
 	@PostMapping(value = { "/save/doctorData" })
 	public String saveBenCancerScreeningDoctorData(@RequestBody String requestObj,
@@ -136,7 +132,6 @@ public class CancerScreeningController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Get beneficiary visit details from nurse screen")
 	@PostMapping(value = { "/getBenDataFrmNurseToDocVisitDetailsScreen" })
 	public String getBenDataFrmNurseScrnToDocScrnVisitDetails(
@@ -167,7 +162,6 @@ public class CancerScreeningController {
 	 * @return history details in JSON format
 	 */
 
-	
 	@Operation(summary = "Get beneficiary cancer history details from nurse screen")
 	@PostMapping(value = { "/getBenDataFrmNurseToDocHistoryScreen" })
 	public String getBenDataFrmNurseScrnToDocScrnHistory(
@@ -197,7 +191,6 @@ public class CancerScreeningController {
 	 * @return vital details in JSON format
 	 */
 
-	
 	@Operation(summary = "Get beneficiary vital details from nurse screen")
 	@PostMapping(value = { "/getBenDataFrmNurseToDocVitalScreen" })
 	public String getBenDataFrmNurseScrnToDocScrnVital(
@@ -228,7 +221,6 @@ public class CancerScreeningController {
 	 * @return examination details in JSON format
 	 */
 
-	
 	@Operation(summary = "Get beneficiary examination details from nurse screen")
 	@PostMapping(value = { "/getBenDataFrmNurseToDocExaminationScreen" })
 	public String getBenDataFrmNurseScrnToDocScrnExamination(
@@ -259,7 +251,6 @@ public class CancerScreeningController {
 	 * @return previous family history details in JSON format
 	 */
 
-	
 	@Operation(summary = "Get beneficiary cancer family history")
 	@PostMapping(value = { "/getBenCancerFamilyHistory" })
 	public String getBenCancerFamilyHistory(
@@ -292,7 +283,6 @@ public class CancerScreeningController {
 	 * @return previous personal history details in JSON format
 	 */
 
-	
 	@Operation(summary = "Get beneficiary cancer personal history")
 	@PostMapping(value = { "/getBenCancerPersonalHistory" })
 	public String getBenCancerPersonalHistory(
@@ -325,7 +315,6 @@ public class CancerScreeningController {
 	 * @return previous personal history details in JSON format
 	 */
 
-	
 	@Operation(summary = "Get beneficiary cancer personal diet history")
 	@PostMapping(value = { "/getBenCancerPersonalDietHistory" })
 	public String getBenCancerPersonalDietHistory(
@@ -358,7 +347,6 @@ public class CancerScreeningController {
 	 * @return previous obstetric history details in JSON format
 	 */
 
-	
 	@Operation(summary = "Get beneficiary cancer obstetric history")
 	@PostMapping(value = { "/getBenCancerObstetricHistory" })
 	public String getBenCancerObstetricHistory(
@@ -390,7 +378,6 @@ public class CancerScreeningController {
 	 * @return doctor details in JSON format
 	 */
 
-	
 	@Operation(summary = "Get beneficiary doctor entered details")
 	@PostMapping(value = { "/getBenCaseRecordFromDoctorCS" })
 	@Transactional(rollbackFor = Exception.class)
@@ -417,7 +404,6 @@ public class CancerScreeningController {
 		return response.toString();
 	}
 
-	
 	@Operation(summary = "Update cancer screening history nurse data in doctor screen")
 	@PostMapping(value = { "/update/historyScreen" })
 	public String updateCSHistoryNurse(
@@ -463,7 +449,6 @@ public class CancerScreeningController {
 	 *            details entered by Doctor
 	 */
 
-	
 	@Operation(summary = "Update beneficiary vital detail")
 	@PostMapping(value = { "/update/vitalScreen" })
 	public String upodateBenVitalDetail(
@@ -501,7 +486,6 @@ public class CancerScreeningController {
 	 *            the details entered by Doctor
 	 */
 
-	
 	@Operation(summary = "Update beneficiary examination detail")
 	@PostMapping(value = { "/update/examinationScreen" })
 	public String upodateBenExaminationDetail(@RequestBody String requestObj) {
@@ -532,7 +516,6 @@ public class CancerScreeningController {
 	 * 
 	 */
 
-	
 	@Operation(summary = "Update cancer diagnosis details by oncologist")
 	@PostMapping(value = { "/update/examinationScreen/diagnosis" })
 	public String updateCancerDiagnosisDetailsByOncologist(
@@ -565,7 +548,6 @@ public class CancerScreeningController {
 	 * 
 	 */
 
-	
 	@Operation(summary = "Update cancer screening doctor data")
 	@PostMapping(value = { "/update/doctorData" })
 	public String updateCancerScreeningDoctorData(@RequestBody String requestObj) {
@@ -587,8 +569,9 @@ public class CancerScreeningController {
 
 		return response.toString();
 	}
+
 	private JsonObject parseJsonRequest(String requestObj) {
-        JsonElement jsonElement = JsonParser.parseString(requestObj);
-        return jsonElement.getAsJsonObject();
-    }
+		JsonElement jsonElement = JsonParser.parseString(requestObj);
+		return jsonElement.getAsJsonObject();
+	}
 }

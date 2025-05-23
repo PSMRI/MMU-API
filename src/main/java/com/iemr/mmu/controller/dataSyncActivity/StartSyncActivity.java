@@ -43,7 +43,6 @@ import io.swagger.v3.oas.annotations.Operation;
 /***
  * @purpose Class used for data sync from van-to-server & server-to-van
  */
-
 @RestController
 @RequestMapping(value = "/dataSyncActivity", headers = "Authorization", consumes = "application/json", produces = "application/json")
 public class StartSyncActivity {

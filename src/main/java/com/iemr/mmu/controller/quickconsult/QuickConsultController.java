@@ -46,7 +46,6 @@ import io.swagger.v3.oas.annotations.Operation;
 /**
  * @Objective Saving general OPD quick consult data for Nurse and Doctor both.
  */
-
 @RestController
 @RequestMapping(value = "/genOPD-QC-quickConsult", headers = "Authorization", consumes = "application/json", produces = "application/json")
 public class QuickConsultController {
