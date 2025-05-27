@@ -79,6 +79,7 @@ import com.iemr.mmu.service.ncdscreening.NCDScreeningServiceImpl;
 import com.iemr.mmu.service.pnc.PNCServiceImpl;
 import com.iemr.mmu.service.quickConsultation.QuickConsultationServiceImpl;
 import com.iemr.mmu.utils.CookieUtil;
+import com.iemr.mmu.utils.RestTemplateUtil;
 import com.iemr.mmu.utils.AESEncryption.AESEncryptionDecryption;
 import com.iemr.mmu.utils.exception.IEMRException;
 import com.iemr.mmu.utils.mapper.InputMapper;
@@ -823,20 +824,14 @@ public class CommonServiceImpl implements CommonService {
 
 	public ResponseEntity<String> restTemplatePost(String URL, String authorization, String reqObj) {
 		RestTemplate restTemplate = new RestTemplate();
-		MultiValueMap<String, String> headers = new LinkedMultiValueMap<String, String>();
-		headers.add("Content-Type", "application/json");
-		headers.add("AUTHORIZATION", authorization);
-		HttpEntity<Object> request = new HttpEntity<Object>(reqObj, headers);
+		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(reqObj, authorization);
 		ResponseEntity<String> response = restTemplate.exchange(URL, HttpMethod.POST, request, String.class);
 		return response;
 	}
 
 	public ResponseEntity<String> restTemplateGet(String URL, String authorization) {
 		RestTemplate restTemplate = new RestTemplate();
-		MultiValueMap<String, String> headers = new LinkedMultiValueMap<String, String>();
-		headers.add("Content-Type", "application/json");
-		headers.add("AUTHORIZATION", authorization);
-		HttpEntity<Object> request = new HttpEntity<Object>("", headers);
+		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity("", authorization);
 		ResponseEntity<String> response = restTemplate.exchange(URL, HttpMethod.GET, request, String.class);
 		return response;
 	}

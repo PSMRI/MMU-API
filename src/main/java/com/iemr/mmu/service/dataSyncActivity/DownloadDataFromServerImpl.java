@@ -53,6 +53,7 @@ import com.iemr.mmu.data.syncActivity_syncLayer.TempVan;
 import com.iemr.mmu.repo.syncActivity_syncLayer.SyncDownloadMasterRepo;
 import com.iemr.mmu.repo.syncActivity_syncLayer.TempVanRepo;
 import com.iemr.mmu.utils.CookieUtil;
+import com.iemr.mmu.utils.RestTemplateUtil;
 import com.iemr.mmu.utils.mapper.InputMapper;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -185,17 +186,7 @@ public class DownloadDataFromServerImpl implements DownloadDataFromServer {
 
 		// initializing RestTemplate
 		RestTemplate restTemplate = new RestTemplate();
-		HttpServletRequest requestHeader = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes())
-				.getRequest();
-		String jwtTokenFromCookie = cookieUtil.getJwtTokenFromCookie(requestHeader);
-
-		// Multivalue map for headers with content-type and auth key
-		MultiValueMap<String, String> headers = new LinkedMultiValueMap<String, String>();
-		headers.add("Content-Type", "application/json");
-		headers.add("AUTHORIZATION", ServerAuthorization);
-		headers.add("Cookie", "Jwttoken=" + jwtTokenFromCookie);
-		HttpEntity<Object> request = new HttpEntity<Object>(syncDownloadMaster, headers);
-
+		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(syncDownloadMaster, ServerAuthorization);
 		// Call rest-template to call API to download master data for given table
 		ResponseEntity<String> response = restTemplate.exchange(dataSyncDownloadUrl, HttpMethod.POST, request,
 				String.class);
@@ -342,17 +333,7 @@ public class DownloadDataFromServerImpl implements DownloadDataFromServer {
 		int i = 0;
 		// Rest template
 		RestTemplate restTemplate = new RestTemplate();
-		HttpServletRequest requestHeader = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes())
-				.getRequest();
-		String jwtTokenFromCookie = cookieUtil.getJwtTokenFromCookie(requestHeader);
-
-		// Multivalue map for headers with content-type and auth key
-		MultiValueMap<String, String> headers = new LinkedMultiValueMap<String, String>();
-		headers.add("Content-Type", "application/json");
-		headers.add("AUTHORIZATION", ServerAuthorization);
-		headers.add("Cookie", "Jwttoken=" + jwtTokenFromCookie);
-		HttpEntity<Object> request = new HttpEntity<Object>(requestOBJ, headers);
-
+		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestOBJ, Authorization);
 		// Call rest-template to call central API to generate UNIQUE ID at central
 		ResponseEntity<String> response = restTemplate.exchange(benGenUrlCentral, HttpMethod.POST, request,
 				String.class);
@@ -361,11 +342,7 @@ public class DownloadDataFromServerImpl implements DownloadDataFromServer {
 			JSONObject obj = new JSONObject(response.getBody());
 			if (obj != null && obj.has("data") && obj.has("statusCode") && obj.getInt("statusCode") == 200) {
 				// Consume the response from API and call local identity api to save data
-				MultiValueMap<String, String> headers1 = new LinkedMultiValueMap<String, String>();
-				headers1.add("Content-Type", "application/json");
-				headers1.add("AUTHORIZATION", Authorization);
-				HttpEntity<Object> request1 = new HttpEntity<Object>(obj.get("data").toString(), headers1);
-
+				HttpEntity<Object> request1 = RestTemplateUtil.createRequestEntity(obj.get("data").toString(), Authorization);
 				i = 1;
 				// Call rest-template to call central API to generate UNIQUE ID at central
 				ResponseEntity<String> response1 = restTemplate.exchange(benImportUrlLocal, HttpMethod.POST, request1,
