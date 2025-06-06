@@ -204,7 +204,7 @@ public interface BeneficiaryFlowStatusRepo extends CrudRepository<BeneficiaryFlo
 
 	@Query("SELECT t from BeneficiaryFlowStatus t WHERE t.pharmacist_flag = 1 "
 			+ " AND t.benVisitDate >= Date(:fromDate) AND t.vanID = :vanID "
-			+ "  AND t.providerServiceMapId= :providerServiceMapId AND (doctorFlag = 9 OR specialist_flag = 9) "
+			+ "  AND t.providerServiceMapId= :providerServiceMapId AND (doctor_Flag = 9 OR specialist_flag = 9) "
 			+ "  ORDER BY consultationDate DESC ")
 	public ArrayList<BeneficiaryFlowStatus> getPharmaWorkListNew(
 			@Param("providerServiceMapId") Integer providerServiceMapId, @Param("fromDate") Timestamp fromDate,

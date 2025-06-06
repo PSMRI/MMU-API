@@ -31,7 +31,6 @@ import com.iemr.mmu.data.common.DocFileManager;
 import com.iemr.mmu.utils.exception.IEMRException;
 
 public interface CommonService {
-	public String saveFiles(List<DocFileManager> docFileManagerList) throws IOException, Exception;
 
 	public Resource loadFileAsResource(String file, String path) throws IOException;
 
