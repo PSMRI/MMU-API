@@ -25,7 +25,7 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.CrossOrigin;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -40,7 +40,6 @@ import com.iemr.mmu.utils.response.OutputResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 
-@CrossOrigin
 @RestController
 @RequestMapping(value = "/location", headers = "Authorization")
 public class LocationController {
@@ -136,7 +135,6 @@ public class LocationController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Get location details based on SP id and PSM id")
 	@PostMapping(value = "/getLocDetailsBasedOnSpIDAndPsmID", consumes = "application/json", produces = "application/json")
 	public String getLocDetailsBasedOnSpIDAndPsmIDNew(@RequestBody String comingRequest) {
@@ -146,10 +144,10 @@ public class LocationController {
 			if (obj != null && obj.has("spID") && obj.has("spPSMID") && obj.get("spID") != null
 					&& obj.get("spPSMID") != null) {
 				Integer userId = null;
-				if(obj.has("userId") && null != obj.get("userId")) {
+				if (obj.has("userId") && null != obj.get("userId")) {
 					userId = Integer.valueOf(obj.get("userId").toString());
 				}
-				String s = locationServiceImpl.getLocDetailsNew(obj.getInt("spID"), obj.getInt("spPSMID"),userId);
+				String s = locationServiceImpl.getLocDetailsNew(obj.getInt("spID"), obj.getInt("spPSMID"), userId);
 
 				response.setResponse(s);
 			} else {
@@ -162,7 +160,6 @@ public class LocationController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Get district taluk master")
 	@GetMapping(value = "/get/DistrictTalukMaster/{districtBranchID}", consumes = "application/json", produces = "application/json")
 	public String getDistrictTalukMaster(@PathVariable("districtBranchID") Integer districtBranchID) {

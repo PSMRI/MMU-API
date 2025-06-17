@@ -29,7 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.CrossOrigin;
+
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -45,11 +45,9 @@ import com.iemr.mmu.utils.response.OutputResponse;
 import io.swagger.annotations.ApiParam;
 import io.swagger.v3.oas.annotations.Operation;
 
-
 /**
  * @Objective Saving NCD Care data for Nurse and Doctor.
  */
-@CrossOrigin
 @RestController
 @RequestMapping(value = "/NCDCare", headers = "Authorization", consumes = "application/json", produces = "application/json")
 public class NCDCareController {
@@ -66,7 +64,6 @@ public class NCDCareController {
 	 * @ApiParam JSON requestObj
 	 * @return success or failure response
 	 */
-	@CrossOrigin
 	@Operation(summary = "Save NCD care data collected by nurse")
 	@PostMapping(value = { "/save/nurseData" })
 	public String saveBenNCDCareNurseData(@RequestBody String requestObj) {
@@ -100,7 +97,6 @@ public class NCDCareController {
 	 * @ApiParam JSON requestObj
 	 * @return success or failure response
 	 */
-	@CrossOrigin
 	@Operation(summary = "Save NCD care beneficiary case record and referral")
 	@PostMapping(value = { "/save/doctorData" })
 	public String saveBenNCDCareDoctorData(@RequestBody String requestObj,
@@ -127,7 +123,6 @@ public class NCDCareController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Get NCD care beneficiary visit details")
 	@PostMapping(value = { "/getBenVisitDetailsFrmNurseNCDCare" })
 	@Transactional(rollbackFor = Exception.class)
@@ -160,7 +155,6 @@ public class NCDCareController {
 	 * @ApiParam comingRequest
 	 * @return visit details in JSON format
 	 */
-	@CrossOrigin()
 	@Operation(summary = "Get NCD care beneficiary history")
 	@PostMapping(value = { "/getBenNCDCareHistoryDetails" })
 
@@ -192,8 +186,6 @@ public class NCDCareController {
 	 * @ApiParam comingRequest
 	 * @return visit details in JSON format
 	 */
-
-	@CrossOrigin()
 	@Operation(summary = "Get NCD care beneficiary vitals")
 	@PostMapping(value = { "/getBenVitalDetailsFrmNurseNCDCare" })
 	public String getBenVitalDetailsFrmNurseNCDCare(
@@ -225,7 +217,6 @@ public class NCDCareController {
 	 * @ApiParam comingRequest
 	 * @return visit details in JSON format
 	 */
-	@CrossOrigin()
 	@Operation(summary = "Get NCD care beneficiary case record and referral")
 	@PostMapping(value = { "/getBenCaseRecordFromDoctorNCDCare" })
 	@Transactional(rollbackFor = Exception.class)
@@ -253,7 +244,6 @@ public class NCDCareController {
 		return response.toString();
 	}
 
-	@CrossOrigin
 	@Operation(summary = "Update NCD care beneficiary history")
 	@PostMapping(value = { "/update/historyScreen" })
 	public String updateHistoryNurse(@RequestBody String requestObj) {
@@ -286,8 +276,6 @@ public class NCDCareController {
 	 * @objective Replace NCD Care Vital Data entered by Nurse with the details
 	 *            entered by Doctor
 	 */
-
-	@CrossOrigin
 	@Operation(summary = "Update NCD care beneficiary vitals")
 	@PostMapping(value = { "/update/vitalScreen" })
 	public String updateVitalNurse(@RequestBody String requestObj) {
@@ -317,7 +305,6 @@ public class NCDCareController {
 	 * @return success or failure response
 	 * @objective Replace NCD Care doctor data for the doctor next visit
 	 */
-	@CrossOrigin
 	@Operation(summary = "Update NCD care beneficiary case record and referral")
 	@PostMapping(value = { "/update/doctorData" })
 	public String updateNCDCareDoctorData(@RequestBody String requestObj,
@@ -341,8 +328,9 @@ public class NCDCareController {
 
 		return response.toString();
 	}
+
 	private JsonObject parseJsonRequest(String requestObj) {
-        JsonElement jsonElement = JsonParser.parseString(requestObj);
-        return jsonElement.getAsJsonObject();
-    }
+		JsonElement jsonElement = JsonParser.parseString(requestObj);
+		return jsonElement.getAsJsonObject();
+	}
 }

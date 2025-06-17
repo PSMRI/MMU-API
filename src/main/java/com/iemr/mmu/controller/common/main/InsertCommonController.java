@@ -27,7 +27,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.CrossOrigin;
+
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -40,7 +40,6 @@ import com.iemr.mmu.utils.response.OutputResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 
-@CrossOrigin
 @RestController
 @RequestMapping(value = "/commonInsert", headers = "Authorization")
 public class InsertCommonController {
@@ -48,7 +47,6 @@ public class InsertCommonController {
 	@Autowired
 	private CommonServiceImpl commonServiceImpl;
 
-	@CrossOrigin()
 	@Operation(summary = "Save beneficairy documents locally")
 	@PostMapping(value = { "/saveFiles" }, consumes = "application/json", produces = "application/json")
 	public String saveFiles(@RequestBody String request) {

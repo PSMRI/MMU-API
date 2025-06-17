@@ -24,7 +24,7 @@ package com.iemr.mmu.controller.teleconsultation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.CrossOrigin;
+
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -43,11 +43,10 @@ import io.swagger.v3.oas.annotations.Operation;
 @RequestMapping(value = "/tc", headers = "Authorization", consumes = "application/json", produces = "application/json")
 public class TeleConsultationController {
 	private Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
-	
+
 	@Autowired
 	private TeleConsultationServiceImpl teleConsultationServiceImpl;
 
-	@CrossOrigin
 	@Operation(summary = "Update beneficiary arrival status based on request")
 	@PostMapping(value = { "/update/benArrivalStatus" })
 	public String benArrivalStatusUpdater(@RequestBody String requestOBJ) {
@@ -68,7 +67,6 @@ public class TeleConsultationController {
 		return response.toString();
 	}
 
-	@CrossOrigin
 	@Operation(summary = "Update beneficiary status based on request")
 	@PostMapping(value = { "/cancel/benTCRequest" })
 	public String updateBeneficiaryStatusToCancelTCRequest(@RequestBody String requestOBJ,
@@ -91,7 +89,6 @@ public class TeleConsultationController {
 		return response.toString();
 	}
 
-	@CrossOrigin
 	@Operation(summary = "Check if specialist can proceed with beneficiary")
 	@PostMapping(value = { "/check/benTCRequestStatus" })
 	public String checkBeneficiaryStatusToProceedWithSpecialist(@RequestBody String requestOBJ) {
@@ -112,7 +109,6 @@ public class TeleConsultationController {
 		return response.toString();
 	}
 
-	@CrossOrigin
 	@Operation(summary = "Create TC request for beneficiary whose visit is created")
 	@PostMapping(value = { "/create/benTCRequestWithVisitCode" })
 	public String createTCRequestForBeneficiary(@RequestBody String requestOBJ, @RequestHeader String Authorization) {
@@ -135,7 +131,6 @@ public class TeleConsultationController {
 		return response.toString();
 	}
 
-	@CrossOrigin
 	@Operation(summary = "Get TC request list for a specialist")
 	@PostMapping(value = { "/getTCRequestList" })
 	public String getTCSpecialistWorkListNew(@RequestBody String requestOBJ) {
@@ -161,8 +156,9 @@ public class TeleConsultationController {
 		}
 		return response.toString();
 	}
+
 	private JsonObject parseJsonRequest(String requestObj) {
-        JsonElement jsonElement = JsonParser.parseString(requestObj);
-        return jsonElement.getAsJsonObject();
-    }
+		JsonElement jsonElement = JsonParser.parseString(requestObj);
+		return jsonElement.getAsJsonObject();
+	}
 }
