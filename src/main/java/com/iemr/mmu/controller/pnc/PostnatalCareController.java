@@ -26,7 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.CrossOrigin;
+
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -42,11 +42,9 @@ import com.iemr.mmu.utils.response.OutputResponse;
 import io.swagger.annotations.ApiParam;
 import io.swagger.v3.oas.annotations.Operation;
 
-
 /**
  * @Objective Saving PNC nurse and doctor data
  */
-@CrossOrigin
 @RestController
 @RequestMapping(value = "/PNC", headers = "Authorization", consumes = "application/json", produces = "application/json")
 public class PostnatalCareController {
@@ -63,8 +61,6 @@ public class PostnatalCareController {
 	 * @ApiParam requestObj
 	 * @return success or failure response
 	 */
-
-	@CrossOrigin
 	@Operation(summary = "Save PNC nurse data")
 	@PostMapping(value = { "/save/nurseData" })
 	public String saveBenPNCNurseData(@RequestBody String requestObj) {
@@ -98,8 +94,6 @@ public class PostnatalCareController {
 	 * @ApiParam requestObj
 	 * @return success or failure response
 	 */
-
-	@CrossOrigin
 	@Operation(summary = "Save PNC doctor data")
 	@PostMapping(value = { "/save/doctorData" })
 	public String saveBenPNCDoctorData(@RequestBody String requestObj,
@@ -125,7 +119,6 @@ public class PostnatalCareController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Get PNC beneficiary visit details from nurse")
 	@PostMapping(value = { "/getBenVisitDetailsFrmNursePNC" })
 	@Transactional(rollbackFor = Exception.class)
@@ -158,7 +151,6 @@ public class PostnatalCareController {
 	 * @ApiParam comingRequest
 	 * @return PNC Care data in JSON format
 	 */
-	@CrossOrigin()
 	@Operation(summary = "Get PNC beneficiary care details from nurse")
 	@PostMapping(value = { "/getBenPNCDetailsFrmNursePNC" })
 	@Transactional(rollbackFor = Exception.class)
@@ -191,7 +183,6 @@ public class PostnatalCareController {
 	 * @ApiParam comingRequest
 	 * @return history data in JSON format
 	 */
-	@CrossOrigin()
 	@Operation(summary = "Get PNC beneficiary  history details from nurse to doctor ")
 	@PostMapping(value = { "/getBenHistoryDetails" })
 
@@ -223,7 +214,6 @@ public class PostnatalCareController {
 	 * @ApiParam comingRequest
 	 * @return vital data in JSON format
 	 */
-	@CrossOrigin()
 	@Operation(summary = "Get PNC beneficiary vital details from nurse")
 	@PostMapping(value = { "/getBenVitalDetailsFrmNurse" })
 	public String getBenVitalDetailsFrmNurse(
@@ -255,7 +245,6 @@ public class PostnatalCareController {
 	 * @ApiParam comingRequest
 	 * @return examination data in JSON format
 	 */
-	@CrossOrigin()
 	@Operation(summary = "Get PNC beneficiary examination details from nurse to doctor ")
 	@PostMapping(value = { "/getBenExaminationDetailsPNC" })
 
@@ -287,7 +276,6 @@ public class PostnatalCareController {
 	 * @ApiParam comingRequest
 	 * @return doctor data in JSON format
 	 */
-	@CrossOrigin()
 	@Operation(summary = "Get PNC beneficiary case record")
 	@PostMapping(value = { "/getBenCaseRecordFromDoctorPNC" })
 	@Transactional(rollbackFor = Exception.class)
@@ -315,7 +303,6 @@ public class PostnatalCareController {
 		return response.toString();
 	}
 
-	@CrossOrigin
 	@Operation(summary = "Update PNC care data in doctor screen")
 	@PostMapping(value = { "/update/PNCScreen" })
 	public String updatePNCCareNurse(@RequestBody String requestObj) {
@@ -346,8 +333,6 @@ public class PostnatalCareController {
 	 * @objective Replace PNC History Data entered by Nurse with the details entered
 	 *            by Doctor
 	 */
-
-	@CrossOrigin
 	@Operation(summary = "Update PNC beneficiary history in doctor screen")
 	@PostMapping(value = { "/update/historyScreen" })
 	public String updateHistoryNurse(@RequestBody String requestObj) {
@@ -378,8 +363,6 @@ public class PostnatalCareController {
 	 * @objective Replace PNC Vital Data entered by Nurse with the details entered
 	 *            by Doctor
 	 */
-
-	@CrossOrigin
 	@Operation(summary = "Update PNC beneficiary vitals in doctor screen")
 	@PostMapping(value = { "/update/vitalScreen" })
 	public String updateVitalNurse(@RequestBody String requestObj) {
@@ -410,8 +393,6 @@ public class PostnatalCareController {
 	 * @objective Replace PNC Examination Data entered by Nurse with the details
 	 *            entered by Doctor
 	 */
-
-	@CrossOrigin
 	@Operation(summary = "Update PNC beneficiary examination data in doctor screen")
 	@PostMapping(value = { "/update/examinationScreen" })
 	public String updateGeneralOPDExaminationNurse(@RequestBody String requestObj) {
@@ -435,7 +416,6 @@ public class PostnatalCareController {
 		return response.toString();
 	}
 
-	@CrossOrigin
 	@Operation(summary = "Update PNC doctor data")
 	@PostMapping(value = { "/update/doctorData" })
 	public String updatePNCDoctorData(@RequestBody String requestObj,
@@ -459,8 +439,9 @@ public class PostnatalCareController {
 
 		return response.toString();
 	}
+
 	private JsonObject parseJsonRequest(String requestObj) {
-        JsonElement jsonElement = JsonParser.parseString(requestObj);
-        return jsonElement.getAsJsonObject();
-    }
+		JsonElement jsonElement = JsonParser.parseString(requestObj);
+		return jsonElement.getAsJsonObject();
+	}
 }

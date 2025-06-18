@@ -24,7 +24,7 @@ package com.iemr.mmu.controller.snomedct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.CrossOrigin;
+
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -39,7 +39,6 @@ import com.iemr.mmu.utils.response.OutputResponse;
 import io.swagger.annotations.ApiParam;
 import io.swagger.v3.oas.annotations.Operation;
 
-
 @RequestMapping(value = "/snomed")
 @RestController
 public class SnomedController {
@@ -52,7 +51,6 @@ public class SnomedController {
 		this.snomedService = snomedService;
 	}
 
-	@CrossOrigin
 	@Operation(summary = "Retrives Snomed CT record")
 	@PostMapping(value = "/getSnomedCTRecord", consumes = "application/json", produces = "application/json", headers = "Authorization")
 	public String getSnomedCTRecord(@ApiParam(value = "{\"term\":\"String\"}") @RequestBody String request) {
@@ -78,7 +76,6 @@ public class SnomedController {
 		return output.toString();
 	}
 
-	@CrossOrigin
 	@Operation(summary = "Retrives Snomed CT record list")
 	@PostMapping(value = "/getSnomedCTRecordList", consumes = "application/json", produces = "application/json", headers = "Authorization")
 	public String getSnomedCTRecordList(@ApiParam(value = "{\"term\":\"String\"}") @RequestBody String request) {

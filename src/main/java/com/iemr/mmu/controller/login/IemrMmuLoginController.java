@@ -25,7 +25,7 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.CrossOrigin;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -55,7 +55,6 @@ public class IemrMmuLoginController {
 		this.iemrMmuLoginServiceImpl = iemrMmuLoginServiceImpl;
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Get user service point van details")
 	@GetMapping(value = "/getUserServicePointVanDetails", consumes = "application/json", produces = "application/json")
 	public String getUserServicePointVanDetails(@RequestBody String comingRequest) {
@@ -75,7 +74,6 @@ public class IemrMmuLoginController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Get service point villages")
 	@PostMapping(value = "/getServicepointVillages", consumes = "application/json", produces = "application/json")
 	public String getServicepointVillages(@RequestBody String comingRequest) {
@@ -95,7 +93,6 @@ public class IemrMmuLoginController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Get user van details")
 	@PostMapping(value = "/getUserVanSpDetails", consumes = "application/json", produces = "application/json")
 	public String getUserVanSpDetails(@RequestBody String comingRequest) {
@@ -120,7 +117,6 @@ public class IemrMmuLoginController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Get van master data")
 	@GetMapping(value = "/getVanMaster/{psmID}", consumes = "application/json", produces = "application/json")
 	public String getVanMaster(@PathVariable("psmID") Integer psmID) {

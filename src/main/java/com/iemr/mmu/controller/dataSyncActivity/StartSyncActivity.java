@@ -25,7 +25,7 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.CrossOrigin;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -44,7 +44,6 @@ import io.swagger.v3.oas.annotations.Operation;
 /***
  * @purpose Class used for data sync from van-to-server & server-to-van
  */
-@CrossOrigin
 @RestController
 @RequestMapping(value = "/dataSyncActivity", headers = "Authorization", consumes = "application/json", produces = "application/json")
 public class StartSyncActivity {
@@ -59,7 +58,6 @@ public class StartSyncActivity {
 	private static final String GROUP_ID = "groupID";
 	private static final String PROVIDER_SERVICE_MAP_ID = "providerServiceMapID";
 
-	@CrossOrigin()
 	@Operation(summary = "Start data sync from van to Server")
 	@PostMapping(value = { "/van-to-server" })
 	public String dataSyncToServer(@RequestBody String requestOBJ,
@@ -71,10 +69,10 @@ public class StartSyncActivity {
 			if (obj.has("user") && obj.get("user") != null && obj.has("vanID") && obj.get("vanID") != null) {
 				String s = uploadDataToServerImpl.getDataToSyncToServer(obj.getInt("vanID"), obj.getString("user"),
 						serverAuthorization);
-//				if (s != null)
-					response.setResponse(s);
-//				else
-//					response.setError(5000, "Error in data sync");
+				// if (s != null)
+				response.setResponse(s);
+				// else
+				// response.setError(5000, "Error in data sync");
 			} else {
 				response.setError(5000, "Invalid request, Either of groupID or user is invalid or null");
 			}
@@ -85,7 +83,6 @@ public class StartSyncActivity {
 		return response.toStringWithSerialization();
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Get data sync group details")
 	@GetMapping(value = { "/getSyncGroupDetails" })
 	public String getSyncGroupDetails() {
@@ -106,7 +103,6 @@ public class StartSyncActivity {
 	/**
 	 * @return Masters download in van from central server
 	 */
-	@CrossOrigin()
 	@Operation(summary = "Data sync master download")
 	@PostMapping(value = { "/startMasterDownload" })
 	public String startMasterDownload(@RequestBody String requestOBJ,
@@ -139,7 +135,6 @@ public class StartSyncActivity {
 		return response.toString();
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Data sync master download progress check")
 	@GetMapping(value = { "/checkMastersDownloadProgress" })
 	public String checkMastersDownloadProgress() {
@@ -153,7 +148,6 @@ public class StartSyncActivity {
 		return response.toString();
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Get van details for master download")
 	@GetMapping(value = { "/getVanDetailsForMasterDownload" })
 	public String getVanDetailsForMasterDownload() {
@@ -171,7 +165,6 @@ public class StartSyncActivity {
 		return response.toString();
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Call central API to generate beneficiary id and import to local")
 	@PostMapping(value = { "/callCentralAPIToGenerateBenIDAndimportToLocal" })
 	public String callCentralAPIToGenerateBenIDAndimportToLocal(@RequestBody String requestOBJ,
@@ -196,7 +189,6 @@ public class StartSyncActivity {
 		return response.toString();
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Call central API to download transaction data to local")
 	@PostMapping(value = { "/downloadTransactionToLocal" })
 	public String downloadTransactionToLocal(@RequestBody String requestOBJ,
