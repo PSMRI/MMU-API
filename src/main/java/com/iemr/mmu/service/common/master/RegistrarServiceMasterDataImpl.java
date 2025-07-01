@@ -222,10 +222,10 @@ public class RegistrarServiceMasterDataImpl implements RegistrarServiceMasterDat
 		return new Gson().toJson(returnBenFlowOBJ);
 	}
 
-	public String getBenImageFromIdentityAPI(String Authorization, String comingRequest) throws Exception {
+	public String getBenImageFromIdentityAPI(String Authorization, String comingRequest, String token) throws Exception {
 		String returnOBJ = null;
 		RestTemplate restTemplate = new RestTemplate();
-		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(comingRequest, Authorization);
+		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(comingRequest, Authorization, token);
 		ResponseEntity<String> response = restTemplate.exchange(getBenImageFromIdentity, HttpMethod.POST, request,
 				String.class);
 		// if()

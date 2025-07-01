@@ -82,12 +82,12 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 	@Autowired
 	private CookieUtil cookieUtil;
 
-	public int downloadTransactionalData(int vanID, String ServerAuthorization) throws Exception {
+	public int downloadTransactionalData(int vanID, String ServerAuthorization, String token) throws Exception {
 		JSONObject obj;
 		for (int i = 0; i < 5; i++) {
 			switch (i) {
 			case 0: {
-				obj = downloadDataFromCentral("db_iemr", "t_indent", vanID, ServerAuthorization);
+				obj = downloadDataFromCentral("db_iemr", "t_indent", vanID, ServerAuthorization, token);
 				List<Long> ids = new ArrayList<Long>();
 				Indent[] indentArr = InputMapper.gson(1).fromJson(String.valueOf(obj.get("data")), Indent[].class, 1);
 				List<Indent> indentList = Arrays.asList(indentArr);
@@ -109,13 +109,13 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 					}
 					indentRepo.saveAll(indentList);
 
-					int updateFlag = updateProcessedFlagToCentral("db_iemr", "t_indent", ids, ServerAuthorization);
+					int updateFlag = updateProcessedFlagToCentral("db_iemr", "t_indent", ids, ServerAuthorization, token);
 				}
 
 				break;
 			}
 			case 1: {
-				obj = downloadDataFromCentral("db_iemr", "t_indentorder", vanID, ServerAuthorization);
+				obj = downloadDataFromCentral("db_iemr", "t_indentorder", vanID, ServerAuthorization, token);
 				List<Long> ids = new ArrayList<Long>();
 				IndentOrder[] indentOrderArr = InputMapper.gson(1).fromJson(String.valueOf(obj.get("data")),
 						IndentOrder[].class, 1);
@@ -136,12 +136,12 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 						indentOrder.setProcessed("P");
 					}
 					indentOrderRepo.saveAll(indentOrderList);
-					int updateFlag = updateProcessedFlagToCentral("db_iemr", "t_indentorder", ids, ServerAuthorization);
+					int updateFlag = updateProcessedFlagToCentral("db_iemr", "t_indentorder", ids, ServerAuthorization, token);
 				}
 				break;
 			}
 			case 2: {
-				obj = downloadDataFromCentral("db_iemr", "t_indentissue", vanID, ServerAuthorization);
+				obj = downloadDataFromCentral("db_iemr", "t_indentissue", vanID, ServerAuthorization, token);
 				List<Long> ids = new ArrayList<Long>();
 				IndentIssue[] indentIssueArr = InputMapper.gson(1).fromJson(String.valueOf(obj.get("data")),
 						IndentIssue[].class, 1);
@@ -164,12 +164,12 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 					}
 					indentIssueRepo.saveAll(indentIssueList);
 
-					int updateFlag = updateProcessedFlagToCentral("db_iemr", "t_indentissue", ids, ServerAuthorization);
+					int updateFlag = updateProcessedFlagToCentral("db_iemr", "t_indentissue", ids, ServerAuthorization, token);
 				}
 				break;
 			}
 			case 3: {
-				obj = downloadDataFromCentral("db_iemr", "t_stocktransfer", vanID, ServerAuthorization);
+				obj = downloadDataFromCentral("db_iemr", "t_stocktransfer", vanID, ServerAuthorization, token);
 				List<Long> ids = new ArrayList<Long>();
 				T_StockTransfer[] stockTransferArr = InputMapper.gson(1).fromJson(String.valueOf(obj.get("data")),
 						T_StockTransfer[].class, 1);
@@ -192,12 +192,12 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 					stockTransferRepo.saveAll(stockTransferList);
 
 					int updateFlag = updateProcessedFlagToCentral("db_iemr", "t_stocktransfer", ids,
-							ServerAuthorization);
+							ServerAuthorization, token);
 				}
 				break;
 			}
 			case 4: {
-				obj = downloadDataFromCentral("db_iemr", "t_itemstockentry", vanID, ServerAuthorization);
+				obj = downloadDataFromCentral("db_iemr", "t_itemstockentry", vanID, ServerAuthorization, token);
 				List<Long> ids = new ArrayList<Long>();
 				ItemStockEntry[] itemStockEntryArr = InputMapper.gson(1).fromJson(String.valueOf(obj.get("data")),
 						ItemStockEntry[].class, 1);
@@ -220,7 +220,7 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 					itemStockEntryRepo.saveAll(itemStockEntryList);
 
 					int updateFlag = updateProcessedFlagToCentral("db_iemr", "t_itemstockentry", ids,
-							ServerAuthorization);
+							ServerAuthorization, token);
 				}
 				break;
 			}
@@ -235,7 +235,7 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 	}
 
 	private JSONObject downloadDataFromCentral(String schemaName, String tableName, int vanID,
-			String ServerAuthorization) throws Exception {
+			String ServerAuthorization, String token) throws Exception {
 
 		Integer facilityID = masterVanRepo.getFacilityID(vanID);
 		if (facilityID != null) {
@@ -244,7 +244,7 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 			SyncUploadDataDigester syncUploadDataDigester = new SyncUploadDataDigester(schemaName, tableName,
 					facilityID);
 
-			HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(syncUploadDataDigester, ServerAuthorization);
+			HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(syncUploadDataDigester, ServerAuthorization, token);
 			// Call rest-template to call API to download master data for given table
 			ResponseEntity<String> response = restTemplate.exchange(dataSyncTransactionDownloadUrl, HttpMethod.POST,
 					request, String.class);
@@ -262,13 +262,13 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 	}
 
 	private int updateProcessedFlagToCentral(String schemaName, String tableName, List<Long> ids,
-			String ServerAuthorization) throws Exception {
+			String ServerAuthorization, String token) throws Exception {
 
 		int result = 0;
 		RestTemplate restTemplate = new RestTemplate();
 		SyncUploadDataDigester syncUploadDataDigester = new SyncUploadDataDigester(schemaName, tableName, ids);
 
-		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(syncUploadDataDigester, ServerAuthorization);
+		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(syncUploadDataDigester, ServerAuthorization, token);
 		// Call rest-template to call API to download master data for given table
 		ResponseEntity<String> response = restTemplate.exchange(dataSyncProcessedFlagUpdate, HttpMethod.POST, request,
 				String.class);

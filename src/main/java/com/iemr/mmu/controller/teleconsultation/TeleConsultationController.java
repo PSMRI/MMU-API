@@ -35,9 +35,11 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.iemr.mmu.service.tele_consultation.TeleConsultationServiceImpl;
+import com.iemr.mmu.utils.CookieUtil;
 import com.iemr.mmu.utils.response.OutputResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping(value = "/tc", headers = "Authorization", consumes = "application/json", produces = "application/json")
@@ -70,11 +72,13 @@ public class TeleConsultationController {
 	@Operation(summary = "Update beneficiary status based on request")
 	@PostMapping(value = { "/cancel/benTCRequest" })
 	public String updateBeneficiaryStatusToCancelTCRequest(@RequestBody String requestOBJ,
-			@RequestHeader String Authorization) {
+			@RequestHeader String Authorization, HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
 		try {
+			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+			
 			if (requestOBJ != null) {
-				int i = teleConsultationServiceImpl.updateBeneficiaryStatusToCancelTCRequest(requestOBJ, Authorization);
+				int i = teleConsultationServiceImpl.updateBeneficiaryStatusToCancelTCRequest(requestOBJ, Authorization, jwtToken);
 				if (i > 0)
 					response.setResponse("Beneficiary TC request cancelled successfully.");
 				else
