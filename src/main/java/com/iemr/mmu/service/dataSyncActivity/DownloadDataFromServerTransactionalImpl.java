@@ -87,7 +87,7 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 		for (int i = 0; i < 5; i++) {
 			switch (i) {
 			case 0: {
-				obj = downloadDataFromCentral("db_iemr", "t_indent", vanID, ServerAuthorization, token);
+				obj = downloadDataFromCentral("db_iemr_sync", "t_indent", vanID, ServerAuthorization, token);
 				List<Long> ids = new ArrayList<Long>();
 				Indent[] indentArr = InputMapper.gson(1).fromJson(String.valueOf(obj.get("data")), Indent[].class, 1);
 				List<Indent> indentList = Arrays.asList(indentArr);
@@ -109,13 +109,13 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 					}
 					indentRepo.saveAll(indentList);
 
-					int updateFlag = updateProcessedFlagToCentral("db_iemr", "t_indent", ids, ServerAuthorization, token);
+					int updateFlag = updateProcessedFlagToCentral("db_iemr_sync", "t_indent", ids, ServerAuthorization, token);
 				}
 
 				break;
 			}
 			case 1: {
-				obj = downloadDataFromCentral("db_iemr", "t_indentorder", vanID, ServerAuthorization, token);
+				obj = downloadDataFromCentral("db_iemr_sync", "t_indentorder", vanID, ServerAuthorization, token);
 				List<Long> ids = new ArrayList<Long>();
 				IndentOrder[] indentOrderArr = InputMapper.gson(1).fromJson(String.valueOf(obj.get("data")),
 						IndentOrder[].class, 1);
@@ -136,12 +136,12 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 						indentOrder.setProcessed("P");
 					}
 					indentOrderRepo.saveAll(indentOrderList);
-					int updateFlag = updateProcessedFlagToCentral("db_iemr", "t_indentorder", ids, ServerAuthorization, token);
+					int updateFlag = updateProcessedFlagToCentral("db_iemr_sync", "t_indentorder", ids, ServerAuthorization, token);
 				}
 				break;
 			}
 			case 2: {
-				obj = downloadDataFromCentral("db_iemr", "t_indentissue", vanID, ServerAuthorization, token);
+				obj = downloadDataFromCentral("db_iemr_sync", "t_indentissue", vanID, ServerAuthorization, token);
 				List<Long> ids = new ArrayList<Long>();
 				IndentIssue[] indentIssueArr = InputMapper.gson(1).fromJson(String.valueOf(obj.get("data")),
 						IndentIssue[].class, 1);
@@ -164,12 +164,12 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 					}
 					indentIssueRepo.saveAll(indentIssueList);
 
-					int updateFlag = updateProcessedFlagToCentral("db_iemr", "t_indentissue", ids, ServerAuthorization, token);
+					int updateFlag = updateProcessedFlagToCentral("db_iemr_sync", "t_indentissue", ids, ServerAuthorization, token);
 				}
 				break;
 			}
 			case 3: {
-				obj = downloadDataFromCentral("db_iemr", "t_stocktransfer", vanID, ServerAuthorization, token);
+				obj = downloadDataFromCentral("db_iemr_sync", "t_stocktransfer", vanID, ServerAuthorization, token);
 				List<Long> ids = new ArrayList<Long>();
 				T_StockTransfer[] stockTransferArr = InputMapper.gson(1).fromJson(String.valueOf(obj.get("data")),
 						T_StockTransfer[].class, 1);
@@ -191,13 +191,13 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 					}
 					stockTransferRepo.saveAll(stockTransferList);
 
-					int updateFlag = updateProcessedFlagToCentral("db_iemr", "t_stocktransfer", ids,
+					int updateFlag = updateProcessedFlagToCentral("db_iemr_sync", "t_stocktransfer", ids,
 							ServerAuthorization, token);
 				}
 				break;
 			}
 			case 4: {
-				obj = downloadDataFromCentral("db_iemr", "t_itemstockentry", vanID, ServerAuthorization, token);
+				obj = downloadDataFromCentral("db_iemr_sync", "t_itemstockentry", vanID, ServerAuthorization, token);
 				List<Long> ids = new ArrayList<Long>();
 				ItemStockEntry[] itemStockEntryArr = InputMapper.gson(1).fromJson(String.valueOf(obj.get("data")),
 						ItemStockEntry[].class, 1);
@@ -219,7 +219,7 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 					}
 					itemStockEntryRepo.saveAll(itemStockEntryList);
 
-					int updateFlag = updateProcessedFlagToCentral("db_iemr", "t_itemstockentry", ids,
+					int updateFlag = updateProcessedFlagToCentral("db_iemr_sync", "t_itemstockentry", ids,
 							ServerAuthorization, token);
 				}
 				break;

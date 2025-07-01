@@ -27,7 +27,10 @@ import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.json.JSONObject;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.iemr.mmu.data.syncActivity_syncLayer.SyncDownloadMaster;
@@ -36,6 +39,7 @@ import com.iemr.mmu.data.syncActivity_syncLayer.SyncDownloadMaster;
 public class GetMasterDataFromCentralForVanImpl implements GetMasterDataFromCentralForVan {
 	@Autowired
 	private DataSyncRepositoryCentral dataSyncRepositoryCentral;
+	private Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 
 	public String getMasterDataForVan(SyncDownloadMaster obj) throws Exception {
 		List<Map<String, Object>> resultSetList = new ArrayList<>();
@@ -56,6 +60,7 @@ public class GetMasterDataFromCentralForVanImpl implements GetMasterDataFromCent
 	}
 
 	private List<Map<String, Object>> getMasterDataFromGivenTable(SyncDownloadMaster tableDetails) throws Exception {
+		logger.info("ger master data="+ tableDetails.getSchemaName());
 		List<Map<String, Object>> resultSetList = new ArrayList<>();
 		resultSetList = dataSyncRepositoryCentral.getMasterDataFromTable(tableDetails.getSchemaName(),
 				tableDetails.getTableName(), tableDetails.getServerColumnName(), tableDetails.getMasterType(),

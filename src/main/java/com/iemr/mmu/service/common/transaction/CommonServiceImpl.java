@@ -650,7 +650,7 @@ public class CommonServiceImpl implements CommonService {
 		headers.add("Cookie", "Jwttoken=" + jwtTokenFromCookie);
 
 		// get TM case sheet by passing TM details
-		ResponseEntity<String> response = restTemplatePost(tmCentralServer, Authorization, new Gson().toJson(tmReqObj));
+		ResponseEntity<String> response = restTemplatePost(tmCentralServer, Authorization, new Gson().toJson(tmReqObj), jwtTokenFromCookie);
 
 		if (response.getStatusCodeValue() == 200 & response.hasBody()) {
 			JsonObject jsnOBJ = getJsonObj(response);
