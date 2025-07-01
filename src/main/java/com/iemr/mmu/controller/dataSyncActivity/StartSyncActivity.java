@@ -38,8 +38,10 @@ import com.iemr.mmu.service.dataSyncActivity.DownloadDataFromServerImpl;
 import com.iemr.mmu.service.dataSyncActivity.DownloadDataFromServerTransactionalImpl;
 import com.iemr.mmu.service.dataSyncActivity.UploadDataToServerImpl;
 import com.iemr.mmu.utils.response.OutputResponse;
+import com.iemr.mmu.utils.CookieUtil;
 
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.http.HttpServletRequest;
 
 /***
  * @purpose Class used for data sync from van-to-server & server-to-van
@@ -62,13 +64,15 @@ public class StartSyncActivity {
 	@PostMapping(value = { "/van-to-server" })
 	public String dataSyncToServer(@RequestBody String requestOBJ,
 			@RequestHeader(value = "Authorization") String authorization,
-			@RequestHeader(value = "ServerAuthorization") String serverAuthorization) {
+			@RequestHeader(value = "ServerAuthorization") String serverAuthorization, HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
 		try {
+			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+
 			JSONObject obj = new JSONObject(requestOBJ);
 			if (obj.has("user") && obj.get("user") != null && obj.has("vanID") && obj.get("vanID") != null) {
 				String s = uploadDataToServerImpl.getDataToSyncToServer(obj.getInt("vanID"), obj.getString("user"),
-						serverAuthorization);
+						serverAuthorization, jwtToken);
 				// if (s != null)
 				response.setResponse(s);
 				// else
@@ -107,13 +111,17 @@ public class StartSyncActivity {
 	@PostMapping(value = { "/startMasterDownload" })
 	public String startMasterDownload(@RequestBody String requestOBJ,
 			@RequestHeader(value = "Authorization") String authorization,
-			@RequestHeader(value = "ServerAuthorization") String serverAuthorization) {
+			@RequestHeader	(value = "ServerAuthorization") String serverAuthorization, HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
 		try {
+
+			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+
+
 			JSONObject obj = new JSONObject(requestOBJ);
 			if (obj.has("vanID") && obj.get("vanID") != null && obj.has(PROVIDER_SERVICE_MAP_ID)
 					&& obj.get(PROVIDER_SERVICE_MAP_ID) != null) {
-				String s = downloadDataFromServerImpl.downloadMasterDataFromServer(serverAuthorization,
+				String s = downloadDataFromServerImpl.downloadMasterDataFromServer(serverAuthorization,jwtToken,
 						obj.getInt("vanID"), obj.getInt(PROVIDER_SERVICE_MAP_ID));
 				if (s != null) {
 					if (s.equalsIgnoreCase("inProgress"))
@@ -169,11 +177,12 @@ public class StartSyncActivity {
 	@PostMapping(value = { "/callCentralAPIToGenerateBenIDAndimportToLocal" })
 	public String callCentralAPIToGenerateBenIDAndimportToLocal(@RequestBody String requestOBJ,
 			@RequestHeader(value = "Authorization") String authorization,
-			@RequestHeader(value = "ServerAuthorization") String serverAuthorization) {
+			@RequestHeader(value = "ServerAuthorization") String serverAuthorization, HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
 		try {
+			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
 			int i = downloadDataFromServerImpl.callCentralAPIToGenerateBenIDAndimportToLocal(requestOBJ, authorization,
-					serverAuthorization);
+					serverAuthorization, jwtToken);
 			if (i == 0) {
 				response.setError(5000, "Error while generating UNIQUE_ID at central server");
 			} else {
@@ -192,13 +201,14 @@ public class StartSyncActivity {
 	@Operation(summary = "Call central API to download transaction data to local")
 	@PostMapping(value = { "/downloadTransactionToLocal" })
 	public String downloadTransactionToLocal(@RequestBody String requestOBJ,
-			@RequestHeader(value = "ServerAuthorization") String serverAuthorization) {
+			@RequestHeader(value = "ServerAuthorization") String serverAuthorization, HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
 		try {
+			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
 			JSONObject obj = new JSONObject(requestOBJ);
 			if (obj.has("vanID") && obj.get("vanID") != null) {
 				int i = downloadDataFromServerTransactionalImpl.downloadTransactionalData(obj.getInt("vanID"),
-						serverAuthorization);
+						serverAuthorization, jwtToken);
 
 				if (i > 0)
 					response.setResponse("Success");

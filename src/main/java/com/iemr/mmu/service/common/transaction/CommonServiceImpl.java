@@ -650,7 +650,7 @@ public class CommonServiceImpl implements CommonService {
 		headers.add("Cookie", "Jwttoken=" + jwtTokenFromCookie);
 
 		// get TM case sheet by passing TM details
-		ResponseEntity<String> response = restTemplatePost(tmCentralServer, Authorization, new Gson().toJson(tmReqObj));
+		ResponseEntity<String> response = restTemplatePost(tmCentralServer, Authorization, new Gson().toJson(tmReqObj), jwtTokenFromCookie);
 
 		if (response.getStatusCodeValue() == 200 & response.hasBody()) {
 			JsonObject jsnOBJ = getJsonObj(response);
@@ -822,16 +822,16 @@ public class CommonServiceImpl implements CommonService {
 
 	}
 
-	public ResponseEntity<String> restTemplatePost(String URL, String authorization, String reqObj) {
+	public ResponseEntity<String> restTemplatePost(String URL, String authorization, String reqObj, String token) {
 		RestTemplate restTemplate = new RestTemplate();
-		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(reqObj, authorization);
+		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(reqObj, authorization,"");
 		ResponseEntity<String> response = restTemplate.exchange(URL, HttpMethod.POST, request, String.class);
 		return response;
 	}
 
 	public ResponseEntity<String> restTemplateGet(String URL, String authorization) {
 		RestTemplate restTemplate = new RestTemplate();
-		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity("", authorization);
+		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity("", authorization, token);
 		ResponseEntity<String> response = restTemplate.exchange(URL, HttpMethod.GET, request, String.class);
 		return response;
 	}

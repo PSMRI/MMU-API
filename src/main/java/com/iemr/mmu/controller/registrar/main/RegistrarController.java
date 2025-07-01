@@ -45,11 +45,13 @@ import com.iemr.mmu.service.common.master.RegistrarServiceMasterDataImpl;
 import com.iemr.mmu.service.common.transaction.CommonNurseServiceImpl;
 import com.iemr.mmu.service.nurse.NurseServiceImpl;
 import com.iemr.mmu.service.registrar.RegistrarServiceImpl;
+import com.iemr.mmu.utils.CookieUtil;
 import com.iemr.mmu.utils.mapper.InputMapper;
 import com.iemr.mmu.utils.response.OutputResponse;
 
 import io.swagger.annotations.ApiParam;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping(value = "/registrar", headers = "Authorization", consumes = "application/json", produces = "application/json")
@@ -227,11 +229,12 @@ public class RegistrarController {
 	@Operation(summary = "Search beneficiary for beneficiary id or beneficiary phone no")
 	@PostMapping(value = { "/quickSearchNew" })
 	public String quickSearchNew(@RequestBody String requestObj,
-			@RequestHeader(value = "Authorization") String authorization) {
+			@RequestHeader(value = "Authorization") String authorization, HttpServletRequest request) {
 		String searchList = null;
 		OutputResponse response = new OutputResponse();
 		try {
-			searchList = registrarServiceImpl.beneficiaryQuickSearch(requestObj, authorization);
+			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+			searchList = registrarServiceImpl.beneficiaryQuickSearch(requestObj, authorization, jwtToken);
 			if (searchList == null) {
 				response.setError(5000, "Invalid request");
 				return response.toString();
@@ -249,11 +252,12 @@ public class RegistrarController {
 	@Operation(summary = "Search beneficiary advance search new")
 	@PostMapping(value = { "/advanceSearchNew" })
 	public String advanceSearchNew(@RequestBody String requestObj,
-			@RequestHeader(value = "Authorization") String authorization) {
+			@RequestHeader(value = "Authorization") String authorization, HttpServletRequest request) {
 		String searchList = null;
 		OutputResponse response = new OutputResponse();
 		try {
-			searchList = registrarServiceImpl.beneficiaryAdvanceSearch(requestObj, authorization);
+			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+			searchList = registrarServiceImpl.beneficiaryAdvanceSearch(requestObj, authorization, jwtToken);
 			if (searchList == null) {
 				response.setError(5000, "Invalid request");
 				return response.toString();
@@ -301,10 +305,12 @@ public class RegistrarController {
 	@Operation(summary = "Get beneficiary image")
 	@PostMapping(value = { "/getBenImage" })
 	public String getBenImage(@RequestBody String requestObj,
-			@RequestHeader(value = "Authorization") String authorization) {
+			@RequestHeader(value = "Authorization") String authorization, HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
 		try {
-			return registrarServiceMasterDataImpl.getBenImageFromIdentityAPI(authorization, requestObj);
+			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+			
+			return registrarServiceMasterDataImpl.getBenImageFromIdentityAPI(authorization, requestObj, jwtToken);
 		} catch (Exception e) {
 			logger.error("Error ben image fetch" + e);
 			response.setError(5000, "Error while getting beneficiary image");
@@ -378,11 +384,12 @@ public class RegistrarController {
 	@Operation(summary = "Register a new beneficiary API")
 	@PostMapping(value = { "/registrarBeneficaryRegistrationNew" })
 	public String registrarBeneficaryRegistrationNew(@RequestBody String comingReq,
-			@RequestHeader(value = "Authorization") String authorization) {
+			@RequestHeader(value = "Authorization") String authorization, HttpServletRequest request) {
 		String s;
 		OutputResponse response = new OutputResponse();
 		try {
-			s = registrarServiceImpl.registerBeneficiary(comingReq, authorization);
+			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+			s = registrarServiceImpl.registerBeneficiary(comingReq, authorization, jwtToken);
 			return s;
 		} catch (Exception e) {
 			logger.error("Error in registration" + e);
@@ -474,11 +481,12 @@ public class RegistrarController {
 	@Operation(summary = "Beneficiary edit, save or submit")
 	@PostMapping(value = { "/update/BeneficiaryUpdate" })
 	public String beneficiaryUpdate(@RequestBody String requestOBJ,
-			@RequestHeader(value = "Authorization") String authorization) {
+			@RequestHeader(value = "Authorization") String authorization, HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
 		Integer s = null;
 		try {
-			s = registrarServiceImpl.updateBeneficiary(requestOBJ, authorization);
+			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+			s = registrarServiceImpl.updateBeneficiary(requestOBJ, authorization, jwtToken);
 			if (s != null) {
 				if (s == 1)
 					response.setResponse("Beneficiary details updated successfully");

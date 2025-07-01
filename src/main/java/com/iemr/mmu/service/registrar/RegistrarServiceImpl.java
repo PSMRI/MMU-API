@@ -692,7 +692,7 @@ public class RegistrarServiceImpl implements RegistrarService {
 	}
 
 	// New beneficiary registration with common and identity
-	public String registerBeneficiary(String comingRequest, String Authorization) throws Exception {
+	public String registerBeneficiary(String comingRequest, String Authorization, String token) throws Exception {
 
 		OutputResponse response1 = new OutputResponse();
 		Long beneficiaryRegID = null;
@@ -700,7 +700,7 @@ public class RegistrarServiceImpl implements RegistrarService {
 
 		RestTemplate restTemplate = new RestTemplate();
 		
-		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(comingRequest, Authorization);
+		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(comingRequest, Authorization, token);
 		ResponseEntity<String> response = restTemplate.exchange(registrationUrl, HttpMethod.POST, request,
 				String.class);
 		if (response.getStatusCodeValue() == 200 & response.hasBody()) {
@@ -709,7 +709,6 @@ public class RegistrarServiceImpl implements RegistrarService {
 			beneficiaryRegID = responseOBJ.getJSONObject("data").getLong("beneficiaryRegID");
 			beneficiaryID = responseOBJ.getJSONObject("data").getLong("beneficiaryID");
 			// System.out.println("hello");
-
 			int i = commonBenStatusFlowServiceImpl.createBenFlowRecord(comingRequest, beneficiaryRegID, beneficiaryID);
 			if (i > 0) {
 				if (i == 1)
@@ -724,11 +723,11 @@ public class RegistrarServiceImpl implements RegistrarService {
 	}
 
 	// New beneficiary update api
-	public Integer updateBeneficiary(String comingRequest, String Authorization) throws Exception {
+	public Integer updateBeneficiary(String comingRequest, String Authorization, String token) throws Exception {
 		Integer returnOBJ = null;
 		RestTemplate restTemplate = new RestTemplate();
 		
-		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(comingRequest, Authorization);
+		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(comingRequest, Authorization, token);
 		
 		ResponseEntity<String> response = restTemplate.exchange(beneficiaryEditUrl, HttpMethod.POST, request,
 				String.class);
@@ -744,11 +743,11 @@ public class RegistrarServiceImpl implements RegistrarService {
 	}
 
 	// beneficiary quick search new integrated with common and identity
-	public String beneficiaryQuickSearch(String requestObj, String Authorization) {
+	public String beneficiaryQuickSearch(String requestObj, String Authorization, String token) {
 		String returnOBJ = null;
 		RestTemplate restTemplate = new RestTemplate();
 		JSONObject obj = new JSONObject(requestObj);
-		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestObj, Authorization);
+		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestObj, Authorization, token);
 		if (obj.has("beneficiaryID") && !obj.isNull("beneficiaryID")) {
 			ResponseEntity<String> response = restTemplate.exchange(registrarQuickSearchByIdUrl, HttpMethod.POST,
 					request, String.class);
@@ -768,10 +767,10 @@ public class RegistrarServiceImpl implements RegistrarService {
 	}
 
 	// beneficiary advance search new integrated with common and identity
-	public String beneficiaryAdvanceSearch(String requestObj, String Authorization) {
+	public String beneficiaryAdvanceSearch(String requestObj, String Authorization, String token) {
 		String returnOBJ = null;
 		RestTemplate restTemplate = new RestTemplate();
-		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestObj, Authorization);
+		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestObj, Authorization, token);
 		ResponseEntity<String> response = restTemplate.exchange(registrarAdvanceSearchUrl, HttpMethod.POST, request,
 				String.class);
 

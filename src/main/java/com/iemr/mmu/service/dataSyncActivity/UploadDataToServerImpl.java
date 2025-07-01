@@ -99,10 +99,10 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 	 */
 	// @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = {
 	// Exception.class })
-	public String getDataToSyncToServer(int vanID, String user, String Authorization) throws Exception {
+	public String getDataToSyncToServer(int vanID, String user, String Authorization, String token) throws Exception {
 
 		String syncData = null;
-		syncData = syncIntercepter(vanID, user, Authorization);
+		syncData = syncIntercepter(vanID, user, Authorization, token);
 
 		return syncData;
 	}
@@ -112,10 +112,10 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 	 * @param Authorization
 	 * @return
 	 */
-	public String syncIntercepter(int vanID, String user, String Authorization) throws Exception {
+	public String syncIntercepter(int vanID, String user, String Authorization, String token) throws Exception {
 
 		// sync activity trigger
-		String serverAcknowledgement = startDataSync(vanID, user, Authorization);
+		String serverAcknowledgement = startDataSync(vanID, user, Authorization, token);
 
 		return serverAcknowledgement;
 	}
@@ -127,7 +127,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 	 * @return
 	 */
 
-	private String startDataSync(int vanID, String user, String Authorization) throws Exception {
+	private String startDataSync(int vanID, String user, String Authorization, String token) throws Exception {
 		String serverAcknowledgement = null;
 		List<Map<String, String>> responseStatus = new ArrayList<>();
 		boolean isProgress = false;
@@ -186,8 +186,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 								remainder);
 						serverAcknowledgement = syncDataToServer(vanID, obj.getSchemaName(), obj.getTableName(),
 								obj.getVanAutoIncColumnName(), obj.getServerColumnName(), syncDataBatch, user,
-								Authorization);
-						logger.debug("Server acknowledgement for remaining data: {}", serverAcknowledgement);
+								Authorization, token);
 
 						if (serverAcknowledgement == null || !serverAcknowledgement.contains("success")) {
 							logger.error("Sync failed for remaining data in schema: {}, table: {}", obj.getSchemaName(),
@@ -226,16 +225,13 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 			Map<String, Object> response = new HashMap<>();
 			response.put("response", "Data sync failed");
 			response.put("groupsProgress", responseStatus);
-			logger.debug("Final response: {}",
 					objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(response));
 			return objectMapper.writerWithDefaultPrettyPrinter()
 					.writeValueAsString(Collections.singletonMap("data", response));
 		} else {
 			if ("No data to sync".equals(serverAcknowledgement)) {
-				logger.info("No data to sync across all groups.");
 				return serverAcknowledgement;
 			} else {
-				logger.info("Data successfully synced across all groups.");
 				return "Data successfully synced";
 			}
 		}
@@ -343,12 +339,11 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 	 */
 
 	public String syncDataToServer(int vanID, String schemaName, String tableName, String vanAutoIncColumnName,
-			String serverColumns, List<Map<String, Object>> dataToBesync, String user, String Authorization)
+			String serverColumns, List<Map<String, Object>> dataToBesync, String user, String Authorization, String token)
 			throws Exception {
 		logger.debug(
 				"Entering syncDataToServer with vanID: {}, schemaName: '{}', tableName: '{}', vanAutoIncColumnName: '{}', serverColumns: '{}', user: '{}'",
 				vanID, schemaName, tableName, vanAutoIncColumnName, serverColumns, user);
-
 		RestTemplate restTemplate = new RestTemplate();
 		
 
@@ -371,9 +366,8 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 			dataMap.put("facilityID", facilityID);
 
 		String requestOBJ = gson.toJson(dataMap);
-		logger.debug("Serialized request object: {}", requestOBJ);
 
-		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestOBJ, Authorization);
+		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestOBJ, Authorization,token);
 		logger.info("Before Data sync upload Url" + dataSyncUploadUrl);
 		ResponseEntity<String> response = restTemplate.exchange(dataSyncUploadUrl, HttpMethod.POST, request,
 				String.class);

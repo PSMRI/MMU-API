@@ -58,76 +58,76 @@ import com.iemr.mmu.utils.mapper.InputMapper;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-@Service
-@PropertySource("classpath:application.properties")
-public class DownloadDataFromServerImpl implements DownloadDataFromServer {
-	private Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
-	// rest URLs from server to download master data for van
-	@Value("${dataSyncDownloadUrl}")
-	private String dataSyncDownloadUrl;
-	@Autowired
-	private SyncDownloadMasterRepo syncDownloadMasterRepo;
-	@Autowired
-	private DataSyncRepository dataSyncRepository;
-	@Autowired
-	private TempVanRepo tempVanRepo;
-	@Autowired
-	private CookieUtil cookieUtil;
+	@Service
+	@PropertySource("classpath:application.properties")
+	public class DownloadDataFromServerImpl implements DownloadDataFromServer {
+		private Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
+		// rest URLs from server to download master data for van
+		@Value("${dataSyncDownloadUrl}")
+		private String dataSyncDownloadUrl;
+		@Autowired
+		private SyncDownloadMasterRepo syncDownloadMasterRepo;
+		@Autowired
+		private DataSyncRepository dataSyncRepository;
+		@Autowired
+		private TempVanRepo tempVanRepo;
+		@Autowired
+		private CookieUtil cookieUtil;
 
-	// ben gen URL
-	@Value("${benGenUrlCentral}")
-	private String benGenUrlCentral;
+		// ben gen URL
+		@Value("${benGenUrlCentral}")
+		private String benGenUrlCentral;
 
-	// ben import URL
-	@Value("${benImportUrlLocal}")
-	private String benImportUrlLocal;
+		// ben import URL
+		@Value("${benImportUrlLocal}")
+		private String benImportUrlLocal;
 
-	private static int progressCounter = 0;
-	private static int totalCounter = 0;
-	private static StringBuilder failedMasters;
-
-
-//	private static int successCounter;
-	private static int failedCounter;
-//	private static int downloadProgress;
+		private static int progressCounter = 0;
+		private static int totalCounter = 0;
+		private static StringBuilder failedMasters;
 
 
-	/**
-	 * 
-	 * @return
-	 * @throws Exception
-	 *             Masters download in van from central server
-	 */
-	public String downloadMasterDataFromServer(String ServerAuthorization, Integer vanID, Integer psmID)
-			throws Exception {
+	//	private static int successCounter;
+		private static int failedCounter;
+	//	private static int downloadProgress;
 
-		if (totalCounter != progressCounter) {
-			return "inProgress";
-		} 
 
-		String successFlag = " Master download started ";
+		/**
+		 * 
+		 * @return
+		 * @throws Exception
+		 *             Masters download in van from central server
+		 */
+		public String downloadMasterDataFromServer(String ServerAuthorization, String jwtToken, Integer vanID, Integer psmID)
+				throws Exception {
 
-		ArrayList<SyncDownloadMaster> downloadMasterList = syncDownloadMasterRepo.getDownloadTables();
+			if (totalCounter != progressCounter) {
+				return "inProgress";
+			} 
 
-		totalCounter = downloadMasterList.size();
-		progressCounter = 0;
+			String successFlag = " Master download started ";
 
-		failedMasters = new StringBuilder();
-//		successCounter = 0;
-		failedCounter = 0;
+			ArrayList<SyncDownloadMaster> downloadMasterList = syncDownloadMasterRepo.getDownloadTables();
 
-		final ExecutorService threadPool = Executors.newFixedThreadPool(3);
-		threadPool.submit(new Callable<String>() {
-			@Override
-			public String call() {
+			totalCounter = downloadMasterList.size();
+			progressCounter = 0;
 
-				if (downloadMasterList != null && downloadMasterList.size() > 0) {
-					for (SyncDownloadMaster table : downloadMasterList) {
-						try {
-							table.setVanID(vanID);
-							table.setProviderServiceMapID(psmID);
+			failedMasters = new StringBuilder();
+	//		successCounter = 0;
+			failedCounter = 0;
 
-							int i = downloadDataFromServer(table, ServerAuthorization);
+			final ExecutorService threadPool = Executors.newFixedThreadPool(3);
+			threadPool.submit(new Callable<String>() {
+				@Override
+				public String call() {
+
+					if (downloadMasterList != null && downloadMasterList.size() > 0) {
+						for (SyncDownloadMaster table : downloadMasterList) {
+		try {
+			table.setVanID(vanID);
+			table.setProviderServiceMapID(psmID);
+
+							int i = downloadDataFromServer(table, ServerAuthorization, jwtToken);
 							if (i > 0) {
 								// successCounter++;
 							} else {
@@ -149,49 +149,49 @@ public class DownloadDataFromServerImpl implements DownloadDataFromServer {
 				return "Master download completed";
 			}
 
-		});
+			});
 
-		// if (downloadMasterList != null && downloadMasterList.size() > 0) {
-		// for (SyncDownloadMaster table : downloadMasterList) {
-		// try {
-		// table.setVanID(vanID);
-		// table.setProviderServiceMapID(psmID);
-		//
-		// int i = downloadDataFromServer(table, ServerAuthorization);
-		// if (i > 0) {
-		// successCounter++;
-		// } else {
-		// failedCounter++;
-		// failedMasters.append(table.getTableName() + " | ");
-		// logger.error("Download failed for " + table.getSchemaName() + "." +
-		// table.getTableName());
-		// }
-		// } catch (Exception e) {
-		// failedCounter++;
-		// failedMasters.append(table.getTableName() + " | ");
-		// logger.error("Download failed for " + table.getSchemaName() + "." +
-		// table.getTableName()
-		// + ". Exception : " + e);
-		// }
-		//
-		// progressCounter++;
-		// }
-		// }
-		return successFlag;
-	}
+			// if (downloadMasterList != null && downloadMasterList.size() > 0) {
+			// for (SyncDownloadMaster table : downloadMasterList) {
+			// try {
+			// table.setVanID(vanID);
+			// table.setProviderServiceMapID(psmID);
+			//
+			// int i = downloadDataFromServer(table, ServerAuthorization);
+			// if (i > 0) {
+			// successCounter++;
+			// } else {
+			// failedCounter++;
+			// failedMasters.append(table.getTableName() + " | ");
+			// logger.error("Download failed for " + table.getSchemaName() + "." +
+			// table.getTableName());
+			// }
+			// } catch (Exception e) {
+			// failedCounter++;
+			// failedMasters.append(table.getTableName() + " | ");
+			// logger.error("Download failed for " + table.getSchemaName() + "." +
+			// table.getTableName()
+			// + ". Exception : " + e);
+			// }
+			//
+			// progressCounter++;
+			// }
+			// }
+			return successFlag;
+		}
 
-	private int downloadDataFromServer(SyncDownloadMaster syncDownloadMaster, String ServerAuthorization)
-			throws Exception {
-		int successFlag = 0;
+		private int downloadDataFromServer(SyncDownloadMaster syncDownloadMaster,String ServerAuthorization, String jwtToken)
+				throws Exception {
+			int successFlag = 0;
+			// initializing RestTemplate
+			RestTemplate restTemplate = new RestTemplate();
+			// Provide the required second argument, e.g., an empty string or appropriate authorization token
+			HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(syncDownloadMaster, ServerAuthorization, jwtToken);
+			// Call rest-template to call API to download master data for given table
+			ResponseEntity<String> response = restTemplate.exchange(dataSyncDownloadUrl, HttpMethod.POST, request,
+					String.class);
 
-		// initializing RestTemplate
-		RestTemplate restTemplate = new RestTemplate();
-		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(syncDownloadMaster, ServerAuthorization);
-		// Call rest-template to call API to download master data for given table
-		ResponseEntity<String> response = restTemplate.exchange(dataSyncDownloadUrl, HttpMethod.POST, request,
-				String.class);
-
-		// Check if API call is success
+			// Check if API call is success
 		if (response != null && response.hasBody()) {
 			JSONObject obj = new JSONObject(response.getBody());
 			if (obj != null && obj.has("data") && obj.has("statusCode") && obj.getInt("statusCode") == 200) {
@@ -329,11 +329,11 @@ public class DownloadDataFromServerImpl implements DownloadDataFromServer {
 
 
 	public int callCentralAPIToGenerateBenIDAndimportToLocal(String requestOBJ, String Authorization,
-			String ServerAuthorization) throws Exception {
+			String ServerAuthorization, String token) throws Exception {
 		int i = 0;
 		// Rest template
 		RestTemplate restTemplate = new RestTemplate();
-		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestOBJ, Authorization);
+		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestOBJ, Authorization,token);
 		// Call rest-template to call central API to generate UNIQUE ID at central
 		ResponseEntity<String> response = restTemplate.exchange(benGenUrlCentral, HttpMethod.POST, request,
 				String.class);
@@ -342,7 +342,7 @@ public class DownloadDataFromServerImpl implements DownloadDataFromServer {
 			JSONObject obj = new JSONObject(response.getBody());
 			if (obj != null && obj.has("data") && obj.has("statusCode") && obj.getInt("statusCode") == 200) {
 				// Consume the response from API and call local identity api to save data
-				HttpEntity<Object> request1 = RestTemplateUtil.createRequestEntity(obj.get("data").toString(), Authorization);
+				HttpEntity<Object> request1 = RestTemplateUtil.createRequestEntity(obj.get("data").toString(), Authorization, token);
 				i = 1;
 				// Call rest-template to call central API to generate UNIQUE ID at central
 				ResponseEntity<String> response1 = restTemplate.exchange(benImportUrlLocal, HttpMethod.POST, request1,
@@ -355,9 +355,9 @@ public class DownloadDataFromServerImpl implements DownloadDataFromServer {
 					}
 				}
 
+				}
 			}
-		}
 
-		return i;
+			return i;
+		}
 	}
-}
