@@ -115,6 +115,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 	public String syncIntercepter(int vanID, String user, String Authorization, String token) throws Exception {
 
 		// sync activity trigger
+		
 		String serverAcknowledgement = startDataSync(vanID, user, Authorization, token);
 
 		return serverAcknowledgement;
@@ -167,7 +168,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 								BATCH_SIZE);
 						serverAcknowledgement = syncDataToServer(vanID, obj.getSchemaName(), obj.getTableName(),
 								obj.getVanAutoIncColumnName(), obj.getServerColumnName(), syncDataBatch, user,
-								Authorization);
+								Authorization, token);
 						logger.debug("Server acknowledgement for batch {}: {}", i, serverAcknowledgement);
 
 						if (serverAcknowledgement == null || !serverAcknowledgement.contains("success")) {
@@ -225,7 +226,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 			Map<String, Object> response = new HashMap<>();
 			response.put("response", "Data sync failed");
 			response.put("groupsProgress", responseStatus);
-					objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(response));
+					objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(response);
 			return objectMapper.writerWithDefaultPrettyPrinter()
 					.writeValueAsString(Collections.singletonMap("data", response));
 		} else {

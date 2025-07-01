@@ -666,7 +666,7 @@ public class CommonServiceImpl implements CommonService {
 					int specialistUserID = jsnOBJ.getAsJsonObject("data").getAsJsonObject("BeneficiaryData")
 							.get("tCSpecialistUserID").getAsInt();
 					ResponseEntity<String> responseSign = restTemplateGet(specialistSign + "/" + specialistUserID,
-							Authorization);
+							Authorization, jwtTokenFromCookie);
 					JsonObject signJsonResponse = getJsonObj(responseSign);
 					if (signJsonResponse.get("statusCode").getAsLong() == 200) {
 						// adding sign response to array
@@ -719,7 +719,7 @@ public class CommonServiceImpl implements CommonService {
 		MultiValueMap<String, String> headers = new LinkedMultiValueMap<String, String>();
 		headers.add("Cookie", "Jwttoken=" + jwtTokenFromCookie);
 
-		ResponseEntity<String> response = restTemplatePost(mmuCentralServer, authCentralServer, mmuBenFlowReq);
+		ResponseEntity<String> response = restTemplatePost(mmuCentralServer, authCentralServer, mmuBenFlowReq, jwtTokenFromCookie);
 
 		if (response.getStatusCodeValue() == 200 & response.hasBody()) {
 
@@ -824,12 +824,12 @@ public class CommonServiceImpl implements CommonService {
 
 	public ResponseEntity<String> restTemplatePost(String URL, String authorization, String reqObj, String token) {
 		RestTemplate restTemplate = new RestTemplate();
-		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(reqObj, authorization,"");
+		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(reqObj, authorization, token);
 		ResponseEntity<String> response = restTemplate.exchange(URL, HttpMethod.POST, request, String.class);
 		return response;
 	}
 
-	public ResponseEntity<String> restTemplateGet(String URL, String authorization) {
+	public ResponseEntity<String> restTemplateGet(String URL, String authorization, String token) {
 		RestTemplate restTemplate = new RestTemplate();
 		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity("", authorization, token);
 		ResponseEntity<String> response = restTemplate.exchange(URL, HttpMethod.GET, request, String.class);
