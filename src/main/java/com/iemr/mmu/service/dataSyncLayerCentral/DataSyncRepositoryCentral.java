@@ -204,5 +204,11 @@ public class DataSyncRepositoryCentral {
 		return resultSetList;
 	}
 
+public List<Map<String, Object>> getBatchForBenDetails(String schema, String table, String columnNames,
+            String whereClause, int limit, int offset) {
+        jdbcTemplate = getJdbcTemplate();
+        String query = "SELECT " + columnNames + " FROM " + schema + "." + table + whereClause + " LIMIT ? OFFSET ?";
+        return jdbcTemplate.queryForList(query, limit, offset);
+    }
 	// End of Data Download Repository
 }
