@@ -39,7 +39,7 @@ public interface BenPersonalHabitRepo extends CrudRepository<BenPersonalHabit, I
 	@Query("select benVisitID from BenPersonalHabit a where a.beneficiaryRegID = :beneficiaryRegID order by benVisitID desc")
 	public ArrayList<Long> getBenLastVisitID(@Param("beneficiaryRegID") Long beneficiaryRegID);
 
-	@Query("select Date(createdDate), dietaryType, physicalActivityType, tobaccoUseStatus, tobaccoUseType, otherTobaccoUseType, numberperDay, "
+	@Query("select Date(createdDate), dietaryType, physicalActivityType, tobaccoUseStatus, tobaccoUseType, otherTobaccoUseType, numberperDay, numberperWeek, "
 			+ "Date(tobaccoUseDuration), riskySexualPracticesStatus from BenPersonalHabit a where a.beneficiaryRegID = :beneficiaryRegID "
 			+ "AND tobaccoUseStatus is not null AND deleted = false order by createdDate DESC")
 	public ArrayList<Object[]> getBenPersonalTobaccoHabitDetail(@Param("beneficiaryRegID") Long beneficiaryRegID);
@@ -51,7 +51,7 @@ public interface BenPersonalHabitRepo extends CrudRepository<BenPersonalHabit, I
 	public ArrayList<Object[]> getBenPersonalAlcoholHabitDetail(@Param("beneficiaryRegID") Long beneficiaryRegID);
 
 	@Query(" SELECT beneficiaryRegID, benVisitID, providerServiceMapID, dietaryType, physicalActivityType, tobaccoUseStatus, tobaccoUseTypeID, "
-			+ "tobaccoUseType, otherTobaccoUseType, numberperDay, tobaccoUseDuration, alcoholIntakeStatus, alcoholTypeID, "
+			+ "tobaccoUseType, otherTobaccoUseType, numberperDay, numberperWeek, tobaccoUseDuration, alcoholIntakeStatus, alcoholTypeID, "
 			+ "alcoholType, otherAlcoholType, alcoholIntakeFrequency, avgAlcoholConsumption, alcoholDuration, riskySexualPracticesStatus, createdDate, visitCode   "
 			+ "FROM BenPersonalHabit WHERE beneficiaryRegID = :benRegID AND deleted = false AND visitCode = :visitCode")
 	public ArrayList<Object[]> getBenPersonalHabitDetail(@Param("benRegID") Long benRegID,

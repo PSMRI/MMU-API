@@ -94,6 +94,10 @@ public class BenPersonalHabit {
 	private Short numberperDay;
 
 	@Expose
+	@Column(name = "NumberperWeek")
+	private Short numberperWeek;
+
+	@Expose
 	@Column(name = "TobaccoUseDuration")
 	private Timestamp tobaccoUseDuration;
 
@@ -333,8 +337,16 @@ public class BenPersonalHabit {
 		return numberperDay;
 	}
 
+	public Short getNumberperWeek() {
+		return numberperWeek;
+	}
+
 	public void setNumberperDay(Short numberperDay) {
 		this.numberperDay = numberperDay;
+	}
+
+	public void setNumberperWeek(Short numberperWeek) {
+		this.numberperWeek = numberperWeek;
 	}
 
 	public Timestamp getTobaccoUseDuration() {
@@ -579,6 +591,9 @@ public class BenPersonalHabit {
 					if (null != tobaccoInfo.get("numberperDay")) {
 						benPersonalHabit.setNumberperDay(new Short(tobaccoInfo.get("numberperDay")));
 					}
+					if (null != tobaccoInfo.get("numberperWeek")) {
+						benPersonalHabit.setNumberperWeek(new Short(tobaccoInfo.get("numberperWeek")));
+					}
 					timePeriodUnit = (String) tobaccoInfo.get("durationUnit");
 
 					if (null != tobaccoInfo.get("duration")) {
@@ -634,7 +649,7 @@ public class BenPersonalHabit {
 	}
 
 	public BenPersonalHabit(Date createdDate, String dietaryType, String physicalActivityType, String tobaccoUseStatus,
-			String tobaccoUseType, String otherTobaccoUseType, Short numberperDay, Date tobaccoUseDuration,
+			String tobaccoUseType, String otherTobaccoUseType, Short numberperDay, Short numberperWeek, Date tobaccoUseDuration,
 			Character riskySexualPracticesStatus) {
 		super();
 		this.captureDate = createdDate;
@@ -650,6 +665,8 @@ public class BenPersonalHabit {
 		} else if(riskySexualPracticesStatus !=null && riskySexualPracticesStatus == '1') {
 			this.riskySexualPracticeStatus = "Yes";
 		}
+		this.numberperWeek = numberperWeek;
+
 	}
 
 	public BenPersonalHabit(Date createdDate, String dietaryType, String physicalActivityType,
@@ -687,7 +704,7 @@ public class BenPersonalHabit {
 	}
 
 	public BenPersonalHabit(String tobaccoUseTypeID, String tobaccoUseType, String otherTobaccoUseType,
-			Short numberperDay, Timestamp tobaccoUseDuration, String alcoholTypeID, String alcoholType,
+			Short numberperDay, Short numberperWeek, Timestamp tobaccoUseDuration, String alcoholTypeID, String alcoholType,
 			String otherAlcoholType, String alcoholIntakeFrequency, String avgAlcoholConsumption,
 			Timestamp alcoholDuration, Timestamp createdDate, Long visitCode) {
 		super();
@@ -704,6 +721,7 @@ public class BenPersonalHabit {
 		this.alcoholDuration = alcoholDuration;
 		this.createdDate = createdDate;
 		this.visitCode = visitCode;
+		this.numberperWeek = numberperWeek;
 	}
 
 	public static BenPersonalHabit getPersonalDetails(ArrayList<Object[]> personalHistoryDetails) {
@@ -712,15 +730,15 @@ public class BenPersonalHabit {
 			Object[] obj1 = personalHistoryDetails.get(0);
 
 			personalDetails = new BenPersonalHabit((Long) obj1[0], (Long) obj1[1], (Integer) obj1[2], (String) obj1[3],
-					(String) obj1[4], (String) obj1[5], (String) obj1[11], (Character) obj1[18]);
+					(String) obj1[4], (String) obj1[5], (String) obj1[12], (Character) obj1[19]);
 
 			ArrayList<Map<String, String>> tobaccoList = new ArrayList<Map<String, String>>();
 			ArrayList<Map<String, String>> alcoholList = new ArrayList<Map<String, String>>();
 			for (Object[] obj : personalHistoryDetails) {
 				BenPersonalHabit personalHabits = new BenPersonalHabit((String) obj[6], (String) obj[7],
-						(String) obj[8], (Short) obj[9], (Timestamp) obj[10], (String) obj[12], (String) obj[13],
-						(String) obj[14], (String) obj[15], (String) obj[16], (Timestamp) obj[17], (Timestamp) obj[19],
-						(Long) obj[20]);
+						(String) obj[8], (Short) obj[9], (Short) obj[10], (Timestamp) obj[11], (String) obj[13], (String) obj[14],
+						(String) obj[15], (String) obj[16], (String) obj[17], (Timestamp) obj[18], (Timestamp) obj[20],
+						(Long) obj[21]);
 
 				Map<String, Object> timePeriod = null;
 				// Integer timePeriodAgo = null;
@@ -732,7 +750,10 @@ public class BenPersonalHabit {
 					if (null != personalHabits.getNumberperDay()) {
 						tobaccoInfo.put("numberperDay", personalHabits.getNumberperDay().toString());
 					}
-
+					if (null != personalHabits.getNumberperWeek()) {
+						tobaccoInfo.put("numberperWeek", personalHabits.getNumberperWeek().toString());
+					}
+				
 					timePeriod = Utility.convertTimeToWords(personalHabits.getTobaccoUseDuration(),
 							personalHabits.getCreatedDate());
 
