@@ -29,7 +29,7 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.CrossOrigin;
+
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -45,13 +45,14 @@ import com.iemr.mmu.service.common.master.RegistrarServiceMasterDataImpl;
 import com.iemr.mmu.service.common.transaction.CommonNurseServiceImpl;
 import com.iemr.mmu.service.nurse.NurseServiceImpl;
 import com.iemr.mmu.service.registrar.RegistrarServiceImpl;
+import com.iemr.mmu.utils.CookieUtil;
 import com.iemr.mmu.utils.mapper.InputMapper;
 import com.iemr.mmu.utils.response.OutputResponse;
 
 import io.swagger.annotations.ApiParam;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.http.HttpServletRequest;
 
-@CrossOrigin
 @RestController
 @RequestMapping(value = "/registrar", headers = "Authorization", consumes = "application/json", produces = "application/json")
 /**
@@ -81,7 +82,6 @@ public class RegistrarController {
 		this.nurseServiceImpl = nurseServiceImpl;
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Get registrar worklist data")
 	@PostMapping(value = { "/registrarWorkListData" })
 	public String getRegistrarWorkList(@ApiParam(value = "{\"spID\": \"Integer\"}") @RequestBody String comingRequest)
@@ -100,7 +100,6 @@ public class RegistrarController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Search for the beneficiary by beneficiary id")
 	@PostMapping(value = { "/quickSearch" })
 	public String quickSearchBeneficiary(
@@ -119,7 +118,6 @@ public class RegistrarController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Search for the beneficiary based on provided data")
 	@PostMapping(value = { "/advanceSearch" })
 	public String advanceSearch(
@@ -140,7 +138,6 @@ public class RegistrarController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Get beneficiary details of given beneficiary registration id")
 	@PostMapping(value = { "/get/benDetailsByRegID" })
 	public String getBenDetailsByRegID(
@@ -170,7 +167,6 @@ public class RegistrarController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Get beneficiary details")
 	@PostMapping(value = { "/get/beneficiaryDetails" })
 	public String getBeneficiaryDetails(
@@ -205,7 +201,6 @@ public class RegistrarController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Get beneficiary image")
 	@PostMapping(value = { "/get/beneficiaryImage" })
 	public String getBeneficiaryImage(
@@ -226,20 +221,20 @@ public class RegistrarController {
 			}
 			logger.info("getBeneficiaryDetails response :" + response);
 		} catch (Exception e) {
-			logger.error("Error caused by {} ",e.getMessage());
+			logger.error("Error caused by {} ", e.getMessage());
 		}
 		return response.toString();
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Search beneficiary for beneficiary id or beneficiary phone no")
 	@PostMapping(value = { "/quickSearchNew" })
 	public String quickSearchNew(@RequestBody String requestObj,
-			@RequestHeader(value = "Authorization") String authorization) {
+			@RequestHeader(value = "Authorization") String authorization, HttpServletRequest request) {
 		String searchList = null;
 		OutputResponse response = new OutputResponse();
 		try {
-			searchList = registrarServiceImpl.beneficiaryQuickSearch(requestObj, authorization);
+			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+			searchList = registrarServiceImpl.beneficiaryQuickSearch(requestObj, authorization, jwtToken);
 			if (searchList == null) {
 				response.setError(5000, "Invalid request");
 				return response.toString();
@@ -254,15 +249,15 @@ public class RegistrarController {
 
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Search beneficiary advance search new")
 	@PostMapping(value = { "/advanceSearchNew" })
 	public String advanceSearchNew(@RequestBody String requestObj,
-			@RequestHeader(value = "Authorization") String authorization) {
+			@RequestHeader(value = "Authorization") String authorization, HttpServletRequest request) {
 		String searchList = null;
 		OutputResponse response = new OutputResponse();
 		try {
-			searchList = registrarServiceImpl.beneficiaryAdvanceSearch(requestObj, authorization);
+			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+			searchList = registrarServiceImpl.beneficiaryAdvanceSearch(requestObj, authorization, jwtToken);
 			if (searchList == null) {
 				response.setError(5000, "Invalid request");
 				return response.toString();
@@ -277,7 +272,6 @@ public class RegistrarController {
 
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Get beneficiary details for left side panel of given beneficiary registration id")
 	@PostMapping(value = { "/get/benDetailsByRegIDForLeftPanelNew" })
 	public String getBenDetailsForLeftSidePanelByRegID(
@@ -308,14 +302,15 @@ public class RegistrarController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Get beneficiary image")
 	@PostMapping(value = { "/getBenImage" })
 	public String getBenImage(@RequestBody String requestObj,
-			@RequestHeader(value = "Authorization") String authorization) {
+			@RequestHeader(value = "Authorization") String authorization, HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
 		try {
-			return registrarServiceMasterDataImpl.getBenImageFromIdentityAPI(authorization, requestObj);
+			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+			
+			return registrarServiceMasterDataImpl.getBenImageFromIdentityAPI(authorization, requestObj, jwtToken);
 		} catch (Exception e) {
 			logger.error("Error ben image fetch" + e);
 			response.setError(5000, "Error while getting beneficiary image");
@@ -324,7 +319,6 @@ public class RegistrarController {
 
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Register a new beneficiary")
 	@PostMapping(value = { "/registrarBeneficaryRegistration" })
 	public String createBeneficiary(
@@ -387,15 +381,15 @@ public class RegistrarController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Register a new beneficiary API")
 	@PostMapping(value = { "/registrarBeneficaryRegistrationNew" })
 	public String registrarBeneficaryRegistrationNew(@RequestBody String comingReq,
-			@RequestHeader(value = "Authorization") String authorization) {
+			@RequestHeader(value = "Authorization") String authorization, HttpServletRequest request) {
 		String s;
 		OutputResponse response = new OutputResponse();
 		try {
-			s = registrarServiceImpl.registerBeneficiary(comingReq, authorization);
+			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+			s = registrarServiceImpl.registerBeneficiary(comingReq, authorization, jwtToken);
 			return s;
 		} catch (Exception e) {
 			logger.error("Error in registration" + e);
@@ -405,7 +399,6 @@ public class RegistrarController {
 
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Update registered beneficiary data")
 	@PostMapping(value = { "/update/BeneficiaryDetails" })
 	public String updateBeneficiary(
@@ -488,11 +481,12 @@ public class RegistrarController {
 	@Operation(summary = "Beneficiary edit, save or submit")
 	@PostMapping(value = { "/update/BeneficiaryUpdate" })
 	public String beneficiaryUpdate(@RequestBody String requestOBJ,
-			@RequestHeader(value = "Authorization") String authorization) {
+			@RequestHeader(value = "Authorization") String authorization, HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
 		Integer s = null;
 		try {
-			s = registrarServiceImpl.updateBeneficiary(requestOBJ, authorization);
+			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+			s = registrarServiceImpl.updateBeneficiary(requestOBJ, authorization, jwtToken);
 			if (s != null) {
 				if (s == 1)
 					response.setResponse("Beneficiary details updated successfully");
@@ -508,7 +502,6 @@ public class RegistrarController {
 		return response.toString();
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Get master data for registrar")
 	@PostMapping(value = { "/registrarMasterData" })
 	public String masterDataForRegistration(

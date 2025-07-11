@@ -24,7 +24,7 @@ package com.iemr.mmu.controller.dataSyncLayerCentral;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.CrossOrigin;
+
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -40,11 +40,9 @@ import com.iemr.mmu.utils.response.OutputResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 
-
 /***
  * @operation Class used for data sync from van-to-server & server-to-van
  */
-@CrossOrigin
 @RestController
 @RequestMapping(value = "/dataSync", headers = "Authorization")
 public class MMUDataSyncVanToServer {
@@ -57,7 +55,6 @@ public class MMUDataSyncVanToServer {
 	@Autowired
 	private FetchDownloadDataImpl fetchDownloadDataImpl;
 
-	@CrossOrigin()
 	@Operation(summary = "Sync data from van-to-server")
 	@PostMapping(value = { "/van-to-server" }, consumes = "application/json", produces = "application/json")
 	public String dataSyncToServer(@RequestBody String requestOBJ,
@@ -76,7 +73,6 @@ public class MMUDataSyncVanToServer {
 		return response.toString();
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Download data from server-to-van")
 	@PostMapping(value = { "/server-to-van" }, consumes = "application/json", produces = "application/json")
 	public String dataDownloadFromServer(@RequestBody SyncDownloadMaster syncDownloadMaster,
@@ -99,9 +95,9 @@ public class MMUDataSyncVanToServer {
 		return response.toStringWithSerialization();
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Download data from server-to-van transactional")
-	@PostMapping(value = { "/server-to-van-transactional" }, consumes = "application/json", produces = "application/json")
+	@PostMapping(value = {
+			"/server-to-van-transactional" }, consumes = "application/json", produces = "application/json")
 	public String dataDownloadFromServerTransactional(@RequestBody SyncUploadDataDigester syncUploadDataDigester,
 			@RequestHeader(value = "Authorization") String Authorization) {
 		OutputResponse response = new OutputResponse();
@@ -126,9 +122,9 @@ public class MMUDataSyncVanToServer {
 		return response.toStringWithSerialization();
 	}
 
-	@CrossOrigin()
 	@Operation(summary = "Update processed flag at central post successfull download")
-	@PostMapping(value = { "/updateProcessedFlagPostDownload" }, consumes = "application/json", produces = "application/json")
+	@PostMapping(value = {
+			"/updateProcessedFlagPostDownload" }, consumes = "application/json", produces = "application/json")
 	public String updateProcessedFlagPostDownload(@RequestBody SyncUploadDataDigester syncUploadDataDigester,
 			@RequestHeader(value = "Authorization") String Authorization) {
 		OutputResponse response = new OutputResponse();

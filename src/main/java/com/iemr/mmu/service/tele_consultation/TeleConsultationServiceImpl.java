@@ -129,7 +129,7 @@ public class TeleConsultationServiceImpl implements TeleConsultationService {
 	}
 
 	@Transactional(rollbackFor = Exception.class)
-	public int updateBeneficiaryStatusToCancelTCRequest(String requestOBJ, String Authorization) throws Exception {
+	public int updateBeneficiaryStatusToCancelTCRequest(String requestOBJ, String Authorization, String token) throws Exception {
 		int resultFlag = 0;
 		JsonObject requestJson = new JsonObject();
 		JsonParser jsnParser = new JsonParser();
@@ -143,7 +143,7 @@ public class TeleConsultationServiceImpl implements TeleConsultationService {
 				&& !requestJson.get("userID").isJsonNull()) {
 
 			int i = cancelSlotForTCCancel(requestJson.get("userID").getAsInt(), requestJson.get("benRegID").getAsLong(),
-					requestJson.get("visitCode").getAsLong(), Authorization);
+					requestJson.get("visitCode").getAsLong(), Authorization, token);
 
 			int j = beneficiaryFlowStatusRepo.updateBeneficiaryStatusToCancelRequest(
 					requestJson.get("benflowID").getAsLong(), requestJson.get("benRegID").getAsLong(),
@@ -165,7 +165,7 @@ public class TeleConsultationServiceImpl implements TeleConsultationService {
 		return resultFlag;
 	}
 
-	public int cancelSlotForTCCancel(int userID, long benRegID, long visitCode, String Authorization) throws Exception {
+	public int cancelSlotForTCCancel(int userID, long benRegID, long visitCode, String Authorization, String token) throws Exception {
 		String fromTime = "";
 		Long duration = null;
 		int returnOBJ = 0;
@@ -197,7 +197,7 @@ public class TeleConsultationServiceImpl implements TeleConsultationService {
 			String requestOBJ = OutputMapper.gson().toJson(obj);
 
 			RestTemplate restTemplate = new RestTemplate();
-			HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestOBJ, Authorization);
+			HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestOBJ, Authorization, token);
 			ResponseEntity<String> response = restTemplate.exchange(tcSpecialistSlotCancel, HttpMethod.POST, request,
 					String.class);
 
