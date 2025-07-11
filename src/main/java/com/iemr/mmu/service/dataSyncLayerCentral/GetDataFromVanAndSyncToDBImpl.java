@@ -60,10 +60,16 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
 		 */
 		String syncTableName = syncUploadDataDigester.getTableName();
 		if (syncUploadDataDigester != null && syncTableName != null
-				&& syncTableName.equalsIgnoreCase("m_beneficiaryregidmapping")) {
+				&& (syncTableName.equalsIgnoreCase("m_beneficiaryregidmapping"))) {
 			String s = update_M_BeneficiaryRegIdMapping_for_provisioned_benID(syncUploadDataDigester);
 			return s;
-		} else {
+		} 
+			else if (syncUploadDataDigester != null && syncTableName != null
+				&& (syncTableName.equalsIgnoreCase("i_beneficiarydetails"))) {
+			String s = update_I_BeneficiaryDetails_for_processed_in_batches(syncUploadDataDigester);
+			return s;
+		}
+		else {
 
 			List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
 
@@ -289,6 +295,72 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
 		queryBuilder.append(" VanID = ? ");
 		String query = queryBuilder.toString();
 		return query;
+	}
+
+	public String update_I_BeneficiaryDetails_for_processed_in_batches(
+			SyncUploadDataDigester syncUploadDataDigester) {
+
+		String returnOBJ = null;
+		List<Object[]> syncData = new ArrayList<>();
+		Object[] objArr;
+
+		String query = getQueryFor_I_BeneficiaryDetails(syncUploadDataDigester.getSchemaName(),
+				syncUploadDataDigester.getTableName());
+
+		int limit = 1000;
+		int offset = 0;
+
+		while (true) {
+			List<Map<String, Object>> batch = dataSyncRepositoryCentral.getBatchForBenDetails(
+					syncUploadDataDigester.getSchemaName(),
+					syncUploadDataDigester.getTableName(),
+					syncUploadDataDigester.getServerColumns(),
+					" WHERE Processed != 'P' AND VanID IS NOT NULL ",
+					limit,
+					offset);
+
+			if (batch == null || batch.isEmpty()) {
+				break;
+			}
+
+			for (Map<String, Object> map : batch) {
+				if (map.get("BeneficiaryDetailsId") != null && map.get("VanID") != null) {
+					objArr = new Object[3];
+					objArr[0] = String.valueOf(syncUploadDataDigester.getSyncedBy());
+					objArr[1] = String.valueOf(map.get("BeneficiaryDetailsId"));
+					objArr[2] = String.valueOf(map.get("VanID"));
+					syncData.add(objArr);
+				}
+			}
+
+			offset += limit;
+		}
+
+		int[] i = null;
+		if (syncData != null && syncData.size() > 0) {
+			i = dataSyncRepositoryCentral.syncDataToCentralDB(syncUploadDataDigester.getSchemaName(),
+					syncUploadDataDigester.getTableName(), ServerColumnsNotRequired, query, syncData);
+
+			if (i.length == syncData.size()) {
+				returnOBJ = "data sync passed";
+			}
+		} else {
+			returnOBJ = "data sync passed";
+		}
+
+		return returnOBJ;
+	}
+
+	private String getQueryFor_I_BeneficiaryDetails(String schemaName, String tableName) {
+		StringBuilder queryBuilder = new StringBuilder(" UPDATE ");
+		queryBuilder.append(schemaName + "." + tableName);
+		queryBuilder.append(" SET ");
+		queryBuilder.append("Processed = 'P', SyncedDate = now(), SyncedBy = ? ");
+		queryBuilder.append(" WHERE ");
+		queryBuilder.append("BeneficiaryDetailsId = ? ");
+		queryBuilder.append(" AND ");
+		queryBuilder.append("VanID = ? ");
+		return queryBuilder.toString();
 	}
 
 	public String getQueryToInsertDataToServerDB(String schemaName, String tableName, String serverColumns) {
