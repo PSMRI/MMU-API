@@ -204,70 +204,12 @@ public class DataSyncRepositoryCentral {
 		return resultSetList;
 	}
 
-// public List<Map<String, Object>> getBatchForBenDetails(String schema, String table, String columnNames,
-//             String whereClause, int limit, int offset) {
-//         jdbcTemplate = getJdbcTemplate();
-//         String query = "SELECT " + columnNames + " FROM " + schema + "." + table + whereClause + " LIMIT ? OFFSET ?";
-//         return jdbcTemplate.queryForList(query, limit, offset);
-//     }
-
-
-public List<Map<String, Object>> getBatchForBenDetails(
-    String schema,
-    String table,
-    String columnNames,
-    String whereClause,
-    int limit,
-    int offset
-) {
-    // Validate identifiers
-    validateIdentifier(schema, "Schema");
-    validateIdentifier(table, "Table");
-    validateColumnNames(columnNames);
-    validateWhereClause(whereClause);
-
-    StringBuilder queryBuilder = new StringBuilder();
-    queryBuilder.append("SELECT ")
-                .append(columnNames)
-                .append(" FROM ")
-                .append(schema).append(".").append(table);
-
-    if (whereClause != null && !whereClause.trim().isEmpty()) {
-        queryBuilder.append(" ").append(whereClause);
+public List<Map<String, Object>> getBatchForBenDetails(String schema, String table, String columnNames,
+            String whereClause, int limit, int offset) {
+        jdbcTemplate = getJdbcTemplate();
+        String query = "SELECT " + columnNames + " FROM " + schema + "." + table + whereClause + " LIMIT ? OFFSET ?";
+        return jdbcTemplate.queryForList(query, limit, offset);
     }
-
-    queryBuilder.append(" LIMIT ? OFFSET ?");
-
-    String query = queryBuilder.toString();
-
-    List<Map<String, Object>> results = getJdbcTemplate().queryForList(
-        query,
-        limit,
-        offset
-    );
-
-    return results;
-}
-
-private void validateIdentifier(String identifier, String type) {
-    if (identifier == null || !identifier.matches("^[a-zA-Z0-9_]+$")) {
-        throw new IllegalArgumentException(type + " contains invalid characters: " + identifier);
-    }
-}
-
-private void validateColumnNames(String columnNames) {
-    if (columnNames == null || !columnNames.matches("^[a-zA-Z0-9_, ]+$")) {
-        throw new IllegalArgumentException("Column names contain invalid characters: " + columnNames);
-    }
-}
-
-private void validateWhereClause(String whereClause) {
-    if (whereClause != null && !whereClause.trim().isEmpty()) {
-        if (!whereClause.matches("^[a-zA-Z0-9_ ='<>()!]+$")) {
-            throw new IllegalArgumentException("Where clause contains invalid characters: " + whereClause);
-        }
-    }
-}
 
 
 	// End of Data Download Repository
