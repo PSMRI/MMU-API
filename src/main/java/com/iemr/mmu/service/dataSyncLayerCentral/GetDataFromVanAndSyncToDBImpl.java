@@ -49,8 +49,8 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
 	@Autowired
 	private DataSyncRepositoryCentral dataSyncRepositoryCentral;
 
-	public String syncDataToServer(String requestOBJ, String Authorization) throws Exception {
-
+	public String syncDataToServer(String requestOBJ, String Authorization, String token) throws Exception {
+System.out.println("Test: token from sync data="+token);
 		// feed sync request
 		ObjectMapper mapper = new ObjectMapper();
 		SyncUploadDataDigester syncUploadDataDigester = mapper.readValue(requestOBJ, SyncUploadDataDigester.class);
