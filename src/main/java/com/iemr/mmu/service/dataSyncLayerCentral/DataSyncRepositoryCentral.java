@@ -68,20 +68,25 @@ public class DataSyncRepositoryCentral {
         Object[] queryParams = params.toArray();
 
         logger.debug("Checking record existence query: {} with params: {}", query, Arrays.toString(queryParams));
+        System.out.println("Checking record existence query: " + query + " with params: " + Arrays.toString(queryParams));
 
         try {
             List<Map<String, Object>> resultSet = jdbcTemplate.queryForList(query, queryParams);
             if (resultSet != null && !resultSet.isEmpty()) {
+                System.out.println("Record found for table " + tableName + ": VanSerialNo=" + vanSerialNo + ", VanID=" + vanID);
                 logger.debug("Record found for table {}: VanSerialNo={}, VanID={}", tableName, vanSerialNo, vanID);
                 return 1;
             } else {
+                System.out.println("No record found for table " + tableName + ": VanSerialNo=" + vanSerialNo + ", VanID=" + vanID);
                 logger.debug("No record found for table {}: VanSerialNo={}, VanID={}", tableName, vanSerialNo, vanID);
                 return 0;
             }
         } catch (org.springframework.dao.EmptyResultDataAccessException e) {
+            System.out.println("No record found (EmptyResultDataAccessException) for table " + tableName + ": VanSerialNo=" + vanSerialNo + ", VanID=" + vanID);
             logger.debug("No record found (EmptyResultDataAccessException) for table {}: VanSerialNo={}, VanID={}", tableName, vanSerialNo, vanID);
             return 0;
         } catch (Exception e) {
+            System.out.println("Database error during checkRecordIsAlreadyPresentOrNot for table " + tableName + ": VanSerialNo=" + vanSerialNo + ", VanID=" + vanID);
             logger.error("Database error during checkRecordIsAlreadyPresentOrNot for table {}: VanSerialNo={}, VanID={}. Error: {}", tableName, vanSerialNo, vanID, e.getMessage(), e);
             throw new RuntimeException("Failed to check record existence: " + e.getMessage(), e); // Re-throw or handle as appropriate
         }
@@ -93,14 +98,17 @@ public class DataSyncRepositoryCentral {
         jdbcTemplate = getJdbcTemplate();
         logger.info("Executing batch operation for table: {}. Query type: {}. Number of records: {}", tableName, query.startsWith("INSERT") ? "INSERT" : "UPDATE", syncDataList.size());
         logger.debug("Query: {}", query);
-
+System.out.println("Executing batch operation for table: " + tableName + ". Query type: " + (query.startsWith("INSERT") ? "INSERT" : "UPDATE") + ". Number of records: " + syncDataList.size());
         try {
             // Start batch insert/update
             int[] i = jdbcTemplate.batchUpdate(query, syncDataList);
+            System.out.println("Batch operation completed for table " + tableName + ". Results: " + Arrays.toString(i));
             logger.info("Batch operation completed for table {}. Results: {}", tableName, Arrays.toString(i));
             return i;
         } catch (Exception e) {
             logger.error("Exception during batch update for table {}: {}", tableName, e.getMessage(), e);
+            System.out.println("Exception during batch update for table " + tableName + ": " + e.getMessage());
+            // Log the error with detailed information
             // Re-throw the exception to be handled by the service layer, so specific errors can be captured.
             throw new RuntimeException("Batch sync failed for table " + tableName + ": " + e.getMessage(), e);
         }
@@ -142,6 +150,9 @@ public class DataSyncRepositoryCentral {
         logger.info("Select query central: {}", finalQuery);
         logger.info("Last Downloaded Date: {}", lastDownloadDate);
         logger.info("Query Params: {}", params);
+        System.out.println("Select query central: " + finalQuery);
+        System.out.println("Last Downloaded Date: " + lastDownloadDate);
+        System.out.println("Query Params: " + params);
 
         try {
             if (params.isEmpty()) {
@@ -150,10 +161,11 @@ public class DataSyncRepositoryCentral {
                 resultSetList = jdbcTemplate.queryForList(finalQuery, params.toArray());
             }
         } catch (Exception e) {
+            System.out.println("Error fetching master data from table " + table + ": " + e.getMessage());
             logger.error("Error fetching master data from table {}: {}", table, e.getMessage(), e);
             throw new RuntimeException("Failed to fetch master data: " + e.getMessage(), e);
         }
-
+System.out.println("Result set Details size: " + resultSetList.size());
         logger.info("Result set Details size: {}", resultSetList.size());
         return resultSetList;
     }
@@ -162,11 +174,13 @@ public class DataSyncRepositoryCentral {
                                                             String whereClause, int limit, int offset) {
         jdbcTemplate = getJdbcTemplate();
         String query = "SELECT " + columnNames + " FROM " + schema + "." + table + whereClause + " LIMIT ? OFFSET ?";
+        System.out.println("Fetching batch for beneficiary details. Query: " + query + ", Limit: " + limit + ", Offset: " + offset);
         logger.debug("Fetching batch for beneficiary details. Query: {}, Limit: {}, Offset: {}", query, limit, offset);
         try {
             return jdbcTemplate.queryForList(query, limit, offset);
         } catch (Exception e) {
             logger.error("Error fetching batch for beneficiary details from table {}: {}", table, e.getMessage(), e);
+            System.out.println("Error fetching batch for beneficiary details from table " + table + ": " + e.getMessage());
             throw new RuntimeException("Failed to fetch batch data: " + e.getMessage(), e);
         }
     }

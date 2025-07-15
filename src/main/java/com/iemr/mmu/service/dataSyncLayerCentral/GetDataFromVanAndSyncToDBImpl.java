@@ -44,11 +44,12 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
 
     public String syncDataToServer(String requestOBJ, String Authorization, String token) throws Exception {
         logger.info("Starting syncDataToServer. Token: {}", token);
-
+System.out.println("Starting syncDataToServer. Token: " + token);
         ObjectMapper mapper = new ObjectMapper();
         SyncUploadDataDigester syncUploadDataDigester = mapper.readValue(requestOBJ, SyncUploadDataDigester.class);
 
         if (syncUploadDataDigester == null || syncUploadDataDigester.getTableName() == null) {
+            System.out.println("Invalid SyncUploadDataDigester object or tableName is null.");
             logger.error("Invalid SyncUploadDataDigester object or tableName is null.");
             return "Error: Invalid sync request.";
         }
@@ -59,16 +60,21 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         if ("m_beneficiaryregidmapping".equalsIgnoreCase(syncTableName)) {
             String result = update_M_BeneficiaryRegIdMapping_for_provisioned_benID(syncUploadDataDigester);
             if ("data sync passed".equals(result)) {
+                System.out.println("Sync successful for m_beneficiaryregidmapping.");
                 return "Sync successful for m_beneficiaryregidmapping.";
             } else {
+                System.out.println("Sync failed for m_beneficiaryregidmapping: " + result);
                 logger.error("Sync failed for m_beneficiaryregidmapping: {}", result);
                 return "Sync failed for m_beneficiaryregidmapping.";
             }
-        } else if ("i_beneficiarydetails".equalsIgnoreCase(syncTableName)) {
+        }  
+        if ("i_beneficiarydetails".equalsIgnoreCase(syncTableName)) {
             String result = update_I_BeneficiaryDetails_for_processed_in_batches(syncUploadDataDigester);
             if ("data sync passed".equals(result)) {
+                System.out.println("Sync successful for i_beneficiarydetails.");
                 return "Sync successful for i_beneficiarydetails.";
             } else {
+                System.out.println("Sync failed for i_beneficiarydetails: " + result);
                 logger.error("Sync failed for i_beneficiarydetails: {}", result);
                 return "Sync failed for i_beneficiarydetails.";
             }
@@ -83,6 +89,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                 boolean foundInGroup = false;
                 for (Map.Entry<Integer, List<String>> entry : TABLE_GROUPS.entrySet()) {
                     if (entry.getValue().contains(syncTableName.toLowerCase())) {
+                        System.out.println("Attempting sync for table '" + syncTableName + "' in Group " + entry.getKey());
                         logger.info("Attempting to sync table '{}' from Group {}", syncTableName, entry.getKey());
                         syncSuccess = syncTablesInGroup(syncUploadDataDigester.getSchemaName(), syncTableName, syncUploadDataDigester);
                         foundInGroup = true;
@@ -90,16 +97,19 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                     }
                 }
                 if (!foundInGroup) {
+                    System.out.println("Table '" + syncTableName + "' not found in any predefined groups. Proceeding with generic sync logic.");
                     logger.warn("Table '{}' not found in any predefined groups. Proceeding with generic sync logic.", syncTableName);
                     syncSuccess = performGenericTableSync(syncUploadDataDigester);
                 }
             } else {
+                System.out.println("No specific table provided in the request. Attempting to sync all tables group by group.");
                 // If no specific table is in the request (e.g., a general sync trigger), iterate through groups
                 logger.info("No specific table provided. Attempting to sync all tables group by group.");
                 for (Map.Entry<Integer, List<String>> entry : TABLE_GROUPS.entrySet()) {
                     Integer groupId = entry.getKey();
                     List<String> tablesInGroup = entry.getValue();
                     logger.info("Starting sync for Group {}", groupId);
+                    System.out.println("Starting sync for Group " + groupId);
                     for (String table : tablesInGroup) {
                         try {
                             // Create a new digester for each table within the group,
@@ -114,15 +124,18 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                             if (!currentTableSyncResult) {
                                 syncSuccess = false;
                                 errorMessage += "Failed to sync table: " + table + " in Group " + groupId + ". ";
+                                System.out.println("Sync failed for table '" + table + "' in Group " + groupId);
                                 logger.error("Sync failed for table '{}' in Group {}. Error: {}", table, groupId, errorMessage);
                                 // Optionally, you can choose to break here or continue to sync other tables in the group/next group
                                 // For now, let's continue to attempt other tables within the group.
                             } else {
+                                System.out.println("Successfully synced table '" + table + "' in Group " + groupId);
                                 logger.info("Successfully synced table: {} in Group {}", table, groupId);
                             }
                         } catch (Exception e) {
                             syncSuccess = false;
                             errorMessage += "Exception during sync for table: " + table + " in Group " + groupId + ": " + e.getMessage() + ". ";
+                            System.out.println("Exception during sync for table '" + table + "' in Group " + groupId + ": " + e.getMessage());
                             logger.error("Exception during sync for table '{}' in Group {}: {}", table, groupId, e.getMessage(), e);
                             // Continue to attempt other tables
                         }
