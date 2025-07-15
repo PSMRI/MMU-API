@@ -36,9 +36,11 @@ import com.iemr.mmu.data.syncActivity_syncLayer.SyncUploadDataDigester;
 import com.iemr.mmu.service.dataSyncLayerCentral.FetchDownloadDataImpl;
 import com.iemr.mmu.service.dataSyncLayerCentral.GetDataFromVanAndSyncToDBImpl;
 import com.iemr.mmu.service.dataSyncLayerCentral.GetMasterDataFromCentralForVanImpl;
+import com.iemr.mmu.utils.CookieUtil;
 import com.iemr.mmu.utils.response.OutputResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.http.HttpServletRequest;
 
 /***
  * @operation Class used for data sync from van-to-server & server-to-van
@@ -58,10 +60,15 @@ public class MMUDataSyncVanToServer {
 	@Operation(summary = "Sync data from van-to-server")
 	@PostMapping(value = { "/van-to-server" }, consumes = "application/json", produces = "application/json")
 	public String dataSyncToServer(@RequestBody String requestOBJ,
-			@RequestHeader(value = "Authorization") String Authorization) {
+			@RequestHeader(value = "Authorization") String Authorization,  HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
+		
+		logger.info("test: vanto server auth="+Authorization);
 		try {
-			String s = getDataFromVanAndSyncToDBImpl.syncDataToServer(requestOBJ, Authorization);
+			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+		logger.info("test: vanto server token="+jwtToken);
+
+			String s = getDataFromVanAndSyncToDBImpl.syncDataToServer(requestOBJ, Authorization, jwtToken);
 			if (s != null)
 				response.setResponse(s);
 			else
