@@ -50,7 +50,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
 	private DataSyncRepositoryCentral dataSyncRepositoryCentral;
 
 	public String syncDataToServer(String requestOBJ, String Authorization, String token) throws Exception {
-System.out.println("Test: token from sync data="+token);
+System.out.println("Test: token from sync data="+ requestOBJ);
 		// feed sync request
 		ObjectMapper mapper = new ObjectMapper();
 		SyncUploadDataDigester syncUploadDataDigester = mapper.readValue(requestOBJ, SyncUploadDataDigester.class);
@@ -59,6 +59,7 @@ System.out.println("Test: token from sync data="+token);
 		 * InputMapper.gson().fromJson(requestOBJ, SyncUploadDataDigester.class);
 		 */
 		String syncTableName = syncUploadDataDigester.getTableName();
+		System.out.println("Test: syncTableName from sync data="+ syncTableName);
 		if (syncUploadDataDigester != null && syncTableName != null
 				&& (syncTableName.equalsIgnoreCase("m_beneficiaryregidmapping"))) {
 			String s = update_M_BeneficiaryRegIdMapping_for_provisioned_benID(syncUploadDataDigester);
@@ -307,7 +308,7 @@ System.out.println("Test: token from sync data="+token);
 		String query = getQueryFor_I_BeneficiaryDetails(syncUploadDataDigester.getSchemaName(),
 				syncUploadDataDigester.getTableName());
 
-		int limit = 1000;
+		int limit = 500;
 		int offset = 0;
 
 		while (true) {
