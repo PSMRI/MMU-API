@@ -710,7 +710,7 @@ public class CSNurseServiceImpl implements CSNurseService {
 	}
 
 	public BeneficiaryVisitDetail getBeneficiaryVisitDetails(Long benRegID, Long visitCode) {
-		List<Objects[]> beneficiaryVisitDetail = benVisitDetailRepo.getBeneficiaryVisitDetails(benRegID, visitCode);
+		List<Object[]> beneficiaryVisitDetail = benVisitDetailRepo.getBeneficiaryVisitDetails(benRegID, visitCode);
 		BeneficiaryVisitDetail beneficiaryVisit = null;
 		if (null != beneficiaryVisitDetail) {
 			for (Object[] obj : beneficiaryVisitDetail) {
