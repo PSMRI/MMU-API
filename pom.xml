@@ -5,7 +5,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.iemr.mmu</groupId>
 	<artifactId>mmu-api</artifactId>
-	<version>3.1.0</version>
+	<version>3.3.0</version>
 	<packaging>war</packaging>
 
 	<name>MMU-API</name>
