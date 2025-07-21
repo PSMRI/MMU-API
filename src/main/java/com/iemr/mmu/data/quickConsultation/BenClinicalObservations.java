@@ -34,7 +34,10 @@ import jakarta.persistence.Transient;
 
 import com.google.gson.annotations.Expose;
 
+import lombok.Data;
+
 @Entity
+@Data
 @Table(name = "t_benclinicalobservation")
 public class BenClinicalObservations {
 	@Id
