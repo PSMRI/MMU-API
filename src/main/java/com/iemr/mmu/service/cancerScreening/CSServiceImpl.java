@@ -977,6 +977,12 @@ public class CSServiceImpl implements CSService {
 						.fromJson(examinationOBJ.get("gynecologicalDetails"), CancerGynecologicalExamination.class);
 				cancerGynecologicalExamination.setBenVisitID(benVisitID);
 				cancerGynecologicalExamination.setVisitCode(benVisitCode);
+
+				if (cancerGynecologicalExamination.getFileIDs() != null) {
+    				cancerGynecologicalExamination.setFilePath(
+        			String.join(",", cancerGynecologicalExamination.getFileIDs()));
+				} 
+
 				Long ID = cSNurseServiceImpl.saveCancerGynecologicalExaminationData(cancerGynecologicalExamination);
 				if (ID != null && ID > 0) {
 					// gynecologicalDetails stored successfully...

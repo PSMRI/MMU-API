@@ -33,9 +33,12 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.gson.annotations.Expose;
+import lombok.Data;
 
 @Entity
+@Data
 @Table(name = "t_cancergynecologicalexamination")
 public class CancerGynecologicalExamination {
 	@Id
@@ -91,6 +94,11 @@ public class CancerGynecologicalExamination {
 	@Expose
 	@Column(name = "RTIOrSTIDetail")
 	private String rTIOrSTIDetail;
+
+	@Expose
+	@Transient
+	@JsonProperty("fileIDs")
+	private List<String> fileIDs;
 
 	@Expose
 	@Column(name = "FilePath")
