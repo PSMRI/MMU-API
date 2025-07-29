@@ -182,6 +182,8 @@ public class DataSyncRepositoryCentral {
         }
 
         try {
+            // Safe dynamic SQL: All dynamic parts (table names, columns, etc.) are validated or hardcoded.
+            // Parameter values are bound safely using prepared statement placeholders (?).
             return jdbcTemplate.queryForList(queryBuilder.toString(), params.toArray());
         } catch (Exception e) {
             logger.error("Error fetching master data: {}", e.getMessage(), e);
@@ -199,7 +201,6 @@ public class DataSyncRepositoryCentral {
         // Safe dynamic SQL: Schema, table, and column names are validated against predefined whitelists.
         // Only trusted values are used in the query string.
         // limit and offset are passed as parameters to prevent SQL injection.
-
         String query = String.format("SELECT %s FROM %s.%s %s LIMIT ? OFFSET ?", columnNames, schema, table, whereClause);
 
         try {
