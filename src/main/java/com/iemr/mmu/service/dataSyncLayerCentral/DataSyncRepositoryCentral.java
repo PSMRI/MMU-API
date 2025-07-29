@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
 import java.sql.Timestamp;
-import java.sql.Statement; // Import Statement for batchUpdate result interpretation
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -37,6 +36,12 @@ public class DataSyncRepositoryCentral {
         jdbcTemplate = getJdbcTemplate();
 
         List<Object> params = new ArrayList<>();
+
+       if (!isValidDatabaseIdentifier(schemaName) || !isValidDatabaseIdentifier(tableName) || !isValidDatabaseIdentifier(vanAutoIncColumnName)) {
+            logger.error("Invalid database identifier detected: schemaName={}, tableName={}, vanAutoIncColumnName={}", schemaName, tableName, vanAutoIncColumnName);
+            throw new IllegalArgumentException("Invalid database identifier provided.");
+        }
+
 
         StringBuilder queryBuilder = new StringBuilder("SELECT ");
         queryBuilder.append(vanAutoIncColumnName);
@@ -92,15 +97,18 @@ public class DataSyncRepositoryCentral {
         }
     }
 
+    // Helper method to validate database identifiers
+    private boolean isValidDatabaseIdentifier(String identifier) {
+        return identifier != null && identifier.matches("^[a-zA-Z_][a-zA-Z0-9_]*$");
+    }
+
     // Method for synchronization of data to central DB
     public int[] syncDataToCentralDB(String schema, String tableName, String serverColumns, String query,
                                      List<Object[]> syncDataList) {
         jdbcTemplate = getJdbcTemplate();
         logger.info("Executing batch operation for table: {}. Query type: {}. Number of records: {}", tableName, query.startsWith("INSERT") ? "INSERT" : "UPDATE", syncDataList.size());
         logger.debug("Query: {}", query);
-System.out.println("Executing batch operation for table: " + tableName + ". Query type: " + (query.startsWith("INSERT") ? "INSERT" : "UPDATE") + ". Number of records: " + syncDataList.size());
         try {
-            // Start batch insert/update
             int[] i = jdbcTemplate.batchUpdate(query, syncDataList);
             System.out.println("Batch operation completed for table " + tableName + ". Results: " + Arrays.toString(i));
             logger.info("Batch operation completed for table {}. Results: {}", tableName, Arrays.toString(i));
@@ -108,8 +116,6 @@ System.out.println("Executing batch operation for table: " + tableName + ". Quer
         } catch (Exception e) {
             logger.error("Exception during batch update for table {}: {}", tableName, e.getMessage(), e);
             System.out.println("Exception during batch update for table " + tableName + ": " + e.getMessage());
-            // Log the error with detailed information
-            // Re-throw the exception to be handled by the service layer, so specific errors can be captured.
             throw new RuntimeException("Batch sync failed for table " + tableName + ": " + e.getMessage(), e);
         }
     }
@@ -120,8 +126,17 @@ System.out.println("Executing batch operation for table: " + tableName + ". Quer
                                                             String masterType, Timestamp lastDownloadDate, Integer vanID, Integer psmID) throws Exception {
         jdbcTemplate = getJdbcTemplate();
         List<Map<String, Object>> resultSetList = new ArrayList<>();
-        StringBuilder baseQueryBuilder = new StringBuilder(" SELECT ").append(columnNames).append(" FROM ").append(schema).append(".").append(table);
         List<Object> params = new ArrayList<>();
+
+        if (!isValidDatabaseIdentifier(schema) || !isValidDatabaseIdentifier(table)) {
+            logger.error("Invalid database identifier detected in getMasterDataFromTable: schema={}, table={}", schema, table);
+            throw new IllegalArgumentException("Invalid database identifier provided.");
+        }
+
+        StringBuilder baseQueryBuilder = new StringBuilder(" SELECT ");
+        baseQueryBuilder.append(columnNames); 
+        baseQueryBuilder.append(" FROM ");
+        baseQueryBuilder.append(schema).append(".").append(table);
 
         if (masterType != null) {
             if (lastDownloadDate != null) {
@@ -147,13 +162,6 @@ System.out.println("Executing batch operation for table: " + tableName + ". Quer
         }
 
         String finalQuery = baseQueryBuilder.toString();
-        logger.info("Select query central: {}", finalQuery);
-        logger.info("Last Downloaded Date: {}", lastDownloadDate);
-        logger.info("Query Params: {}", params);
-        System.out.println("Select query central: " + finalQuery);
-        System.out.println("Last Downloaded Date: " + lastDownloadDate);
-        System.out.println("Query Params: " + params);
-
         try {
             if (params.isEmpty()) {
                 resultSetList = jdbcTemplate.queryForList(finalQuery);
@@ -161,11 +169,9 @@ System.out.println("Executing batch operation for table: " + tableName + ". Quer
                 resultSetList = jdbcTemplate.queryForList(finalQuery, params.toArray());
             }
         } catch (Exception e) {
-            System.out.println("Error fetching master data from table " + table + ": " + e.getMessage());
             logger.error("Error fetching master data from table {}: {}", table, e.getMessage(), e);
             throw new RuntimeException("Failed to fetch master data: " + e.getMessage(), e);
         }
-System.out.println("Result set Details size: " + resultSetList.size());
         logger.info("Result set Details size: {}", resultSetList.size());
         return resultSetList;
     }
@@ -173,17 +179,20 @@ System.out.println("Result set Details size: " + resultSetList.size());
     public List<Map<String, Object>> getBatchForBenDetails(String schema, String table, String columnNames,
                                                             String whereClause, int limit, int offset) {
         jdbcTemplate = getJdbcTemplate();
+
+        if (!isValidDatabaseIdentifier(schema) || !isValidDatabaseIdentifier(table)) {
+            logger.error("Invalid database identifier detected in getBatchForBenDetails: schema={}, table={}", schema, table);
+            throw new IllegalArgumentException("Invalid database identifier provided.");
+        }
+        
         String query = "SELECT " + columnNames + " FROM " + schema + "." + table + whereClause + " LIMIT ? OFFSET ?";
-        System.out.println("Fetching batch for beneficiary details. Query: " + query + ", Limit: " + limit + ", Offset: " + offset);
         logger.debug("Fetching batch for beneficiary details. Query: {}, Limit: {}, Offset: {}", query, limit, offset);
         try {
             return jdbcTemplate.queryForList(query, limit, offset);
         } catch (Exception e) {
             logger.error("Error fetching batch for beneficiary details from table {}: {}", table, e.getMessage(), e);
-            System.out.println("Error fetching batch for beneficiary details from table " + table + ": " + e.getMessage());
             throw new RuntimeException("Failed to fetch batch data: " + e.getMessage(), e);
         }
     }
 
-    // End of Data Download Repository
 }
