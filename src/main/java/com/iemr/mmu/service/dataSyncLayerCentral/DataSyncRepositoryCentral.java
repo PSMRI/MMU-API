@@ -33,6 +33,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 
 @Service
 public class DataSyncRepositoryCentral {
@@ -41,7 +43,6 @@ public class DataSyncRepositoryCentral {
 
     private JdbcTemplate jdbcTemplate;
 
-    // Lazily initialize jdbcTemplate to ensure DataSource is available
     private JdbcTemplate getJdbcTemplate() {
         if (this.jdbcTemplate == null) {
             this.jdbcTemplate = new JdbcTemplate(dataSource);
@@ -50,24 +51,78 @@ public class DataSyncRepositoryCentral {
     }
 
     private Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
-    
-    // Data Upload Repository
+
+    private static final Set<String> VALID_SCHEMAS = new HashSet<>(Arrays.asList("public", "db_iemr_mmu_sync"));
+
+    private static final Set<String> VALID_TABLES = new HashSet<>(Arrays.asList(
+            "m_beneficiaryregidmapping", "i_beneficiaryaccount", "i_beneficiaryaddress", "i_beneficiarycontacts",
+            "i_beneficiarydetails", "i_beneficiaryfamilymapping", "i_beneficiaryidentity", "i_beneficiarymapping",
+            "t_benvisitdetail", "t_phy_anthropometry", "t_phy_vitals", "t_benadherence", "t_anccare", "t_pnccare",
+            "t_ncdscreening", "t_ncdcare", "i_ben_flow_outreach", "t_covid19", "t_idrsdetails", "t_physicalactivity",
+            "t_phy_generalexam", "t_phy_headtotoe", "t_sys_obstetric", "t_sys_gastrointestinal", "t_sys_cardiovascular",
+            "t_sys_respiratory", "t_sys_centralnervous", "t_sys_musculoskeletalsystem", "t_sys_genitourinarysystem",
+            "t_ancdiagnosis", "t_ncddiagnosis", "t_pncdiagnosis", "t_benchefcomplaint", "t_benclinicalobservation",
+            "t_prescription", "t_prescribeddrug", "t_lab_testorder", "t_benreferdetails",
+            "t_lab_testresult", "t_physicalstockentry", "t_patientissue", "t_facilityconsumption", "t_itemstockentry",
+            "t_itemstockexit", "t_benmedhistory", "t_femaleobstetrichistory", "t_benmenstrualdetails",
+            "t_benpersonalhabit", "t_childvaccinedetail1", "t_childvaccinedetail2", "t_childoptionalvaccinedetail",
+            "t_ancwomenvaccinedetail", "t_childfeedinghistory", "t_benallergyhistory", "t_bencomorbiditycondition",
+            "t_benmedicationhistory", "t_benfamilyhistory", "t_perinatalhistory", "t_developmenthistory",
+            "t_cancerfamilyhistory", "t_cancerpersonalhistory", "t_cancerdiethistory", "t_cancerobstetrichistory",
+            "t_cancervitals", "t_cancersignandsymptoms", "t_cancerlymphnode", "t_canceroralexamination",
+            "t_cancerbreastexamination", "t_cancerabdominalexamination", "t_cancergynecologicalexamination",
+            "t_cancerdiagnosis", "t_cancerimageannotation", "i_beneficiaryimage", "t_stockadjustment",
+            "t_stocktransfer", "t_patientreturn", "t_indent", "t_indentissue", "t_indentorder", "t_saitemmapping"
+    ));
+
+  private boolean isValidDatabaseIdentifierCharacter(String identifier) {
+        return identifier != null && identifier.matches("^[a-zA-Z_][a-zA-Z0-9_]*$");
+    }
+
+    private boolean isValidSchemaName(String schemaName) {
+        return VALID_SCHEMAS.contains(schemaName.toLowerCase());
+    }
+
+    private boolean isValidTableName(String tableName) {
+        return VALID_TABLES.contains(tableName.toLowerCase());
+    }
+
+    private boolean isValidColumnNamesList(String columnNames) {
+        if (columnNames == null || columnNames.trim().isEmpty()) {
+            return false;
+        }
+        String[] individualColumns = columnNames.split(",");
+        for (String col : individualColumns) {
+            if (!isValidDatabaseIdentifierCharacter(col.trim())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public int checkRecordIsAlreadyPresentOrNot(String schemaName, String tableName, String vanSerialNo, String vanID,
                                                  String vanAutoIncColumnName, int syncFacilityID) {
         jdbcTemplate = getJdbcTemplate();
 
         List<Object> params = new ArrayList<>();
 
-       if (!isValidDatabaseIdentifier(schemaName) || !isValidDatabaseIdentifier(tableName) || !isValidDatabaseIdentifier(vanAutoIncColumnName)) {
-            logger.error("Invalid database identifier detected: schemaName={}, tableName={}, vanAutoIncColumnName={}", schemaName, tableName, vanAutoIncColumnName);
-            throw new IllegalArgumentException("Invalid database identifier provided.");
+        if (!isValidSchemaName(schemaName)) {
+            logger.error("Invalid schema name detected: {}", schemaName);
+            throw new IllegalArgumentException("Invalid schema name provided.");
+        }
+        if (!isValidTableName(tableName)) {
+            logger.error("Invalid table name detected: {}", tableName);
+            throw new IllegalArgumentException("Invalid table name provided.");
+        }
+        if (!isValidDatabaseIdentifierCharacter(vanAutoIncColumnName)) { // vanAutoIncColumnName is a single column identifier
+            logger.error("Invalid auto increment column name detected: {}", vanAutoIncColumnName);
+            throw new IllegalArgumentException("Invalid auto increment column name provided.");
         }
 
-
         StringBuilder queryBuilder = new StringBuilder("SELECT ");
-        queryBuilder.append(vanAutoIncColumnName);
+        queryBuilder.append(vanAutoIncColumnName); // Appending validated column name
         queryBuilder.append(" FROM ");
-        queryBuilder.append(schemaName).append(".").append(tableName);
+        queryBuilder.append(schemaName).append(".").append(tableName); // Appending validated schema and table names
 
         StringBuilder whereClause = new StringBuilder();
         whereClause.append(" WHERE ");
@@ -112,14 +167,7 @@ public class DataSyncRepositoryCentral {
             throw new RuntimeException("Failed to check record existence: " + e.getMessage(), e); // Re-throw or handle as appropriate
         }
     }
-    
 
-    // Helper method to validate database identifiers
-    private boolean isValidDatabaseIdentifier(String identifier) {
-        return identifier != null && identifier.matches("^[a-zA-Z_][a-zA-Z0-9_]*$");
-    }
-
-    // Method for synchronization of data to central DB
     public int[] syncDataToCentralDB(String schema, String tableName, String serverColumns, String query,
                                      List<Object[]> syncDataList) {
         jdbcTemplate = getJdbcTemplate();
@@ -141,14 +189,23 @@ public class DataSyncRepositoryCentral {
         List<Map<String, Object>> resultSetList = new ArrayList<>();
         List<Object> params = new ArrayList<>();
 
-        if (!isValidDatabaseIdentifier(schema) || !isValidDatabaseIdentifier(table)) {
-            throw new IllegalArgumentException("Invalid database identifier provided.");
+        if (!isValidSchemaName(schema)) {
+            logger.error("Invalid schema name: {}", schema);
+            throw new IllegalArgumentException("Invalid schema name provided.");
+        }
+        if (!isValidTableName(table)) {
+            logger.error("Invalid table name: {}", table);
+            throw new IllegalArgumentException("Invalid table name provided.");
+        }
+        if (!isValidColumnNamesList(columnNames)) { 
+            logger.error("Invalid column names list: {}", columnNames);
+            throw new IllegalArgumentException("Invalid column names provided.");
         }
 
         StringBuilder baseQueryBuilder = new StringBuilder(" SELECT ");
-        baseQueryBuilder.append(columnNames); 
+        baseQueryBuilder.append(columnNames);
         baseQueryBuilder.append(" FROM ");
-        baseQueryBuilder.append(schema).append(".").append(table);
+        baseQueryBuilder.append(schema).append(".").append(table); 
 
         if (masterType != null) {
             if (lastDownloadDate != null) {
@@ -181,7 +238,7 @@ public class DataSyncRepositoryCentral {
                 resultSetList = jdbcTemplate.queryForList(finalQuery, params.toArray());
             }
         } catch (Exception e) {
-            logger.error("Error fetching master data from table {}: {}", table, e.getMessage(), e);
+            logger.error("Error fetching master data from table {}.{}: {}", schema, table, e.getMessage(), e);
             throw new RuntimeException("Failed to fetch master data: " + e.getMessage(), e);
         }
         logger.info("Result set Details size: {}", resultSetList.size());
@@ -192,19 +249,28 @@ public class DataSyncRepositoryCentral {
                                                             String whereClause, int limit, int offset) {
         jdbcTemplate = getJdbcTemplate();
 
-        if (!isValidDatabaseIdentifier(schema) || !isValidDatabaseIdentifier(table)) {
-            logger.error("Invalid database identifier detected in getBatchForBenDetails: schema={}, table={}", schema, table);
-            throw new IllegalArgumentException("Invalid database identifier provided.");
+        if (!isValidSchemaName(schema)) {
+            logger.error("Invalid schema name detected in getBatchForBenDetails: {}", schema);
+            throw new IllegalArgumentException("Invalid schema name provided.");
         }
-        
+        if (!isValidTableName(table)) {
+            logger.error("Invalid table name detected in getBatchForBenDetails: {}", table);
+            throw new IllegalArgumentException("Invalid table name provided.");
+        }
+        if (!isValidColumnNamesList(columnNames)) {
+            logger.error("Invalid column names list in getBatchForBenDetails: {}", columnNames);
+            throw new IllegalArgumentException("Invalid column names provided.");
+        }
+
         String query = "SELECT " + columnNames + " FROM " + schema + "." + table + whereClause + " LIMIT ? OFFSET ?";
         logger.debug("Fetching batch for beneficiary details. Query: {}, Limit: {}, Offset: {}", query, limit, offset);
         try {
             return jdbcTemplate.queryForList(query, limit, offset);
         } catch (Exception e) {
-            logger.error("Error fetching batch for beneficiary details from table {}: {}", table, e.getMessage(), e);
+            logger.error("Error fetching batch for beneficiary details from table {}.{}: {}", schema, table, e.getMessage(), e);
             throw new RuntimeException("Failed to fetch batch data: " + e.getMessage(), e);
         }
     }
 
+    // End of Data Download Repository
 }
