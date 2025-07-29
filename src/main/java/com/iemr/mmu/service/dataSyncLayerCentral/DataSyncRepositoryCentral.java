@@ -29,12 +29,7 @@ import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.HashSet;
+import java.util.*;
 
 @Service
 public class DataSyncRepositoryCentral {
@@ -50,11 +45,11 @@ public class DataSyncRepositoryCentral {
         return this.jdbcTemplate;
     }
 
-    private Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
+    private final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 
-    private static final Set<String> VALID_SCHEMAS = new HashSet<>(Arrays.asList("public", "db_iemr_mmu_sync"));
+    private static final Set<String> VALID_SCHEMAS = Set.of("public", "db_iemr_mmu_sync");
 
-    private static final Set<String> VALID_TABLES = new HashSet<>(Arrays.asList(
+    private static final Set<String> VALID_TABLES = Set.of(
             "m_beneficiaryregidmapping", "i_beneficiaryaccount", "i_beneficiaryaddress", "i_beneficiarycontacts",
             "i_beneficiarydetails", "i_beneficiaryfamilymapping", "i_beneficiaryidentity", "i_beneficiarymapping",
             "t_benvisitdetail", "t_phy_anthropometry", "t_phy_vitals", "t_benadherence", "t_anccare", "t_pnccare",
@@ -73,9 +68,9 @@ public class DataSyncRepositoryCentral {
             "t_cancerbreastexamination", "t_cancerabdominalexamination", "t_cancergynecologicalexamination",
             "t_cancerdiagnosis", "t_cancerimageannotation", "i_beneficiaryimage", "t_stockadjustment",
             "t_stocktransfer", "t_patientreturn", "t_indent", "t_indentissue", "t_indentorder", "t_saitemmapping"
-    ));
+    );
 
-  private boolean isValidDatabaseIdentifierCharacter(String identifier) {
+    private boolean isValidDatabaseIdentifierCharacter(String identifier) {
         return identifier != null && identifier.matches("^[a-zA-Z_][a-zA-Z0-9_]*$");
     }
 
@@ -91,8 +86,7 @@ public class DataSyncRepositoryCentral {
         if (columnNames == null || columnNames.trim().isEmpty()) {
             return false;
         }
-        String[] individualColumns = columnNames.split(",");
-        for (String col : individualColumns) {
+        for (String col : columnNames.split(",")) {
             if (!isValidDatabaseIdentifierCharacter(col.trim())) {
                 return false;
             }
@@ -103,68 +97,36 @@ public class DataSyncRepositoryCentral {
     public int checkRecordIsAlreadyPresentOrNot(String schemaName, String tableName, String vanSerialNo, String vanID,
                                                  String vanAutoIncColumnName, int syncFacilityID) {
         jdbcTemplate = getJdbcTemplate();
-
         List<Object> params = new ArrayList<>();
 
-        if (!isValidSchemaName(schemaName)) {
-            logger.error("Invalid schema name detected: {}", schemaName);
-            throw new IllegalArgumentException("Invalid schema name provided.");
-        }
-        if (!isValidTableName(tableName)) {
-            logger.error("Invalid table name detected: {}", tableName);
-            throw new IllegalArgumentException("Invalid table name provided.");
-        }
-        if (!isValidDatabaseIdentifierCharacter(vanAutoIncColumnName)) { // vanAutoIncColumnName is a single column identifier
-            logger.error("Invalid auto increment column name detected: {}", vanAutoIncColumnName);
-            throw new IllegalArgumentException("Invalid auto increment column name provided.");
+        if (!isValidSchemaName(schemaName) || !isValidTableName(tableName) ||
+                !isValidDatabaseIdentifierCharacter(vanAutoIncColumnName)) {
+            logger.error("Invalid identifiers: schema={}, table={}, column={}", schemaName, tableName, vanAutoIncColumnName);
+            throw new IllegalArgumentException("Invalid identifiers provided.");
         }
 
-        StringBuilder queryBuilder = new StringBuilder("SELECT ");
-        queryBuilder.append(vanAutoIncColumnName); // Appending validated column name
-        queryBuilder.append(" FROM ");
-        queryBuilder.append(schemaName).append(".").append(tableName); // Appending validated schema and table names
+        StringBuilder queryBuilder = new StringBuilder("SELECT ")
+                .append(vanAutoIncColumnName).append(" FROM ")
+                .append(schemaName).append(".").append(tableName).append(" WHERE VanSerialNo = ?");
 
-        StringBuilder whereClause = new StringBuilder();
-        whereClause.append(" WHERE ");
-        whereClause.append("VanSerialNo = ?");
         params.add(vanSerialNo);
 
-        if (Arrays.asList("t_patientissue", "t_physicalstockentry", "t_stockadjustment", "t_saitemmapping",
+        if (List.of("t_patientissue", "t_physicalstockentry", "t_stockadjustment", "t_saitemmapping",
                 "t_stocktransfer", "t_patientreturn", "t_facilityconsumption", "t_indent",
-                "t_indentorder", "t_indentissue", "t_itemstockentry", "t_itemstockexit")
-                .contains(tableName.toLowerCase()) && syncFacilityID > 0) {
-
-            whereClause.append(" AND ");
-            whereClause.append("SyncFacilityID = ?");
+                "t_indentorder", "t_indentissue", "t_itemstockentry", "t_itemstockexit").contains(tableName.toLowerCase()) && syncFacilityID > 0) {
+            queryBuilder.append(" AND SyncFacilityID = ?");
             params.add(syncFacilityID);
-
         } else {
-            whereClause.append(" AND ");
-            whereClause.append("VanID = ?");
+            queryBuilder.append(" AND VanID = ?");
             params.add(vanID);
         }
 
-        queryBuilder.append(whereClause);
-        String query = queryBuilder.toString();
-        Object[] queryParams = params.toArray();
-
-        logger.debug("Checking record existence query: {} with params: {}", query, Arrays.toString(queryParams));
-
         try {
-            List<Map<String, Object>> resultSet = jdbcTemplate.queryForList(query, queryParams);
-            if (resultSet != null && !resultSet.isEmpty()) {
-                logger.debug("Record found for table {}: VanSerialNo={}, VanID={}", tableName, vanSerialNo, vanID);
-                return 1;
-            } else {
-                logger.debug("No record found for table {}: VanSerialNo={}, VanID={}", tableName, vanSerialNo, vanID);
-                return 0;
-            }
-        } catch (org.springframework.dao.EmptyResultDataAccessException e) {
-            logger.debug("No record found (EmptyResultDataAccessException) for table {}: VanSerialNo={}, VanID={}", tableName, vanSerialNo, vanID);
-            return 0;
+            List<Map<String, Object>> resultSet = jdbcTemplate.queryForList(queryBuilder.toString(), params.toArray());
+            return (resultSet != null && !resultSet.isEmpty()) ? 1 : 0;
         } catch (Exception e) {
-            logger.error("Database error during checkRecordIsAlreadyPresentOrNot for table {}: VanSerialNo={}, VanID={}. Error: {}", tableName, vanSerialNo, vanID, e.getMessage(), e);
-            throw new RuntimeException("Failed to check record existence: " + e.getMessage(), e); // Re-throw or handle as appropriate
+            logger.error("Error checking record presence: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to check record existence: " + e.getMessage(), e);
         }
     }
 
@@ -172,101 +134,72 @@ public class DataSyncRepositoryCentral {
                                      List<Object[]> syncDataList) {
         jdbcTemplate = getJdbcTemplate();
         try {
-            int[] i = jdbcTemplate.batchUpdate(query, syncDataList);
-            logger.info("Batch operation completed for table {}. Results: {}", tableName, Arrays.toString(i));
-            return i;
+            return jdbcTemplate.batchUpdate(query, syncDataList);
         } catch (Exception e) {
-            logger.error("Exception during batch update for table {}: {}", tableName, e.getMessage(), e);
-            throw new RuntimeException("Batch sync failed for table " + tableName + ": " + e.getMessage(), e);
+            logger.error("Batch sync failed for table {}: {}", tableName, e.getMessage(), e);
+            throw new RuntimeException("Batch sync failed: " + e.getMessage(), e);
         }
     }
 
-    // End of Data Upload Repository
-
     public List<Map<String, Object>> getMasterDataFromTable(String schema, String table, String columnNames,
-                                                            String masterType, Timestamp lastDownloadDate, Integer vanID, Integer psmID) throws Exception {
+                                                            String masterType, Timestamp lastDownloadDate, Integer vanID, Integer psmID) {
         jdbcTemplate = getJdbcTemplate();
-        List<Map<String, Object>> resultSetList = new ArrayList<>();
         List<Object> params = new ArrayList<>();
 
-        if (!isValidSchemaName(schema)) {
-            logger.error("Invalid schema name: {}", schema);
-            throw new IllegalArgumentException("Invalid schema name provided.");
-        }
-        if (!isValidTableName(table)) {
-            logger.error("Invalid table name: {}", table);
-            throw new IllegalArgumentException("Invalid table name provided.");
-        }
-        if (!isValidColumnNamesList(columnNames)) { 
-            logger.error("Invalid column names list: {}", columnNames);
-            throw new IllegalArgumentException("Invalid column names provided.");
+        if (!isValidSchemaName(schema) || !isValidTableName(table) || !isValidColumnNamesList(columnNames)) {
+            throw new IllegalArgumentException("Invalid schema, table, or column names.");
         }
 
-        StringBuilder baseQueryBuilder = new StringBuilder(" SELECT ");
-        baseQueryBuilder.append(columnNames);
-        baseQueryBuilder.append(" FROM ");
-        baseQueryBuilder.append(schema).append(".").append(table); 
+        StringBuilder queryBuilder = new StringBuilder("SELECT ").append(columnNames)
+                .append(" FROM ").append(schema).append(".").append(table);
 
         if (masterType != null) {
             if (lastDownloadDate != null) {
-                baseQueryBuilder.append(" WHERE LastModDate >= ? ");
+                queryBuilder.append(" WHERE LastModDate >= ?");
                 params.add(lastDownloadDate);
 
-                if (masterType.equalsIgnoreCase("V")) {
-                    baseQueryBuilder.append(" AND VanID = ? ");
+                if ("V".equalsIgnoreCase(masterType)) {
+                    queryBuilder.append(" AND VanID = ?");
                     params.add(vanID);
-                } else if (masterType.equalsIgnoreCase("P")) {
-                    baseQueryBuilder.append(" AND ProviderServiceMapID = ? ");
+                } else if ("P".equalsIgnoreCase(masterType)) {
+                    queryBuilder.append(" AND ProviderServiceMapID = ?");
                     params.add(psmID);
                 }
             } else {
-                if (masterType.equalsIgnoreCase("V")) {
-                    baseQueryBuilder.append(" WHERE VanID = ? ");
+                queryBuilder.append(" WHERE ");
+                if ("V".equalsIgnoreCase(masterType)) {
+                    queryBuilder.append("VanID = ?");
                     params.add(vanID);
-                } else if (masterType.equalsIgnoreCase("P")) {
-                    baseQueryBuilder.append(" WHERE ProviderServiceMapID = ? ");
+                } else if ("P".equalsIgnoreCase(masterType)) {
+                    queryBuilder.append("ProviderServiceMapID = ?");
                     params.add(psmID);
                 }
             }
         }
 
-        String finalQuery = baseQueryBuilder.toString();
         try {
-                resultSetList = jdbcTemplate.queryForList(finalQuery, params.toArray());
+            return jdbcTemplate.queryForList(queryBuilder.toString(), params.toArray());
         } catch (Exception e) {
-            logger.error("Error fetching master data from table {}.{}: {}", schema, table, e.getMessage(), e);
+            logger.error("Error fetching master data: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to fetch master data: " + e.getMessage(), e);
         }
-        logger.info("Result set Details size: {}", resultSetList.size());
-        return resultSetList;
     }
 
     public List<Map<String, Object>> getBatchForBenDetails(String schema, String table, String columnNames,
-                                                            String whereClause, int limit, int offset) {
+                                                           String whereClause, int limit, int offset) {
         jdbcTemplate = getJdbcTemplate();
 
-        if (!isValidSchemaName(schema)) {
-            logger.error("Invalid schema name detected in getBatchForBenDetails: {}", schema);
-            throw new IllegalArgumentException("Invalid schema name provided.");
-        }
-        if (!isValidTableName(table)) {
-            logger.error("Invalid table name detected in getBatchForBenDetails: {}", table);
-            throw new IllegalArgumentException("Invalid table name provided.");
-        }
-        if (!isValidColumnNamesList(columnNames)) {
-            logger.error("Invalid column names list in getBatchForBenDetails: {}", columnNames);
-            throw new IllegalArgumentException("Invalid column names provided.");
+        if (!isValidSchemaName(schema) || !isValidTableName(table) || !isValidColumnNamesList(columnNames)) {
+            throw new IllegalArgumentException("Invalid schema, table, or column names.");
         }
 
-        String query = "SELECT " + columnNames + " FROM " + schema + "." + table + whereClause + " LIMIT ? OFFSET ?";
-        logger.debug("Fetching batch for beneficiary details. Query: {}, Limit: {}, Offset: {}", query, limit, offset);
+        String query = String.format("SELECT %s FROM %s.%s %s LIMIT ? OFFSET ?", columnNames, schema, table, whereClause);
+
         try {
             return jdbcTemplate.queryForList(query, limit, offset);
         } catch (Exception e) {
-            logger.error("Error fetching batch for beneficiary details from table {}.{}: {}", schema, table, e.getMessage(), e);
+            logger.error("Error fetching batch details: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to fetch batch data: " + e.getMessage(), e);
         }
     }
-
-    // End of Data Download Repository
 }
