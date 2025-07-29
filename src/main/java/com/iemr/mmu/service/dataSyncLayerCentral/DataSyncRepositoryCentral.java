@@ -50,7 +50,7 @@ public class DataSyncRepositoryCentral {
     }
 
     private Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
-
+    
     // Data Upload Repository
     public int checkRecordIsAlreadyPresentOrNot(String schemaName, String tableName, String vanSerialNo, String vanID,
                                                  String vanAutoIncColumnName, int syncFacilityID) {
@@ -94,29 +94,25 @@ public class DataSyncRepositoryCentral {
         Object[] queryParams = params.toArray();
 
         logger.debug("Checking record existence query: {} with params: {}", query, Arrays.toString(queryParams));
-        System.out.println("Checking record existence query: " + query + " with params: " + Arrays.toString(queryParams));
 
         try {
             List<Map<String, Object>> resultSet = jdbcTemplate.queryForList(query, queryParams);
             if (resultSet != null && !resultSet.isEmpty()) {
-                System.out.println("Record found for table " + tableName + ": VanSerialNo=" + vanSerialNo + ", VanID=" + vanID);
                 logger.debug("Record found for table {}: VanSerialNo={}, VanID={}", tableName, vanSerialNo, vanID);
                 return 1;
             } else {
-                System.out.println("No record found for table " + tableName + ": VanSerialNo=" + vanSerialNo + ", VanID=" + vanID);
                 logger.debug("No record found for table {}: VanSerialNo={}, VanID={}", tableName, vanSerialNo, vanID);
                 return 0;
             }
         } catch (org.springframework.dao.EmptyResultDataAccessException e) {
-            System.out.println("No record found (EmptyResultDataAccessException) for table " + tableName + ": VanSerialNo=" + vanSerialNo + ", VanID=" + vanID);
             logger.debug("No record found (EmptyResultDataAccessException) for table {}: VanSerialNo={}, VanID={}", tableName, vanSerialNo, vanID);
             return 0;
         } catch (Exception e) {
-            System.out.println("Database error during checkRecordIsAlreadyPresentOrNot for table " + tableName + ": VanSerialNo=" + vanSerialNo + ", VanID=" + vanID);
             logger.error("Database error during checkRecordIsAlreadyPresentOrNot for table {}: VanSerialNo={}, VanID={}. Error: {}", tableName, vanSerialNo, vanID, e.getMessage(), e);
             throw new RuntimeException("Failed to check record existence: " + e.getMessage(), e); // Re-throw or handle as appropriate
         }
     }
+    
 
     // Helper method to validate database identifiers
     private boolean isValidDatabaseIdentifier(String identifier) {
@@ -127,16 +123,12 @@ public class DataSyncRepositoryCentral {
     public int[] syncDataToCentralDB(String schema, String tableName, String serverColumns, String query,
                                      List<Object[]> syncDataList) {
         jdbcTemplate = getJdbcTemplate();
-        logger.info("Executing batch operation for table: {}. Query type: {}. Number of records: {}", tableName, query.startsWith("INSERT") ? "INSERT" : "UPDATE", syncDataList.size());
-        logger.debug("Query: {}", query);
         try {
             int[] i = jdbcTemplate.batchUpdate(query, syncDataList);
-            System.out.println("Batch operation completed for table " + tableName + ". Results: " + Arrays.toString(i));
             logger.info("Batch operation completed for table {}. Results: {}", tableName, Arrays.toString(i));
             return i;
         } catch (Exception e) {
             logger.error("Exception during batch update for table {}: {}", tableName, e.getMessage(), e);
-            System.out.println("Exception during batch update for table " + tableName + ": " + e.getMessage());
             throw new RuntimeException("Batch sync failed for table " + tableName + ": " + e.getMessage(), e);
         }
     }
