@@ -21,15 +21,19 @@
 */
 package com.iemr.mmu.service.dataSyncLayerCentral;
 
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import javax.sql.DataSource;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-
-import javax.sql.DataSource;
-import java.sql.Timestamp;
-import java.util.*;
 
 @Service
 public class DataSyncRepositoryCentral {
@@ -192,6 +196,9 @@ public class DataSyncRepositoryCentral {
         if (!isValidSchemaName(schema) || !isValidTableName(table) || !isValidColumnNamesList(columnNames)) {
             throw new IllegalArgumentException("Invalid schema, table, or column names.");
         }
+        // Safe dynamic SQL: Schema, table, and column names are validated against predefined whitelists.
+        // Only trusted values are used in the query string.
+        // limit and offset are passed as parameters to prevent SQL injection.
 
         String query = String.format("SELECT %s FROM %s.%s %s LIMIT ? OFFSET ?", columnNames, schema, table, whereClause);
 
