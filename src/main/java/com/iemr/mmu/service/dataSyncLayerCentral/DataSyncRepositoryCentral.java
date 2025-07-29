@@ -232,11 +232,7 @@ public class DataSyncRepositoryCentral {
 
         String finalQuery = baseQueryBuilder.toString();
         try {
-            if (params.isEmpty()) {
-                resultSetList = jdbcTemplate.queryForList(finalQuery);
-            } else {
                 resultSetList = jdbcTemplate.queryForList(finalQuery, params.toArray());
-            }
         } catch (Exception e) {
             logger.error("Error fetching master data from table {}.{}: {}", schema, table, e.getMessage(), e);
             throw new RuntimeException("Failed to fetch master data: " + e.getMessage(), e);
