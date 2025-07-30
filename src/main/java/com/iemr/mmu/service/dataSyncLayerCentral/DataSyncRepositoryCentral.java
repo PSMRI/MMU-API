@@ -191,23 +191,28 @@ public class DataSyncRepositoryCentral {
         }
     }
 
-    public List<Map<String, Object>> getBatchForBenDetails(String schema, String table, String columnNames,
-                                                           String whereClause, int limit, int offset) {
-        jdbcTemplate = getJdbcTemplate();
+        public List<Map<String, Object>> getBatchForBenDetails(SyncUploadDataDigester digester,
+                                                            String whereClause, int limit, int offset) {
+            jdbcTemplate = getJdbcTemplate();
 
-        if (!isValidSchemaName(schema) || !isValidTableName(table) || !isValidColumnNamesList(columnNames)) {
-            throw new IllegalArgumentException("Invalid schema, table, or column names.");
-        }
-        // Safe dynamic SQL: Schema, table, and column names are validated against predefined whitelists.
-        // Only trusted values are used in the query string.
-        // limit and offset are passed as parameters to prevent SQL injection.
-        String query = String.format("SELECT %s FROM %s.%s %s LIMIT ? OFFSET ?", columnNames, schema, table, whereClause);
+String schema = digester.getSchemaName();
+    String table = digester.getTableName();
+    String columnNames = digester.getServerColumns();
 
-        try {
-            return jdbcTemplate.queryForList(query, limit, offset);
-        } catch (Exception e) {
-            logger.error("Error fetching batch details: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to fetch batch data: " + e.getMessage(), e);
+
+            if (!isValidSchemaName(schema) || !isValidTableName(table) || !isValidColumnNamesList(columnNames)) {
+                throw new IllegalArgumentException("Invalid schema, table, or column names.");
+            }
+            // Safe dynamic SQL: Schema, table, and column names are validated against predefined whitelists.
+            // Only trusted values are used in the query string.
+            // limit and offset are passed as parameters to prevent SQL injection.
+            String query = String.format("SELECT %s FROM %s.%s %s LIMIT ? OFFSET ?", columnNames, schema, table, whereClause);
+
+            try {
+                return jdbcTemplate.queryForList(query, limit, offset);
+            } catch (Exception e) {
+                logger.error("Error fetching batch details: {}", e.getMessage(), e);
+                throw new RuntimeException("Failed to fetch batch data: " + e.getMessage(), e);
+            }
         }
-    }
 }
