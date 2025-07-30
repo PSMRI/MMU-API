@@ -53,7 +53,7 @@ public class DataSyncRepositoryCentral {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 
-    private static final Set<String> VALID_SCHEMAS = Set.of("public", "db_iemr_mmu_sync");
+    private static final Set<String> VALID_SCHEMAS = Set.of("public", "db_iemr");
 
     private static final Set<String> VALID_TABLES = Set.of(
             "m_beneficiaryregidmapping", "i_beneficiaryaccount", "i_beneficiaryaddress", "i_beneficiarycontacts",
@@ -208,7 +208,7 @@ String schema = digester.getSchemaName();
             // Safe dynamic SQL: Schema, table, and column names are validated against predefined whitelists.
             // Only trusted values are used in the query string.
             // limit and offset are passed as parameters to prevent SQL injection.
-            String query = String.format("SELECT %s FROM %s.%s %s LIMIT ? OFFSET ?", columnNames, schema, table, whereClause);
+            String query = String.format("SELECT %s FROM %s.%s %s LIMIT ? OFFSET ?", columnNames, schema, table, whereClause); //NOSONAR
 
             try {
                 return jdbcTemplate.queryForList(query, limit, offset);

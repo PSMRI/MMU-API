@@ -50,7 +50,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
     private DataSyncRepositoryCentral dataSyncRepositoryCentral;
 
     private static final Map<Integer, List<String>> TABLE_GROUPS = new HashMap<>();
-    private static final Set<String> VALID_SCHEMAS = new HashSet<>(Arrays.asList("public", "db_iemr_mmu_sync")); // Add your actual schema names
+    private static final Set<String> VALID_SCHEMAS = new HashSet<>(Arrays.asList("public", "db_iemr")); // Add your actual schema names
     private static final Set<String> VALID_TABLES = new HashSet<>(Arrays.asList(
         "m_beneficiaryregidmapping", "i_beneficiaryaccount","i_beneficiaryaddress","i_beneficiarycontacts","i_beneficiarydetails","i_beneficiaryfamilymapping","i_beneficiaryidentity","i_beneficiarymapping",
         "t_benvisitdetail","t_phy_anthropometry","t_phy_vitals","t_benadherence","t_anccare","t_pnccare","t_ncdscreening","t_ncdcare","i_ben_flow_outreach","t_covid19","t_idrsdetails","t_physicalactivity",
