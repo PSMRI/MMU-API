@@ -287,9 +287,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
             List<Map<String, Object>> batchToFetch;
             try {
                batchToFetch = dataSyncRepositoryCentral.getBatchForBenDetails(
-                        schemaName,
-                        tableName,
-                        syncUploadDataDigester.getServerColumns(), 
+                        syncUploadDataDigester,
                         whereClauseForBatchFetch, 
                         limit,
                         offset);
