@@ -22,7 +22,9 @@
 package com.iemr.mmu.data.doctor;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -35,6 +37,7 @@ import jakarta.persistence.Transient;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.gson.annotations.Expose;
+
 import lombok.Data;
 
 @Entity
@@ -104,6 +107,10 @@ public class CancerGynecologicalExamination {
 	@Column(name = "FilePath")
 	private String filePath;
 
+	@Expose
+	@Transient
+	private ArrayList<Map<String, String>> files;
+	
 	@Expose
 	@Column(name = "ExperiencedPostCoitalBleeding")
 	private Boolean experiencedPostCoitalBleeding;
@@ -429,5 +436,15 @@ public class CancerGynecologicalExamination {
 	public void setVisitCode(Long visitCode) {
 		this.visitCode = visitCode;
 	}
+
+
+	public ArrayList<Map<String, String>> getFiles() {
+		return files;
+	}
+
+	public void setFiles(ArrayList<Map<String, String>> files) {
+		this.files = files;
+	}
+
 
 }
