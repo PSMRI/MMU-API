@@ -73,15 +73,10 @@ public interface BeneficiaryFlowStatusRepo extends CrudRepository<BeneficiaryFlo
 	public int updateBenFlowStatusTMReferred(@Param("benFlowID") Long benFlowID, @Param("benRegID") Long benRegID,
 			@Param("specialistFlag") Short specialistFlag, @Param("pharmacistflag") Short pharmacistflag);
 
-	// @Query("SELECT  t.benFlowID, t.beneficiaryRegID, t.visitDate, t.benName, t.age, t.ben_age_val, t.genderID, t.genderName, "
-	// 		+ " t.villageName, t.districtName, t.beneficiaryID, t.servicePointName, t.VisitReason, t.VisitCategory, t.benVisitID,  "
-	// 		+ " t.registrationDate, t.benVisitDate, t.visitCode, t.consultationDate, t.fatherName, t.preferredPhoneNum FROM BeneficiaryFlowStatus t "
-	// 		+ " Where t.beneficiaryRegID = :benRegID AND t.benFlowID = :benFlowID ")
-	// public ArrayList<Object[]> getBenDetailsForLeftSidePanel(@Param("benRegID") Long benRegID,
-	// 		@Param("benFlowID") Long benFlowID);
-	
-	//for testing
-	@Query("SELECT t FROM BeneficiaryFlowStatus t Where t.beneficiaryRegID = :benRegID AND t.benFlowID = :benFlowID ")
+	@Query("SELECT  t.benFlowID, t.beneficiaryRegID, t.visitDate, t.benName, t.age, t.ben_age_val, t.genderID, t.genderName, "
+			+ " t.villageName, t.districtName, t.beneficiaryID, t.servicePointName, t.VisitReason, t.VisitCategory, t.benVisitID,  "
+			+ " t.registrationDate, t.benVisitDate, t.visitCode, t.consultationDate, t.father_name, t.ben_phone_no FROM BeneficiaryFlowStatus t "
+			+ " Where t.beneficiaryRegID = :benRegID AND t.benFlowID = :benFlowID ")
 	public ArrayList<Object[]> getBenDetailsForLeftSidePanel(@Param("benRegID") Long benRegID,
 			@Param("benFlowID") Long benFlowID);
 
