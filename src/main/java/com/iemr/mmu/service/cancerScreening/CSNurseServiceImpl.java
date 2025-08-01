@@ -63,10 +63,14 @@ import com.iemr.mmu.repo.nurse.BenObstetricCancerHistoryRepo;
 import com.iemr.mmu.repo.nurse.BenPersonalCancerDietHistoryRepo;
 import com.iemr.mmu.repo.nurse.BenPersonalCancerHistoryRepo;
 import com.iemr.mmu.repo.nurse.BenVisitDetailRepo;
+import com.iemr.mmu.utils.AESEncryption.AESEncryptionDecryption;
 
 @Service
 public class CSNurseServiceImpl implements CSNurseService {
 	private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
+
+	@Autowired
+	private AESEncryptionDecryption aESEncryptionDecryption;
 	private BenFamilyCancerHistoryRepo benFamilyCancerHistoryRepo;
 	private BenPersonalCancerHistoryRepo benPersonalCancerHistoryRepo;
 	private BenPersonalCancerDietHistoryRepo benPersonalCancerDietHistoryRepo;
@@ -593,10 +597,41 @@ public class CSNurseServiceImpl implements CSNurseService {
 	}
 
 	public CancerGynecologicalExamination getBenCancerGynecologicalExaminationData(Long benRegID, Long visitCode) {
-		CancerGynecologicalExamination cancerGynecologicalExamination = cancerGynecologicalExaminationRepo
-				.getBenCancerGynecologicalExaminationDetails(benRegID, visitCode);
-		return cancerGynecologicalExamination;
-	}
+    CancerGynecologicalExamination cancerGynecologicalExamination = cancerGynecologicalExaminationRepo
+            .getBenCancerGynecologicalExaminationDetails(benRegID, visitCode);
+
+    if (cancerGynecologicalExamination != null) {
+
+        String filePathStr = cancerGynecologicalExamination.getFilePath();
+
+        if (filePathStr != null && !filePathStr.trim().isEmpty()) {
+            ArrayList<Map<String, String>> fileList = new ArrayList<>();
+            String[] fileIds = filePathStr.split(",");
+
+            for (String str : fileIds) {
+                if (str != null && !str.trim().isEmpty()) {
+                    try {
+                        String decryptedFilePath = aESEncryptionDecryption.decrypt(str);  // Decrypt
+                        String[] tempArr = decryptedFilePath.split("/");
+                        String fileName = tempArr[tempArr.length - 1];
+
+                        Map<String, String> fileMap = new HashMap<>();
+                        fileMap.put("filePath", str);
+                        fileMap.put("fileName", fileName);
+
+                        fileList.add(fileMap);
+                    } catch (Exception e) {
+                        e.printStackTrace(); 
+                    }
+                }
+            }
+
+            cancerGynecologicalExamination.setFiles(fileList);  
+        }
+    }
+
+    return cancerGynecologicalExamination;
+}
 
 	public CancerSignAndSymptoms getBenCancerSignAndSymptomsData(Long benRegID, Long visitCode) {
 		CancerSignAndSymptoms cancerSignAndSymptoms = cancerSignAndSymptomsRepo
