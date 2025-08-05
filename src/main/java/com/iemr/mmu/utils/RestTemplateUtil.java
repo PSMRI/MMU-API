@@ -44,19 +44,16 @@ public class RestTemplateUtil {
         headers.add(HttpHeaders.AUTHORIZATION, "Bearer " + authorization);
     }
 
-     ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-
-        if ((jwtToken == null || jwtToken.isEmpty()) && attrs != null) {
-            HttpServletRequest request = attrs.getRequest();
-            try {
-                jwtToken = CookieUtil.getJwtTokenFromCookie(request);
-            } catch (Exception e) {
-                logger.error("Error while getting JWT token from cookie: {}", e.getMessage());
-            }
-
-            String jwtTokenHeader = request.getHeader("JwtToken");
-            if (jwtTokenHeader != null && !jwtTokenHeader.isEmpty()) {
-                jwtToken = jwtTokenHeader;
+	 if (jwtToken == null || jwtToken.isEmpty()) {
+            ServletRequestAttributes attrs =
+                    (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs != null) {
+                HttpServletRequest request = attrs.getRequest();
+                try {
+                    jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+                } catch (Exception e) {
+                    logger.error("Error while getting JWT token from cookie: {}", e.getMessage());
+                }
             }
         }
 
@@ -65,6 +62,7 @@ public class RestTemplateUtil {
         headers.add(HttpHeaders.COOKIE, "Jwttoken=" + jwtToken);
     }
     
+
     return new HttpEntity<>(body, headers);
 }
 }
