@@ -87,7 +87,7 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 		for (int i = 0; i < 5; i++) {
 			switch (i) {
 			case 0: {
-				obj = downloadDataFromCentral("db_iemr_sync", "t_indent", vanID, ServerAuthorization, token);
+				obj = downloadDataFromCentral("db_iemr", "t_indent", vanID, ServerAuthorization, token);
 				List<Long> ids = new ArrayList<Long>();
 				Indent[] indentArr = InputMapper.gson(1).fromJson(String.valueOf(obj.get("data")), Indent[].class, 1);
 				List<Indent> indentList = Arrays.asList(indentArr);
@@ -115,7 +115,7 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 				break;
 			}
 			case 1: {
-				obj = downloadDataFromCentral("db_iemr_sync", "t_indentorder", vanID, ServerAuthorization, token);
+				obj = downloadDataFromCentral("db_iemr", "t_indentorder", vanID, ServerAuthorization, token);
 				List<Long> ids = new ArrayList<Long>();
 				IndentOrder[] indentOrderArr = InputMapper.gson(1).fromJson(String.valueOf(obj.get("data")),
 						IndentOrder[].class, 1);
@@ -141,7 +141,7 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 				break;
 			}
 			case 2: {
-				obj = downloadDataFromCentral("db_iemr_sync", "t_indentissue", vanID, ServerAuthorization, token);
+				obj = downloadDataFromCentral("db_iemr", "t_indentissue", vanID, ServerAuthorization, token);
 				List<Long> ids = new ArrayList<Long>();
 				IndentIssue[] indentIssueArr = InputMapper.gson(1).fromJson(String.valueOf(obj.get("data")),
 						IndentIssue[].class, 1);
@@ -169,7 +169,7 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 				break;
 			}
 			case 3: {
-				obj = downloadDataFromCentral("db_iemr_sync", "t_stocktransfer", vanID, ServerAuthorization, token);
+				obj = downloadDataFromCentral("db_iemr", "t_stocktransfer", vanID, ServerAuthorization, token);
 				List<Long> ids = new ArrayList<Long>();
 				T_StockTransfer[] stockTransferArr = InputMapper.gson(1).fromJson(String.valueOf(obj.get("data")),
 						T_StockTransfer[].class, 1);
@@ -197,7 +197,7 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 				break;
 			}
 			case 4: {
-				obj = downloadDataFromCentral("db_iemr_sync", "t_itemstockentry", vanID, ServerAuthorization, token);
+				obj = downloadDataFromCentral("db_iemr", "t_itemstockentry", vanID, ServerAuthorization, token);
 				List<Long> ids = new ArrayList<Long>();
 				ItemStockEntry[] itemStockEntryArr = InputMapper.gson(1).fromJson(String.valueOf(obj.get("data")),
 						ItemStockEntry[].class, 1);

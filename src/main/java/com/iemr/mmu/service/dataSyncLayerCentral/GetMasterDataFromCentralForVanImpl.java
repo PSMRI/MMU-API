@@ -39,6 +39,10 @@ import com.iemr.mmu.data.syncActivity_syncLayer.SyncDownloadMaster;
 public class GetMasterDataFromCentralForVanImpl implements GetMasterDataFromCentralForVan {
 	@Autowired
 	private DataSyncRepositoryCentral dataSyncRepositoryCentral;
+
+	@Autowired
+	private DataSyncRepositoryCentralDownload dataSyncRepositoryCentralDownload;
+
 	private Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 
 	public String getMasterDataForVan(SyncDownloadMaster obj) throws Exception {
@@ -62,7 +66,7 @@ public class GetMasterDataFromCentralForVanImpl implements GetMasterDataFromCent
 	private List<Map<String, Object>> getMasterDataFromGivenTable(SyncDownloadMaster tableDetails) throws Exception {
 		logger.info("ger master data="+ tableDetails.getSchemaName());
 		List<Map<String, Object>> resultSetList = new ArrayList<>();
-		resultSetList = dataSyncRepositoryCentral.getMasterDataFromTable(tableDetails.getSchemaName(),
+		resultSetList = dataSyncRepositoryCentralDownload.getMasterDataFromTable(tableDetails.getSchemaName(),
 				tableDetails.getTableName(), tableDetails.getServerColumnName(), tableDetails.getMasterType(),
 				tableDetails.getLastDownloadDate(), tableDetails.getVanID(), tableDetails.getProviderServiceMapID());
 		return resultSetList;
