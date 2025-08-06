@@ -299,6 +299,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 
 	private List<Map<String, Object>> getDataToSync(String schemaName, String tableName, String columnNames)
 			throws Exception {
+				logger.info("Fetching data to sync for schema: {}, table: {}, columns: {}", schemaName, tableName, columnNames);
 		List<Map<String, Object>> resultSetList = dataSyncRepository.getDataForGivenSchemaAndTable(schemaName,
 				tableName, columnNames);
 		if (resultSetList != null) {
