@@ -98,10 +98,10 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         String syncTableName = syncUploadDataDigester.getTableName();
         String schemaName = syncUploadDataDigester.getSchemaName();
 
-        if (!isValidSchemaName(schemaName) || !isValidTableName(syncTableName)) {
-            logger.error("Invalid schema or table name provided: Schema='{}', Table='{}'.", schemaName, syncTableName);
-            return "Error: Invalid schema or table name.";
-        }
+        // if (!isValidSchemaName(schemaName) || !isValidTableName(syncTableName)) {
+        //     logger.error("Invalid schema or table name provided: Schema='{}', Table='{}'.", schemaName, syncTableName);
+        //     return "Error: Invalid schema or table name.";
+        // }
 
 
         // Handle specific tables first, if their logic is distinct
@@ -192,10 +192,10 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         logger.info("Attempting generic sync for table: {}", currentTableName);
         
         // Validate schemaName and currentTableName for safety before proceeding
-        if (!isValidSchemaName(schemaName) || !isValidTableName(currentTableName)) {
-            logger.error("Invalid schema or table name for group sync: Schema='{}', Table='{}'.", schemaName, currentTableName);
-            return false; // Fail fast if identifiers are invalid
-        }
+        // if (!isValidSchemaName(schemaName) || !isValidTableName(currentTableName)) {
+        //     logger.error("Invalid schema or table name for group sync: Schema='{}', Table='{}'.", schemaName, currentTableName);
+        //     return false; // Fail fast if identifiers are invalid
+        // }
 
         SyncUploadDataDigester tableSpecificDigester = new SyncUploadDataDigester();
         tableSpecificDigester.setSchemaName(schemaName);
@@ -217,10 +217,10 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         String schemaName = syncUploadDataDigester.getSchemaName();
         String tableName = syncUploadDataDigester.getTableName();
 
-        if (!isValidSchemaName(schemaName) || !isValidTableName(tableName)) {
-            logger.error("Invalid schema or table name provided for m_beneficiaryregidmapping update: Schema='{}', Table='{}'.", schemaName, tableName);
-            return "Error: Invalid schema or table name.";
-        }
+        // if (!isValidSchemaName(schemaName) || !isValidTableName(tableName)) {
+        //     logger.error("Invalid schema or table name provided for m_beneficiaryregidmapping update: Schema='{}', Table='{}'.", schemaName, tableName);
+        //     return "Error: Invalid schema or table name.";
+        // }
 
         List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
         List<Object[]> syncData = new ArrayList<>();
@@ -268,10 +268,10 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         String schemaName = syncUploadDataDigester.getSchemaName();
         String tableName = syncUploadDataDigester.getTableName();
 
-        if (!isValidSchemaName(schemaName) || !isValidTableName(tableName)) {
-            logger.error("Invalid schema or table name provided for i_beneficiarydetails update: Schema='{}', Table='{}'.", schemaName, tableName);
-            return "Error: Invalid schema or table name.";
-        }
+        // if (!isValidSchemaName(schemaName) || !isValidTableName(tableName)) {
+        //     logger.error("Invalid schema or table name provided for i_beneficiarydetails update: Schema='{}', Table='{}'.", schemaName, tableName);
+        //     return "Error: Invalid schema or table name.";
+        // }
 
         List<Object[]> syncData = new ArrayList<>(); // This list will hold data for batch updates to 'Processed'
     
@@ -353,10 +353,10 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
     }
 
     private String getQueryFor_I_BeneficiaryDetails(String schemaName, String tableName) {
-        if (!isValidSchemaName(schemaName) || !isValidTableName(tableName)) {
-            logger.error("Invalid schema or table name for getQueryFor_I_BeneficiaryDetails: Schema='{}', Table='{}'.", schemaName, tableName);
-            throw new IllegalArgumentException("Invalid schema or table name provided.");
-        }
+        // if (!isValidSchemaName(schemaName) || !isValidTableName(tableName)) {
+        //     logger.error("Invalid schema or table name for getQueryFor_I_BeneficiaryDetails: Schema='{}', Table='{}'.", schemaName, tableName);
+        //     throw new IllegalArgumentException("Invalid schema or table name provided.");
+        // }
         return String.format("UPDATE %s.%s SET Processed = 'P', SyncedDate = now(), SyncedBy = ? WHERE BeneficiaryDetailsId = ? AND VanID = ?", schemaName, tableName);
     }
 
@@ -370,15 +370,15 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         String vanAutoIncColumnName = syncUploadDataDigester.getVanAutoIncColumnName();
         String serverColumns = syncUploadDataDigester.getServerColumns();
 
-        if (!isValidSchemaName(schemaName) || !isValidTableName(syncTableName)) {
-            logger.error("Invalid schema or table name for generic sync: Schema='{}', Table='{}'.", schemaName, syncTableName);
-            return false;
-        }
+        // if (!isValidSchemaName(schemaName) || !isValidTableName(syncTableName)) {
+        //     logger.error("Invalid schema or table name for generic sync: Schema='{}', Table='{}'.", schemaName, syncTableName);
+        //     return false;
+        // }
 
-        if (!isValidColumnNames(serverColumns)) {
-             logger.error("Invalid server columns provided for generic sync: {}", serverColumns);
-             return false;
-        }
+        // if (!isValidColumnNames(serverColumns)) {
+        //      logger.error("Invalid server columns provided for generic sync: {}", serverColumns);
+        //      return false;
+        // }
 
 
         List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
@@ -538,14 +538,14 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
     }
 
     private String getQueryToInsertDataToServerDB(String schemaName, String tableName, String serverColumns) {
-        if (!isValidSchemaName(schemaName) || !isValidTableName(tableName)) {
-            logger.error("Invalid schema or table name for getQueryToInsertDataToServerDB: Schema='{}', Table='{}'.", schemaName, tableName);
-            throw new IllegalArgumentException("Invalid schema or table name provided.");
-        }
-        if (!isValidColumnNames(serverColumns)) {
-            logger.error("Invalid server columns provided for getQueryToInsertDataToServerDB: {}", serverColumns);
-            throw new IllegalArgumentException("Invalid column names provided.");
-        }
+        // if (!isValidSchemaName(schemaName) || !isValidTableName(tableName)) {
+        //     logger.error("Invalid schema or table name for getQueryToInsertDataToServerDB: Schema='{}', Table='{}'.", schemaName, tableName);
+        //     throw new IllegalArgumentException("Invalid schema or table name provided.");
+        // }
+        // if (!isValidColumnNames(serverColumns)) {
+        //     logger.error("Invalid server columns provided for getQueryToInsertDataToServerDB: {}", serverColumns);
+        //     throw new IllegalArgumentException("Invalid column names provided.");
+        // }
 
 
         String[] columnsArr = serverColumns.split(",");
@@ -562,24 +562,24 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
     }
 
     public String getQueryToUpdateDataToServerDB(String schemaName, String serverColumns, String tableName) {
-        if (!isValidSchemaName(schemaName) || !isValidTableName(tableName)) {
-            logger.error("Invalid schema or table name for getQueryToUpdateDataToServerDB: Schema='{}', Table='{}'.", schemaName, tableName);
-            throw new IllegalArgumentException("Invalid schema or table name provided.");
-        }
-        if (!isValidColumnNames(serverColumns)) {
-            logger.error("Invalid server columns provided for getQueryToUpdateDataToServerDB: {}", serverColumns);
-            throw new IllegalArgumentException("Invalid column names provided.");
-        }
+        // if (!isValidSchemaName(schemaName) || !isValidTableName(tableName)) {
+        //     logger.error("Invalid schema or table name for getQueryToUpdateDataToServerDB: Schema='{}', Table='{}'.", schemaName, tableName);
+        //     throw new IllegalArgumentException("Invalid schema or table name provided.");
+        // }
+        // if (!isValidColumnNames(serverColumns)) {
+        //     logger.error("Invalid server columns provided for getQueryToUpdateDataToServerDB: {}", serverColumns);
+        //     throw new IllegalArgumentException("Invalid column names provided.");
+        // }
 
         String[] columnsArr = serverColumns.split(",");
         StringBuilder preparedStatementSetter = new StringBuilder();
 
         for (int i = 0; i < columnsArr.length; i++) {
             String column = columnsArr[i].trim();
-            if (!isValidColumnName(column)) {
-                 logger.error("Invalid individual column name encountered: {}", column);
-                 throw new IllegalArgumentException("Invalid individual column name provided: " + column);
-            }
+            // if (!isValidColumnName(column)) {
+            //      logger.error("Invalid individual column name encountered: {}", column);
+            //      throw new IllegalArgumentException("Invalid individual column name provided: " + column);
+            // }
 
             preparedStatementSetter.append(column);
             preparedStatementSetter.append(" = ?");
