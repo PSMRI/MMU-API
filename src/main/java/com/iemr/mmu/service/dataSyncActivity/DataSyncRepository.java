@@ -83,7 +83,6 @@ public class DataSyncRepository {
 			}
 
 		}
-logger.info("base query: {}", baseQuery);
 		resultSetList = jdbcTemplate.queryForList(baseQuery);
 		return resultSetList;
 	}
