@@ -53,7 +53,7 @@ public class DataSyncRepositoryCentral {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 
-    private static final Set<String> VALID_SCHEMAS = Set.of("public", "db_iemr");
+    private static final Set<String> VALID_SCHEMAS = Set.of("public", "db_iemr", "db_identity");
 
     private static final Set<String> VALID_TABLES = Set.of(
             "m_beneficiaryregidmapping", "i_beneficiaryaccount", "i_beneficiaryaddress", "i_beneficiarycontacts",

@@ -64,7 +64,7 @@ public class DataSyncRepository {
 
 		if (table != null && table.equalsIgnoreCase("m_beneficiaryregidmapping")) {
 			baseQuery = " SELECT " + columnNames + " FROM " + schema + "." + table
-					+ " WHERE provisioned is true AND processed != 'P' AND vanID is not null ";
+					+ " WHERE provisioned is true AND processed <> 'P' AND vanID is not null ";
 		} else {
 			if (table != null && (table.equalsIgnoreCase("t_patientissue")
 					|| table.equalsIgnoreCase("t_physicalstockentry") || table.equalsIgnoreCase("t_stockadjustment")
@@ -75,15 +75,15 @@ public class DataSyncRepository {
 					|| table.equalsIgnoreCase("t_itemstockexit"))) {
 
 				baseQuery = " SELECT " + columnNames + " FROM " + schema + "." + table
-						+ " WHERE processed != 'P' AND SyncFacilityID is not null  ";
+						+ " WHERE processed <> 'P' AND SyncFacilityID is not null  ";
 
 			} else {
 				baseQuery = " SELECT " + columnNames + " FROM " + schema + "." + table
-						+ " WHERE processed != 'P' AND vanID is not null ";
+						+ " WHERE processed <> 'P' AND vanID is not null ";
 			}
 
 		}
-
+logger.info("base query: {}", baseQuery);
 		resultSetList = jdbcTemplate.queryForList(baseQuery);
 		return resultSetList;
 	}
