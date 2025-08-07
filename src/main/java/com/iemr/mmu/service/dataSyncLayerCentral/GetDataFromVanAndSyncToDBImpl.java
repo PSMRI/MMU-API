@@ -49,6 +49,17 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
 
     private static final Map<Integer, List<String>> TABLE_GROUPS = new HashMap<>();
     static {
+        // Group 1: Master data or less frequently changing data
+        TABLE_GROUPS.put(1, Arrays.asList("m_beneficiaryregidmapping", "m_another_master_table"));
+
+        // Group 2: Transactional data that might involve facility ID
+        TABLE_GROUPS.put(2, Arrays.asList("t_indent", "t_indentorder", "t_indentissue", "t_stocktransfer", "t_itemstockentry"));
+
+        // Group 3: High volume transactional data
+        TABLE_GROUPS.put(3, Arrays.asList("i_beneficiarydetails", "t_patientissue", "t_physicalstockentry",
+                                          "t_stockadjustment", "t_saitemmapping", "t_patientreturn",
+                                          "t_facilityconsumption", "t_itemstockexit"));
+        // Add more groups as needed, up to 9
        TABLE_GROUPS.put(1, Arrays.asList("m_beneficiaryregidmapping", "i_beneficiaryaccount","i_beneficiaryaddress","i_beneficiarycontacts","i_beneficiarydetails","i_beneficiaryfamilymapping","i_beneficiaryidentity","i_beneficiarymapping"));
 
         TABLE_GROUPS.put(2, Arrays.asList("t_benvisitdetail","t_phy_anthropometry","t_phy_vitals","t_benadherence","t_anccare","t_pnccare","t_ncdscreening","t_ncdcare","i_ben_flow_outreach","t_covid19","t_idrsdetails","t_physicalactivity"));
@@ -67,11 +78,10 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         
         TABLE_GROUPS.put(9, Arrays.asList("t_itemstockentry","t_itemstockexit","t_patientissue","t_physicalstockentry","t_stockadjustment","t_stocktransfer","t_patientreturn","t_facilityconsumption","t_indent","t_indentissue","t_indentorder","t_saitemmapping"));
       
-    }
+       }
 
     public String syncDataToServer(String requestOBJ, String Authorization, String token) throws Exception {
         logger.info("Starting syncDataToServer. Token: {}", token);
-
         ObjectMapper mapper = new ObjectMapper();
         SyncUploadDataDigester syncUploadDataDigester = mapper.readValue(requestOBJ, SyncUploadDataDigester.class);
 
@@ -91,7 +101,8 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                 logger.error("Sync failed for m_beneficiaryregidmapping: {}", result);
                 return "Sync failed for m_beneficiaryregidmapping.";
             }
-        } else if ("i_beneficiarydetails".equalsIgnoreCase(syncTableName)) {
+        }  
+        if ("i_beneficiarydetails".equalsIgnoreCase(syncTableName)) {
             String result = update_I_BeneficiaryDetails_for_processed_in_batches(syncUploadDataDigester);
             if ("data sync passed".equals(result)) {
                 return "Sync successful for i_beneficiarydetails.";
@@ -271,12 +282,13 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
     while (true) {
         List<Map<String, Object>> batch;
         try {
-            // *** ADD THIS LINE ***
             logger.info("DEBUG: Passing whereClause to getBatchForBenDetails: [{}]", problematicWhereClause);
 
             batch = dataSyncRepositoryCentral.getBatchForBenDetails(
-                    syncUploadDataDigester,
-                    problematicWhereClause,
+                    syncUploadDataDigester.getSchemaName(),
+                    syncUploadDataDigester.getTableName(),
+                    syncUploadDataDigester.getServerColumns(),
+                    problematicWhereClause, // Use the variable
                     limit,
                     offset);
         } catch (Exception e) {
