@@ -66,6 +66,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
 		} else {
 
 			List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
+            if (dataToBesync == null) dataToBesync = new ArrayList<>();
 
 			Object[] objArr;
 

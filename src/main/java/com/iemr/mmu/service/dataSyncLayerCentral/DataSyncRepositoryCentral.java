@@ -47,10 +47,9 @@ public class DataSyncRepositoryCentral {
 
 	private JdbcTemplate jdbcTemplate;
 
-	private JdbcTemplate getJdbcTemplate() {
-		return new JdbcTemplate(dataSource);
-
-	}
+protected JdbcTemplate getJdbcTemplate() {
+	return new JdbcTemplate(dataSource);
+}
 	
 	private Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 
@@ -163,7 +162,7 @@ public class DataSyncRepositoryCentral {
 			String masterType, Timestamp lastDownloadDate, Integer vanID, Integer psmID) throws Exception {
 		jdbcTemplate = getJdbcTemplate();
 		List<Map<String, Object>> resultSetList =new ArrayList<>();
-        String baseQuery = "";
+		String baseQuery = "";
 		if (masterType != null) {
 			if (lastDownloadDate != null) {
 				if (masterType.equalsIgnoreCase("A")) {
