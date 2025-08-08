@@ -100,6 +100,7 @@ logger.info("Authorization Header: " + authHeader);
 logger.info("JWT from Cookie: " + jwtFromCookie);
 logger.info("JWT from Header: " + jwtFromHeader);
 logger.info("User agent="+ request.getHeader("User-Agent"));
+
 			if (jwtFromCookie != null) {
 				logger.info("Validating JWT token from cookie");
 				if (jwtAuthenticationUtil.validateUserIdAndJwtToken(jwtFromCookie)) {
@@ -128,6 +129,7 @@ logger.info("User agent="+ request.getHeader("User-Agent"));
 					}
 					return;
 				}
+
 			}
 
 			logger.warn("No valid authentication token found");
@@ -162,7 +164,7 @@ logger.info("User agent="+ request.getHeader("User-Agent"));
 			return false;
 		userAgent = userAgent.toLowerCase();
 		logger.info("User-Agent: " + userAgent);
-		return userAgent.contains("okhttp") || userAgent.contains("java"); // iOS (custom clients)
+		return userAgent.contains("okhttp") || userAgent.contains("Java/"); // iOS (custom clients)
 	}
 
 	private String getJwtTokenFromCookies(HttpServletRequest request) {

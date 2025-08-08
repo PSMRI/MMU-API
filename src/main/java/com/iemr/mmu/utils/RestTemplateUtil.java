@@ -44,18 +44,18 @@ public class RestTemplateUtil {
         headers.add(HttpHeaders.AUTHORIZATION, "Bearer " + authorization);
     }
 
-	 if (jwtToken == null || jwtToken.isEmpty()) {
-            ServletRequestAttributes attrs =
-                    (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-            if (attrs != null) {
-                HttpServletRequest request = attrs.getRequest();
-                try {
-                    jwtToken = CookieUtil.getJwtTokenFromCookie(request);
-                } catch (Exception e) {
-                    logger.error("Error while getting JWT token from cookie: {}", e.getMessage());
-                }
-            }
-        }
+	//  if (jwtToken == null || jwtToken.isEmpty()) {
+    //         ServletRequestAttributes attrs =
+    //                 (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+    //         if (attrs != null) {
+    //             HttpServletRequest request = attrs.getRequest();
+    //             try {
+    //                 jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+    //             } catch (Exception e) {
+    //                 logger.error("Error while getting JWT token from cookie: {}", e.getMessage());
+    //             }
+    //         }
+    //     }
 
 
 	  if (jwtToken != null && !jwtToken.isEmpty()) {
