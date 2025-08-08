@@ -63,12 +63,10 @@ public class MMUDataSyncVanToServer {
 			@RequestHeader(value = "Authorization") String Authorization,  HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
 		
-		logger.info("test: vanto server auth="+Authorization);
 		try {
 			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
-		logger.info("test: vanto server token="+jwtToken);
 
-			String s = getDataFromVanAndSyncToDBImpl.syncDataToServer(requestOBJ, Authorization, jwtToken);
+			String s = getDataFromVanAndSyncToDBImpl.syncDataToServer(requestOBJ, Authorization, "");
 			if (s != null)
 				response.setResponse(s);
 			else
