@@ -73,6 +73,12 @@ public class Validator {
 
 	public void checkKeyExists(String loginKey, String ipAddress) throws IEMRException {
 		try {
+			// Remove "Bearer " prefix if present
+			if (loginKey != null && loginKey.startsWith("Bearer ")) {
+				loginKey = loginKey.substring(7);
+			}
+
+			logger.info("Checking session for key: {}", loginKey);
 			String sessionString = session.getSessionObject(loginKey);
 			JSONObject sessionObj = new JSONObject(sessionString);
 			if (enableIPValidation) {
