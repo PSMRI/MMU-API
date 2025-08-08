@@ -61,7 +61,7 @@ public class RestTemplateUtil {
 	  if (jwtToken != null && !jwtToken.isEmpty()) {
         headers.add(HttpHeaders.COOKIE, "Jwttoken=" + jwtToken);
     }
-    
+    logger.info("Token="+ jwtToken);
 
     return new HttpEntity<>(body, headers);
 }

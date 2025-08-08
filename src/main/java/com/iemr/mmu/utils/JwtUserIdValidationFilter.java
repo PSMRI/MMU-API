@@ -44,7 +44,7 @@ public class JwtUserIdValidationFilter implements Filter {
 		if (origin != null && isOriginAllowed(origin)) {
 			response.setHeader("Access-Control-Allow-Origin", origin);
 			response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-			response.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept, Jwttoken");
+			response.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept, Jwttoken,serverAuthorization, ServerAuthorization, serverauthorization, Serverauthorization");
 			response.setHeader("Vary", "Origin");
 			response.setHeader("Access-Control-Allow-Credentials", "true");
 		} else {
@@ -76,7 +76,7 @@ public class JwtUserIdValidationFilter implements Filter {
 
 		// Log headers for debugging
 		String jwtTokenFromHeader = request.getHeader("Jwttoken");
-		logger.info("JWT token from header: ");
+		logger.info("JWT token from header: "+jwtTokenFromHeader);
 
 		// Skip login and public endpoints
 		if (path.equals(contextPath + "/user/userAuthenticate")
