@@ -40,6 +40,8 @@ public class JwtUserIdValidationFilter implements Filter {
 
 		logger.debug("Incoming Origin: {}", origin);
 		logger.debug("Allowed Origins Configured: {}", allowedOrigins);
+		logger.info("Request="+request);
+		logger.info("Request="+request.getRequestURI());
 
 		if (origin != null && isOriginAllowed(origin)) {
 			response.setHeader("Access-Control-Allow-Origin", origin);
@@ -156,6 +158,7 @@ public class JwtUserIdValidationFilter implements Filter {
 		if (userAgent == null)
 			return false;
 		userAgent = userAgent.toLowerCase();
+		logger.info("User-Agent: " + userAgent);
 		return userAgent.contains("okhttp") || userAgent.contains("java"); // iOS (custom clients)
 	}
 
