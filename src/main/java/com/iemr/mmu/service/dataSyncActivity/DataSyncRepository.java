@@ -92,7 +92,7 @@ public class DataSyncRepository {
 			String autoIncreamentColumn, String user) throws Exception {
 		jdbcTemplate = getJdbcTemplate();
 		String query = " UPDATE " + schemaName + "." + tableName
-				+ " SET processed = 'P' , CreatedDate = ?, SyncedDate = ?, Syncedby = ? WHERE " + autoIncreamentColumn
+				+ " SET processed = 'P' , SyncedDate = ?, Syncedby = ? WHERE " + autoIncreamentColumn
 				+ " IN (" + vanSerialNos + ")";
 
 		Timestamp syncedDate = new Timestamp(System.currentTimeMillis());
