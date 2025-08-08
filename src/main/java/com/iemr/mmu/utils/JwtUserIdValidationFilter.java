@@ -164,7 +164,7 @@ logger.info("User agent="+ request.getHeader("User-Agent"));
 			return false;
 		userAgent = userAgent.toLowerCase();
 		logger.info("User-Agent: " + userAgent);
-		return userAgent.contains("okhttp") || userAgent.contains("Java/"); // iOS (custom clients)
+		return userAgent.contains("okhttp") || userAgent.contains("java/"); // iOS (custom clients)
 	}
 
 	private String getJwtTokenFromCookies(HttpServletRequest request) {
