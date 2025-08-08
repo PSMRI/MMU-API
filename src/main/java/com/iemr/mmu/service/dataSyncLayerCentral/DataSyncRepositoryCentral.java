@@ -53,7 +53,8 @@ public class DataSyncRepositoryCentral {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 
-    private static final Set<String> VALID_SCHEMAS = Set.of("public", "db_iemr");
+    private static final Set<String> VALID_SCHEMAS = Set.of("public", "db_iemr", "db_identity", "apl_db_iemr",
+            "apl_db_identity");
 
     private static final Set<String> VALID_TABLES = Set.of(
             "m_beneficiaryregidmapping", "i_beneficiaryaccount", "i_beneficiaryaddress", "i_beneficiarycontacts",
@@ -73,8 +74,7 @@ public class DataSyncRepositoryCentral {
             "t_cancervitals", "t_cancersignandsymptoms", "t_cancerlymphnode", "t_canceroralexamination",
             "t_cancerbreastexamination", "t_cancerabdominalexamination", "t_cancergynecologicalexamination",
             "t_cancerdiagnosis", "t_cancerimageannotation", "i_beneficiaryimage", "t_stockadjustment",
-            "t_stocktransfer", "t_patientreturn", "t_indent", "t_indentissue", "t_indentorder", "t_saitemmapping"
-    );
+            "t_stocktransfer", "t_patientreturn", "t_indent", "t_indentissue", "t_indentorder", "t_saitemmapping");
 
     private boolean isValidDatabaseIdentifierCharacter(String identifier) {
         return identifier != null && identifier.matches("^[a-zA-Z_][a-zA-Z0-9_]*$");
@@ -101,13 +101,14 @@ public class DataSyncRepositoryCentral {
     }
 
     public int checkRecordIsAlreadyPresentOrNot(String schemaName, String tableName, String vanSerialNo, String vanID,
-                                                 String vanAutoIncColumnName, int syncFacilityID) {
+            String vanAutoIncColumnName, int syncFacilityID) {
         jdbcTemplate = getJdbcTemplate();
         List<Object> params = new ArrayList<>();
 
         if (!isValidSchemaName(schemaName) || !isValidTableName(tableName) ||
                 !isValidDatabaseIdentifierCharacter(vanAutoIncColumnName)) {
-            logger.error("Invalid identifiers: schema={}, table={}, column={}", schemaName, tableName, vanAutoIncColumnName);
+            logger.error("Invalid identifiers: schema={}, table={}, column={}", schemaName, tableName,
+                    vanAutoIncColumnName);
             throw new IllegalArgumentException("Invalid identifiers provided.");
         }
 
@@ -119,7 +120,8 @@ public class DataSyncRepositoryCentral {
 
         if (List.of("t_patientissue", "t_physicalstockentry", "t_stockadjustment", "t_saitemmapping",
                 "t_stocktransfer", "t_patientreturn", "t_facilityconsumption", "t_indent",
-                "t_indentorder", "t_indentissue", "t_itemstockentry", "t_itemstockexit").contains(tableName.toLowerCase()) && syncFacilityID > 0) {
+                "t_indentorder", "t_indentissue", "t_itemstockentry", "t_itemstockexit")
+                .contains(tableName.toLowerCase()) && syncFacilityID > 0) {
             queryBuilder.append(" AND SyncFacilityID = ?");
             params.add(syncFacilityID);
         } else {
@@ -137,7 +139,7 @@ public class DataSyncRepositoryCentral {
     }
 
     public int[] syncDataToCentralDB(String schema, String tableName, String serverColumns, String query,
-                                     List<Object[]> syncDataList) {
+            List<Object[]> syncDataList) {
         jdbcTemplate = getJdbcTemplate();
         try {
             return jdbcTemplate.batchUpdate(query, syncDataList);
@@ -148,7 +150,7 @@ public class DataSyncRepositoryCentral {
     }
 
     public List<Map<String, Object>> getMasterDataFromTable(String schema, String table, String columnNames,
-                                                            String masterType, Timestamp lastDownloadDate, Integer vanID, Integer psmID) {
+            String masterType, Timestamp lastDownloadDate, Integer vanID, Integer psmID) {
         jdbcTemplate = getJdbcTemplate();
         List<Object> params = new ArrayList<>();
 
@@ -184,7 +186,8 @@ public class DataSyncRepositoryCentral {
         }
 
         try {
-            // Safe dynamic SQL: All dynamic parts (table names, columns, etc.) are validated or hardcoded.
+            // Safe dynamic SQL: All dynamic parts (table names, columns, etc.) are
+            // validated or hardcoded.
             // Parameter values are bound safely using prepared statement placeholders (?).
             return jdbcTemplate.queryForList(queryBuilder.toString(), params.toArray());
         } catch (Exception e) {
@@ -193,28 +196,29 @@ public class DataSyncRepositoryCentral {
         }
     }
 
-        public List<Map<String, Object>> getBatchForBenDetails(SyncUploadDataDigester digester,
-                                                            String whereClause, int limit, int offset) {
-            jdbcTemplate = getJdbcTemplate();
+    public List<Map<String, Object>> getBatchForBenDetails(SyncUploadDataDigester digester,
+            String whereClause, int limit, int offset) {
+        jdbcTemplate = getJdbcTemplate();
 
-String schema = digester.getSchemaName();
-    String table = digester.getTableName();
-    String columnNames = digester.getServerColumns();
+        String schema = digester.getSchemaName();
+        String table = digester.getTableName();
+        String columnNames = digester.getServerColumns();
 
-
-            if (!isValidSchemaName(schema) || !isValidTableName(table) || !isValidColumnNamesList(columnNames)) {
-                throw new IllegalArgumentException("Invalid schema, table, or column names.");
-            }
-            // Safe dynamic SQL: Schema, table, and column names are validated against predefined whitelists.
-            // Only trusted values are used in the query string.
-            // limit and offset are passed as parameters to prevent SQL injection.
-            String query = String.format("SELECT %s FROM %s.%s %s LIMIT ? OFFSET ?", columnNames, schema, table, whereClause); //NOSONAR
-
-            try {
-                return jdbcTemplate.queryForList(query, limit, offset);
-            } catch (Exception e) {
-                logger.error("Error fetching batch details: {}", e.getMessage(), e);
-                throw new RuntimeException("Failed to fetch batch data: " + e.getMessage(), e);
-            }
+        if (!isValidSchemaName(schema) || !isValidTableName(table) || !isValidColumnNamesList(columnNames)) {
+            throw new IllegalArgumentException("Invalid schema, table, or column names.");
         }
+        // Safe dynamic SQL: Schema, table, and column names are validated against
+        // predefined whitelists.
+        // Only trusted values are used in the query string.
+        // limit and offset are passed as parameters to prevent SQL injection.
+        String query = String.format("SELECT %s FROM %s.%s %s LIMIT ? OFFSET ?", columnNames, schema, table,
+                whereClause); // NOSONAR
+
+        try {
+            return jdbcTemplate.queryForList(query, limit, offset);
+        } catch (Exception e) {
+            logger.error("Error fetching batch details: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to fetch batch data: " + e.getMessage(), e);
+        }
+    }
 }
