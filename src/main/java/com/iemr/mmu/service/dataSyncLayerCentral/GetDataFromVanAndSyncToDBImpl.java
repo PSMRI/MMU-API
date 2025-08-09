@@ -53,10 +53,26 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                         "i_beneficiarycontacts", "i_beneficiarydetails", "i_beneficiaryfamilymapping",
                         "i_beneficiaryidentity", "i_beneficiarymapping"));
 
+        // TABLE_GROUPS.put(2,
+        // Arrays.asList("t_benvisitdetail", "t_phy_anthropometry", "t_phy_vitals",
+        // "t_benadherence", "t_anccare",
+        // "t_pnccare", "t_ncdscreening", "t_ncdcare", "i_ben_flow_outreach",
+        // "t_covid19", "t_idrsdetails",
+        // "t_physicalactivity"));
         TABLE_GROUPS.put(2,
-                Arrays.asList("t_benvisitdetail", "t_phy_anthropometry", "t_phy_vitals", "t_benadherence", "t_anccare",
-                        "t_pnccare", "t_ncdscreening", "t_ncdcare", "i_ben_flow_outreach", "t_covid19", "t_idrsdetails",
-                        "t_physicalactivity"));
+                Arrays.asList(
+                        "t_physicalactivity",
+                        "t_idrsdetails",
+                        "t_covid19",
+                        "i_ben_flow_outreach",
+                        "t_ncdcare",
+                        "t_ncdscreening",
+                        "t_pnccare",
+                        "t_anccare",
+                        "t_benadherence",
+                        "t_phy_vitals",
+                        "t_phy_anthropometry",
+                        "t_benvisitdetail"));
 
         TABLE_GROUPS.put(3,
                 Arrays.asList("t_phy_generalexam", "t_phy_headtotoe", "t_sys_obstetric", "t_sys_gastrointestinal",
@@ -229,7 +245,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         // The `originalDigester.getSyncData()` might not be correct for all tables in a group.
         // For demonstration, I'm just using the original digester's data, which is likely incorrect
         tableSpecificDigester.setSyncData(originalDigester.getSyncData());
-logger.info("vanitha: sync tables in group"+tableSpecificDigester.getSyncData());
+        logger.info("vanitha: sync tables in group" + tableSpecificDigester.getSyncData());
         return performGenericTableSync(tableSpecificDigester);
     }
 
