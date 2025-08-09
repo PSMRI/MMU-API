@@ -35,7 +35,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iemr.mmu.data.syncActivity_syncLayer.DataSyncGroups;
 import com.iemr.mmu.data.syncActivity_syncLayer.SyncUploadDataDigester;
+import com.iemr.mmu.repo.syncActivity_syncLayer.DataSyncGroupsRepo;
 
 @Service
 public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB {
@@ -46,6 +48,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
     @Autowired
     private DataSyncRepositoryCentral dataSyncRepositoryCentral;
 
+    
     private static final Map<Integer, List<String>> TABLE_GROUPS = new HashMap<>();
     static {
         TABLE_GROUPS.put(1,
@@ -95,7 +98,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
 
         ObjectMapper mapper = new ObjectMapper();
         SyncUploadDataDigester syncUploadDataDigester = mapper.readValue(requestOBJ, SyncUploadDataDigester.class);
-
+List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
         if (syncUploadDataDigester == null || syncUploadDataDigester.getTableName() == null) {
             logger.error("Invalid SyncUploadDataDigester object or tableName is null.");
             return "Error: Invalid sync request.";
@@ -131,9 +134,11 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
             // Otherwise, iterate through all defined groups.
             if (syncTableName != null && !syncTableName.isEmpty()) {
                 boolean foundInGroup = false;
-                for (Map.Entry<Integer, List<String>> entry : TABLE_GROUPS.entrySet()) {
-                    if (entry.getValue().contains(syncTableName.toLowerCase())) {
-                        logger.info("Attempting to sync table '{}' from Group {}", syncTableName, entry.getKey());
+                
+			for (Map<String, Object> map : dataToBesync) {
+                    // if (entry.getValue().contains(syncTableName.toLowerCase())) {
+                    if(map.get("tableName") != null
+                            && map.get("tableName").toString().equalsIgnoreCase(syncTableName)) {
                         syncSuccess = syncTablesInGroup(syncUploadDataDigester.getSchemaName(), syncTableName,
                                 syncUploadDataDigester);
                         foundInGroup = true;
