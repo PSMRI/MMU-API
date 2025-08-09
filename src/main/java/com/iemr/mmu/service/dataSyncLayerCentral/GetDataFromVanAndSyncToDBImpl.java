@@ -26,9 +26,12 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -48,6 +51,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
 	private static final String ServerColumnsNotRequired = null;
 	@Autowired
 	private DataSyncRepositoryCentral dataSyncRepositoryCentral;
+	private Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 
     private static final Map<Integer, List<String>> TABLE_GROUPS = new HashMap<>();
     static {
