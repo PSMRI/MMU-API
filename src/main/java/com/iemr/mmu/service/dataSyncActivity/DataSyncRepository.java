@@ -27,9 +27,11 @@ import java.util.List;
 import java.util.Map;
 
 import javax.sql.DataSource;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -97,11 +99,11 @@ logger.info("Base Query: " + baseQuery);
 			String autoIncreamentColumn, String user) throws Exception {
 		jdbcTemplate = getJdbcTemplate();
 		String query = " UPDATE " + schemaName + "." + tableName
-				+ " SET createdDate = ? , processed = 'P' , SyncedDate = ?, Syncedby = ? WHERE " + autoIncreamentColumn
+				+ " SET CreatedDate = ? , processed = 'P' , SyncedDate = ?, Syncedby = ? WHERE " + autoIncreamentColumn
 				+ " IN (" + vanSerialNos + ")";
 
 		Timestamp syncedDate = new Timestamp(System.currentTimeMillis());
-		int updatedRows = jdbcTemplate.update(query, syncedDate, user);
+		int updatedRows = jdbcTemplate.update(query, syncedDate, syncedDate, user);
 logger.info("Update query executed: " + query);
 		return updatedRows;
 

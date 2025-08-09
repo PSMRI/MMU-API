@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -380,9 +381,9 @@ logger.info("vanitha: sync tables in group"+tableSpecificDigester.getSyncData())
             // Update SyncedBy and SyncedDate in the xmap itself before processing
             map.put("SyncedBy", syncUploadDataDigester.getSyncedBy());
             map.put("SyncedDate", String.valueOf(LocalDateTime.now())); // Ensure column name matches DB
- if (map.get("createdDate") == null) {
-        logger.info("createdDate was null for table: " + syncTableName + ", inserting current time");
-        map.put("createdDate", String.valueOf(LocalDateTime.now()));
+ if (map.get("CreatedDate") == null) {
+        logger.info("CreatedDate was null for table: " + syncTableName + ", inserting current time");
+        map.put("CreatedDate", String.valueOf(LocalDateTime.now()));
     }
             // Facility ID processing
             if (facilityIDFromDigester != null) {
@@ -495,7 +496,9 @@ logger.info("vanitha: sync tables in group"+tableSpecificDigester.getSyncData())
         if (!syncDataListInsert.isEmpty()) {
             String queryInsert = getQueryToInsertDataToServerDB(schemaName, syncTableName, syncUploadDataDigester.getServerColumns());
             logger.info("Generated insert query for table {}: {}", syncTableName, queryInsert);
-            logger.info("Data to be inserted for table {}: {}", syncTableName, syncDataListInsert);
+            logger.info("Data to be inserted for table {}: {}", syncTableName,  syncDataListInsert.stream()
+                      .map(Arrays::toString)
+                      .collect(Collectors.joining(", ")));
             try {
                 int[] i = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
                         syncUploadDataDigester.getServerColumns(), queryInsert, syncDataListInsert);
@@ -572,16 +575,33 @@ logger.info("vanitha: sync tables in group"+tableSpecificDigester.getSyncData())
 
         StringBuilder preparedStatementSetter = new StringBuilder();
 
-        if (columnsArr != null && columnsArr.length > 0) {
+        // if (columnsArr != null && columnsArr.length > 0) {
+        //     for (int i = 0; i < columnsArr.length; i++) {
+        //         preparedStatementSetter.append(columnsArr[i].trim());
+        //         preparedStatementSetter.append(" = ?");
+        //         if (i < columnsArr.length - 1) {
+        //             preparedStatementSetter.append(", ");
+        //         }
+        //     }
+        // }
+       if (columnsArr != null && columnsArr.length > 0) {
             for (int i = 0; i < columnsArr.length; i++) {
-                preparedStatementSetter.append(columnsArr[i].trim());
-                preparedStatementSetter.append(" = ?");
+                String columnName = columnsArr[i].trim(); // ← NEW LINE
+ 
+                // Special handling for CreatedDate - use COALESCE to prevent NULL
+                if (columnName.equalsIgnoreCase("CreatedDate")) { // ← NEW BLOCK
+                    preparedStatementSetter.append(columnName);
+                    preparedStatementSetter.append(" = COALESCE(?, CURRENT_TIMESTAMP)");
+                } else {
+                    preparedStatementSetter.append(columnName);
+                    preparedStatementSetter.append(" = ?");
+                }
+ 
                 if (i < columnsArr.length - 1) {
                     preparedStatementSetter.append(", ");
                 }
             }
         }
-
         StringBuilder queryBuilder = new StringBuilder(" UPDATE ");
         queryBuilder.append(schemaName).append(".").append(tableName);
         queryBuilder.append(" SET ");
