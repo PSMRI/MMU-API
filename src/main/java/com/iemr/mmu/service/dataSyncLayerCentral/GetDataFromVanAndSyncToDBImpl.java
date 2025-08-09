@@ -624,9 +624,11 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         queryBuilder.append(preparedStatementSetter);
         queryBuilder.append(" WHERE VanSerialNo = ? ");
 
-        if (Arrays.asList("t_patientissue", "t_physicalstockentry", "t_stockadjustment", "t_saitemmapping",
-                "t_stocktransfer", "t_patientreturn", "t_facilityconsumption", "t_indent",
-                "t_indentorder", "t_indentissue", "t_itemstockentry", "t_itemstockexit")
+        if (Arrays
+                .asList("t_physicalstockentry", "t_patientissue", "t_itemstockentry", "t_itemstockexit",
+                        "t_stockadjustment",
+                        "t_stocktransfer", "t_patientreturn", "t_facilityconsumption", "t_indent",
+                        "t_indentissue", "t_indentorder", "t_saitemmapping")
                 .contains(tableName.toLowerCase())) {
             queryBuilder.append(" AND SyncFacilityID = ? ");
         } else {
