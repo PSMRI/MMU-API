@@ -64,7 +64,7 @@ public class MMUDataSyncVanToServer {
 		OutputResponse response = new OutputResponse();
 		
 		try {
-			String s = getDataFromVanAndSyncToDBImpl.syncDataToServer(requestOBJ, Authorization, "");
+			String s = getDataFromVanAndSyncToDBImpl.syncDataToServer(requestOBJ, Authorization);
 			if (s != null)
 				response.setResponse(s);
 			else
