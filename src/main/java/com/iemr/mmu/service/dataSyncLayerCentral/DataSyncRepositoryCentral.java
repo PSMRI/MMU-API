@@ -53,8 +53,7 @@ public class DataSyncRepositoryCentral {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 
-    private static final Set<String> VALID_SCHEMAS = Set.of("public", "db_iemr", "db_identity", "apl_db_iemr",
-            "apl_db_identity");
+    private static final Set<String> VALID_SCHEMAS = Set.of("public", "db_iemr", "db_identity","apl_db_iemr","apl_db_identity","db_iemr_sync","db_identity_sync");
 
     private static final Set<String> VALID_TABLES = Set.of(
             "m_beneficiaryregidmapping", "i_beneficiaryaccount", "i_beneficiaryaddress", "i_beneficiarycontacts",
@@ -142,6 +141,9 @@ public class DataSyncRepositoryCentral {
             List<Object[]> syncDataList) {
         jdbcTemplate = getJdbcTemplate();
         try {
+            logger.info("Syncing data to central DB for table: {}", tableName);
+            logger.info("servercolumns="+serverColumns);
+            logger.info("Query: {}", query);
             return jdbcTemplate.batchUpdate(query, syncDataList);
         } catch (Exception e) {
             logger.error("Batch sync failed for table {}: {}", tableName, e.getMessage(), e);
@@ -189,6 +191,8 @@ public class DataSyncRepositoryCentral {
             // Safe dynamic SQL: All dynamic parts (table names, columns, etc.) are
             // validated or hardcoded.
             // Parameter values are bound safely using prepared statement placeholders (?).
+            logger.info("Executing query: {}", queryBuilder.toString());
+            logger.info("With parameters: {}", params);
             return jdbcTemplate.queryForList(queryBuilder.toString(), params.toArray());
         } catch (Exception e) {
             logger.error("Error fetching master data: {}", e.getMessage(), e);
@@ -214,11 +218,13 @@ public class DataSyncRepositoryCentral {
         String query = String.format("SELECT %s FROM %s.%s %s LIMIT ? OFFSET ?", columnNames, schema, table,
                 whereClause); // NOSONAR
 
-        try {
-            return jdbcTemplate.queryForList(query, limit, offset);
-        } catch (Exception e) {
-            logger.error("Error fetching batch details: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to fetch batch data: " + e.getMessage(), e);
+            try {
+                logger.info("Fetching batch details with query: {}", query);
+                logger.info("With limit: {}, offset: {}", limit, offset);
+                return jdbcTemplate.queryForList(query, limit, offset);
+            } catch (Exception e) {
+                logger.error("Error fetching batch details: {}", e.getMessage(), e);
+                throw new RuntimeException("Failed to fetch batch data: " + e.getMessage(), e);
+            }
         }
-    }
 }

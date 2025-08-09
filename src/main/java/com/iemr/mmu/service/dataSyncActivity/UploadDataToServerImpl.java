@@ -385,17 +385,18 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 		int i = 0;
 		if (response != null && response.hasBody()) {
 			JSONObject obj = new JSONObject(response.getBody());
+			logger.info("Response = "+obj);
 			if (obj != null && obj.has("statusCode") && obj.getInt("statusCode") == 200) {
 				StringBuilder vanSerialNos = getVanSerialNoListForSyncedData(vanAutoIncColumnName, dataToBesync);
 				logger.info(
 						"Updating processed flag for schemaName: {}, tableName: {}, vanSerialNos: {}, vanAutoIncColumnName: {}, user: {}",
 						schemaName, tableName, vanSerialNos.toString(), vanAutoIncColumnName, user);
 				// update table for processed flag = "P"
-				logger.info(schemaName + "|" + tableName + "|" + vanSerialNos.toString() + "|" + vanAutoIncColumnName
+				logger.info("For update="+ schemaName + "|" + tableName + "|" + vanSerialNos.toString() + "|" + vanAutoIncColumnName
 						+ "|" + user);
 				i = dataSyncRepository.updateProcessedFlagInVan(schemaName, tableName, vanSerialNos,
 						vanAutoIncColumnName, user);
-				logger.debug("Updated processed flag in database. Records affected: {}", i);
+				logger.info("Updated processed flag in database. Records affected: {}", i);
 			}
 		}
 		if (i > 0)

@@ -27,7 +27,8 @@ import java.util.List;
 import java.util.Map;
 
 import javax.sql.DataSource;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -49,6 +50,8 @@ public class DataSyncRepository {
 
 	@Autowired
 	private SyncUtilityClassRepo syncutilityClassRepo;
+
+	private Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 
 	private JdbcTemplate getJdbcTemplate() {
 		return new JdbcTemplate(dataSource);
@@ -83,7 +86,9 @@ public class DataSyncRepository {
 			}
 
 		}
-
+		logger.info("Schema and table: " + schema + "." + table);
+		logger.info("Column names: " + columnNames);
+logger.info("Base Query: " + baseQuery);
 		resultSetList = jdbcTemplate.queryForList(baseQuery);
 		return resultSetList;
 	}
@@ -92,12 +97,12 @@ public class DataSyncRepository {
 			String autoIncreamentColumn, String user) throws Exception {
 		jdbcTemplate = getJdbcTemplate();
 		String query = " UPDATE " + schemaName + "." + tableName
-				+ " SET processed = 'P' , SyncedDate = ?, Syncedby = ? WHERE " + autoIncreamentColumn
+				+ " SET createdDate = ? , processed = 'P' , SyncedDate = ?, Syncedby = ? WHERE " + autoIncreamentColumn
 				+ " IN (" + vanSerialNos + ")";
 
 		Timestamp syncedDate = new Timestamp(System.currentTimeMillis());
 		int updatedRows = jdbcTemplate.update(query, syncedDate, user);
-
+logger.info("Update query executed: " + query);
 		return updatedRows;
 
 	}

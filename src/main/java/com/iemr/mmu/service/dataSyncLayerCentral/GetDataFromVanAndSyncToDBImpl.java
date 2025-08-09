@@ -224,18 +224,11 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         tableSpecificDigester.setServerColumns(originalDigester.getServerColumns()); // Assuming serverColumns is
                                                                                      // generic or set per table
 
-        // !!! IMPORTANT: You'll need to fetch the data for 'currentTableName' from your
-        // local DB here.
-        // The `originalDigester.getSyncData()` might not be correct for all tables in a
-        // group.
-        // For demonstration, I'm just using the original digester's data, which is
-        // likely incorrect
-        // if you're syncing multiple tables from a single request.
-        // You'll need a method like:
-        // dataSyncRepositoryLocal.getDataForTable(currentTableName, ...)
-        tableSpecificDigester.setSyncData(originalDigester.getSyncData()); // Placeholder: Replace with actual data
-                                                                           // fetching
-
+        // !!! IMPORTANT: You'll need to fetch the data for 'currentTableName' from your local DB here.
+        // The `originalDigester.getSyncData()` might not be correct for all tables in a group.
+        // For demonstration, I'm just using the original digester's data, which is likely incorrect
+        tableSpecificDigester.setSyncData(originalDigester.getSyncData());
+logger.info("vanitha: sync tables in group"+tableSpecificDigester.getSyncData());
         return performGenericTableSync(tableSpecificDigester);
     }
 
@@ -265,9 +258,10 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         }
 
         if (!syncData.isEmpty()) {
+            logger.info("Sync data in m_beneficiaryregidmapping: {}", syncData);
             try {
                 int[] i = dataSyncRepositoryCentral.syncDataToCentralDB(syncUploadDataDigester.getSchemaName(),
-                        syncUploadDataDigester.getTableName(), SERVER_COLUMNS_NOT_REQUIRED, query, syncData);
+                        syncUploadDataDigester.getTableName(), syncUploadDataDigester.getServerColumns(), query, syncData);
 
                 if (i.length == syncData.size()) {
                     logger.info("Successfully updated {} records for m_beneficiaryregidmapping.", i.length);
@@ -299,6 +293,8 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         queryBuilder.append(" BeneficiaryID = ? ");
         queryBuilder.append(" AND ");
         queryBuilder.append(" VanID = ? ");
+
+        logger.info("Generated query for m_beneficiaryregidmapping: {}", queryBuilder.toString());
         return queryBuilder.toString();
     }
 
@@ -316,11 +312,11 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
 
         String problematicWhereClause = " WHERE Processed <> 'P' AND VanID IS NOT NULL "; // Define it explicitly
 
-        while (true) {
-            List<Map<String, Object>> batch;
-            try {
-                // *** ADD THIS LINE ***
-                logger.info("DEBUG: Passing whereClause to getBatchForBenDetails: [{}]", problematicWhereClause);
+    while (true) {
+        List<Map<String, Object>> batch;
+        try {
+            
+            logger.info("DEBUG: Passing whereClause to getBatchForBenDetails: [{}]", problematicWhereClause);
 
                 batch = dataSyncRepositoryCentral.getBatchForBenDetails(
                         syncUploadDataDigester,
@@ -352,6 +348,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         queryBuilder.append("BeneficiaryDetailsId = ? ");
         queryBuilder.append(" AND ");
         queryBuilder.append("VanID = ? ");
+        logger.info("Generated query for i_beneficiarydetails: {}", queryBuilder.toString());
         return queryBuilder.toString();
     }
 
@@ -380,14 +377,13 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
             String vanID = String.valueOf(map.get("VanID"));
             int syncFacilityID = 0;
 
-            // Update SyncedBy and SyncedDate in the map itself before processing
+            // Update SyncedBy and SyncedDate in the xmap itself before processing
             map.put("SyncedBy", syncUploadDataDigester.getSyncedBy());
             map.put("SyncedDate", String.valueOf(LocalDateTime.now())); // Ensure column name matches DB
-
-            if (!map.containsKey("createdDate") || map.get("createdDate") == null) {
-                map.put("createdDate", String.valueOf(LocalDateTime.now()));
-            }
-
+ if (map.get("createdDate") == null) {
+        logger.info("createdDate was null for table: " + syncTableName + ", inserting current time");
+        map.put("createdDate", String.valueOf(LocalDateTime.now()));
+    }
             // Facility ID processing
             if (facilityIDFromDigester != null) {
                 // Determine the 'Processed' status based on facility ID for specific tables
@@ -497,8 +493,9 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         boolean updateSuccess = true;
 
         if (!syncDataListInsert.isEmpty()) {
-            String queryInsert = getQueryToInsertDataToServerDB(schemaName, syncTableName,
-                    syncUploadDataDigester.getServerColumns());
+            String queryInsert = getQueryToInsertDataToServerDB(schemaName, syncTableName, syncUploadDataDigester.getServerColumns());
+            logger.info("Generated insert query for table {}: {}", syncTableName, queryInsert);
+            logger.info("Data to be inserted for table {}: {}", syncTableName, syncDataListInsert);
             try {
                 int[] i = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
                         syncUploadDataDigester.getServerColumns(), queryInsert, syncDataListInsert);
@@ -517,8 +514,10 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         }
 
         if (!syncDataListUpdate.isEmpty()) {
-            String queryUpdate = getQueryToUpdateDataToServerDB(schemaName, syncUploadDataDigester.getServerColumns(),
-                    syncTableName);
+            String queryUpdate = getQueryToUpdateDataToServerDB(schemaName, syncUploadDataDigester.getServerColumns(), syncTableName);
+            logger.info("Generated update query for table {}: {}", syncTableName, queryUpdate);
+            logger.info("Data to be updated for table {}: {}", syncTableName, syncDataListUpdate);
+            // Ensure the update query is correct and matches the expected format
             try {
                 int[] j = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
                         SERVER_COLUMNS_NOT_REQUIRED, queryUpdate, syncDataListUpdate);
@@ -561,10 +560,12 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         queryBuilder.append(") VALUES (");
         queryBuilder.append(preparedStatementSetter);
         queryBuilder.append(")");
+        logger.info("Generated insert query for table {}: {}", tableName, queryBuilder.toString());
         return queryBuilder.toString();
     }
 
     public String getQueryToUpdateDataToServerDB(String schemaName, String serverColumns, String tableName) {
+        logger.info("schema name="+schemaName+" table name="+tableName+" server columns="+serverColumns);
         String[] columnsArr = null;
         if (serverColumns != null)
             columnsArr = serverColumns.split(",");
@@ -595,6 +596,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         } else {
             queryBuilder.append(" AND VanID = ? ");
         }
+        logger.info("Generated update query for table {}: {}", tableName, queryBuilder.toString());
         return queryBuilder.toString();
     }
 
@@ -616,6 +618,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                 }
             }
         }
+        logger.info("Failed records info: {}", failedRecordsInfo);
         return String.join("; ", failedRecordsInfo);
     }
 }

@@ -64,8 +64,6 @@ public class MMUDataSyncVanToServer {
 		OutputResponse response = new OutputResponse();
 		
 		try {
-			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
-
 			String s = getDataFromVanAndSyncToDBImpl.syncDataToServer(requestOBJ, Authorization, "");
 			if (s != null)
 				response.setResponse(s);
