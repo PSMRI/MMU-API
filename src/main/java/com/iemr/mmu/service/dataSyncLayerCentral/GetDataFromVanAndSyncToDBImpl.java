@@ -24,9 +24,9 @@ package com.iemr.mmu.service.dataSyncLayerCentral;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -35,9 +35,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.iemr.mmu.data.syncActivity_syncLayer.DataSyncGroups;
 import com.iemr.mmu.data.syncActivity_syncLayer.SyncUploadDataDigester;
-import com.iemr.mmu.repo.syncActivity_syncLayer.DataSyncGroupsRepo;
 
 @Service
 public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB {
@@ -387,9 +385,9 @@ logger.info("vanitha: sync tables in group"+tableSpecificDigester.getSyncData())
             map.put("SyncedDate", String.valueOf(LocalDateTime.now())); // Ensure column name matches DB
             if (map.get("CreatedDate") == null || map.get("created_date") == null) {
                 logger.info("CreatedDate was null for table: " + syncTableName + ", inserting current time");
-                if(map.get("CreatedDate") != null)
+                if(map.get("CreatedDate") == null)
                     map.put("CreatedDate", String.valueOf(LocalDateTime.now()));
-                if(map.get("created_date") != null)
+                if(map.get("created_date") == null)
                     map.put("created_date", String.valueOf(LocalDateTime.now()));
                 }
             // Facility ID processing
