@@ -340,7 +340,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 			dataMap.put("facilityID", facilityID);
 
 		String requestOBJ = gson.toJson(dataMap);
-		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestOBJ, Authorization,"");
+		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestOBJ, Authorization,"datasync");
 		ResponseEntity<String> response = restTemplate.exchange(dataSyncUploadUrl, HttpMethod.POST, request,
 				String.class);
 		

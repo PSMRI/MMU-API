@@ -39,7 +39,7 @@ public class RestTemplateUtil {
     MultiValueMap<String, String> headers = new LinkedMultiValueMap<>();
    
     headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE + ";charset=utf-8");
-
+logger.info("token: {}", jwtToken);
     if (authorization != null && !authorization.isEmpty() && !jwtToken.equalsIgnoreCase("datasync")) {
         headers.add(HttpHeaders.AUTHORIZATION, "Bearer " + authorization);
     }
