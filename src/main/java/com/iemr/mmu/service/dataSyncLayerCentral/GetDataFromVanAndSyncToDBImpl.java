@@ -385,10 +385,13 @@ logger.info("vanitha: sync tables in group"+tableSpecificDigester.getSyncData())
             // Update SyncedBy and SyncedDate in the xmap itself before processing
             map.put("SyncedBy", syncUploadDataDigester.getSyncedBy());
             map.put("SyncedDate", String.valueOf(LocalDateTime.now())); // Ensure column name matches DB
- if (map.get("CreatedDate") == null) {
-        logger.info("CreatedDate was null for table: " + syncTableName + ", inserting current time");
-        map.put("CreatedDate", String.valueOf(LocalDateTime.now()));
-    }
+            if (map.get("CreatedDate") == null || map.get("created_date") == null) {
+                logger.info("CreatedDate was null for table: " + syncTableName + ", inserting current time");
+                if(map.get("CreatedDate") != null)
+                    map.put("CreatedDate", String.valueOf(LocalDateTime.now()));
+                if(map.get("created_date") != null)
+                    map.put("created_date", String.valueOf(LocalDateTime.now()));
+                }
             // Facility ID processing
             if (facilityIDFromDigester != null) {
                 // Determine the 'Processed' status based on facility ID for specific tables
