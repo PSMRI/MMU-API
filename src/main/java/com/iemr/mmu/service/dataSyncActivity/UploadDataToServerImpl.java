@@ -243,31 +243,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 		groupIdStatus.put("groupId", String.valueOf(groupId));
 		groupIdStatus.put("status", serverAcknowledgement);
 		responseStatus.add(groupIdStatus);
-		logger.info("Response from data sync: {}", responseStatus);
 	}
-
-//	private boolean setResponseStatus(Map<String, String> groupIdStatus, int groupId, String serverAcknowledgement,
-//			List<Map<String, String>> responseStatus, boolean isProgress) {
-//		if (serverAcknowledgement != null) {
-//			groupIdStatus.put("groupId", String.valueOf(groupId));
-//			groupIdStatus.put("status", serverAcknowledgement);
-//			responseStatus.add(groupIdStatus);
-//			logger.info("Response from data sync", responseStatus);
-//		} else if (isProgress) {
-//			groupIdStatus.put("groupId", String.valueOf(groupId));
-//			groupIdStatus.put("status", "pending");
-//			responseStatus.add(groupIdStatus);
-//			logger.info("Response from data sync", responseStatus);
-//		} else {
-//			isProgress = true;
-//			groupIdStatus.put("groupId", String.valueOf(groupId));
-//			groupIdStatus.put("status", "failed");
-//			responseStatus.add(groupIdStatus);
-//			logger.info("Response from data sync", responseStatus);
-//		}
-//		return isProgress;
-//
-//	}
 
 	/**
 	 * 
@@ -342,14 +318,11 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 	public String syncDataToServer(int vanID, String schemaName, String tableName, String vanAutoIncColumnName,
 			String serverColumns, List<Map<String, Object>> dataToBesync, String user, String Authorization, String token)
 			throws Exception {
-		logger.debug(
-				"Entering syncDataToServer with vanID: {}, schemaName: '{}', tableName: '{}', vanAutoIncColumnName: '{}', serverColumns: '{}', user: '{}'",
-				vanID, schemaName, tableName, vanAutoIncColumnName, serverColumns, user);
+		
 		RestTemplate restTemplate = new RestTemplate();
 		
 
 		Integer facilityID = masterVanRepo.getFacilityID(vanID);
-		logger.debug("Fetched facilityID for vanID {}: {}", vanID, facilityID);
 
 		// serialize null
 		GsonBuilder gsonBuilder = new GsonBuilder();
@@ -367,36 +340,19 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 			dataMap.put("facilityID", facilityID);
 
 		String requestOBJ = gson.toJson(dataMap);
-logger.info("Request Object for data sync: {}", requestOBJ);
 		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestOBJ, Authorization,"");
-		logger.info("Before Data sync upload Url" + dataSyncUploadUrl);
-		logger.info("Token= " + token);
-		logger.info("server authorization= " + Authorization);
 		ResponseEntity<String> response = restTemplate.exchange(dataSyncUploadUrl, HttpMethod.POST, request,
 				String.class);
-		logger.info("Received response from data sync URL: {}", response);
-		logger.info("Received response from data sync URL: {}", dataSyncUploadUrl);
-
-		logger.info("After Data sync upload Url" + dataSyncUploadUrl);
-		/**
-		 * if data successfully synced then getVanSerialNo of synced data to update
-		 * processed flag
-		 */
+		
 		int i = 0;
 		if (response != null && response.hasBody()) {
 			JSONObject obj = new JSONObject(response.getBody());
 			logger.info("Response = "+obj);
 			if (obj != null && obj.has("statusCode") && obj.getInt("statusCode") == 200) {
 				StringBuilder vanSerialNos = getVanSerialNoListForSyncedData(vanAutoIncColumnName, dataToBesync);
-				logger.info(
-						"Updating processed flag for schemaName: {}, tableName: {}, vanSerialNos: {}, vanAutoIncColumnName: {}, user: {}",
-						schemaName, tableName, vanSerialNos.toString(), vanAutoIncColumnName, user);
-				// update table for processed flag = "P"
-				logger.info("For update="+ schemaName + "|" + tableName + "|" + vanSerialNos.toString() + "|" + vanAutoIncColumnName
-						+ "|" + user);
+				
 				i = dataSyncRepository.updateProcessedFlagInVan(schemaName, tableName, vanSerialNos,
 						vanAutoIncColumnName, user);
-				logger.info("Updated processed flag in database. Records affected: {}", i);
 			}
 		}
 		if (i > 0)

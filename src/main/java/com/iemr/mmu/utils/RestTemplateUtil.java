@@ -40,29 +40,31 @@ public class RestTemplateUtil {
    
     headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE + ";charset=utf-8");
 
-    if (authorization != null && !authorization.isEmpty()) {
+    if (authorization != null && !authorization.isEmpty() && !jwtToken.equalsIgnoreCase("datasync")) {
         headers.add(HttpHeaders.AUTHORIZATION, "Bearer " + authorization);
     }
 
-	//  if (jwtToken == null || jwtToken.isEmpty()) {
-    //         ServletRequestAttributes attrs =
-    //                 (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-    //         if (attrs != null) {
-    //             HttpServletRequest request = attrs.getRequest();
-    //             try {
-    //                 jwtToken = CookieUtil.getJwtTokenFromCookie(request);
-    //             } catch (Exception e) {
-    //                 logger.error("Error while getting JWT token from cookie: {}", e.getMessage());
-    //             }
-    //         }
-    //     }
+    if(authorization != null && !authorization.isEmpty() && jwtToken.equalsIgnoreCase("datasync"))
+    {
+        headers.add(HttpHeaders.AUTHORIZATION, authorization);
+    }
 
+	 if (jwtToken == null || jwtToken.isEmpty()) {
+            ServletRequestAttributes attrs =
+                    (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs != null) {
+                HttpServletRequest request = attrs.getRequest();
+                try {
+                    jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+                } catch (Exception e) {
+                    logger.error("Error while getting JWT token from cookie: {}", e.getMessage());
+                }
+            }
+        }                                                                                                        
 
-	  if (jwtToken != null && !jwtToken.isEmpty()) {
+	  if (jwtToken != null && !jwtToken.isEmpty() && !jwtToken.equalsIgnoreCase("datasync")) {
         headers.add(HttpHeaders.COOKIE, "Jwttoken=" + jwtToken);
     }
-    logger.info("Token="+ jwtToken);
-
     return new HttpEntity<>(body, headers);
 }
 }

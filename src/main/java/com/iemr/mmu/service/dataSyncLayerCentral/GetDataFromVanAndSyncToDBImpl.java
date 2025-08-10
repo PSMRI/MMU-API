@@ -231,14 +231,12 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
         // The `originalDigester.getSyncData()` might not be correct for all tables in a group.
         // For demonstration, I'm just using the original digester's data, which is likely incorrect
         tableSpecificDigester.setSyncData(originalDigester.getSyncData());
-logger.info("vanitha: sync tables in group"+tableSpecificDigester.getSyncData());
         return performGenericTableSync(tableSpecificDigester);
     }
 
     private String update_M_BeneficiaryRegIdMapping_for_provisioned_benID(
             SyncUploadDataDigester syncUploadDataDigester) {
-        logger.info("Processing update_M_BeneficiaryRegIdMapping_for_provisioned_benID for table: {}",
-                syncUploadDataDigester.getTableName());
+        
         List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
         List<Object[]> syncData = new ArrayList<>();
 
@@ -261,7 +259,6 @@ logger.info("vanitha: sync tables in group"+tableSpecificDigester.getSyncData())
         }
 
         if (!syncData.isEmpty()) {
-            logger.info("Sync data in m_beneficiaryregidmapping: {}", syncData);
             try {
                 int[] i = dataSyncRepositoryCentral.syncDataToCentralDB(syncUploadDataDigester.getSchemaName(),
                         syncUploadDataDigester.getTableName(), syncUploadDataDigester.getServerColumns(), query, syncData);
@@ -297,13 +294,10 @@ logger.info("vanitha: sync tables in group"+tableSpecificDigester.getSyncData())
         queryBuilder.append(" AND ");
         queryBuilder.append(" VanID = ? ");
 
-        logger.info("Generated query for m_beneficiaryregidmapping: {}", queryBuilder.toString());
         return queryBuilder.toString();
     }
 
     public String update_I_BeneficiaryDetails_for_processed_in_batches(SyncUploadDataDigester syncUploadDataDigester) {
-        logger.info("Processing update_I_BeneficiaryDetails_for_processed_in_batches for table: {}",
-                syncUploadDataDigester.getTableName());
         List<Object[]> syncData = new ArrayList<>();
 
         String query = getQueryFor_I_BeneficiaryDetails(syncUploadDataDigester.getSchemaName(),
@@ -319,8 +313,6 @@ logger.info("vanitha: sync tables in group"+tableSpecificDigester.getSyncData())
         List<Map<String, Object>> batch;
         try {
             
-            logger.info("DEBUG: Passing whereClause to getBatchForBenDetails: [{}]", problematicWhereClause);
-
                 batch = dataSyncRepositoryCentral.getBatchForBenDetails(
                         syncUploadDataDigester,
                         problematicWhereClause,
@@ -351,7 +343,6 @@ logger.info("vanitha: sync tables in group"+tableSpecificDigester.getSyncData())
         queryBuilder.append("BeneficiaryDetailsId = ? ");
         queryBuilder.append(" AND ");
         queryBuilder.append("VanID = ? ");
-        logger.info("Generated query for i_beneficiarydetails: {}", queryBuilder.toString());
         return queryBuilder.toString();
     }
 
@@ -360,7 +351,6 @@ logger.info("vanitha: sync tables in group"+tableSpecificDigester.getSyncData())
      * handlers.
      */
     private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDigester) {
-        logger.info("Performing generic sync for table: {}", syncUploadDataDigester.getTableName());
         List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
         List<Object[]> syncDataListInsert = new ArrayList<>();
         List<Object[]> syncDataListUpdate = new ArrayList<>();
@@ -500,10 +490,7 @@ logger.info("vanitha: sync tables in group"+tableSpecificDigester.getSyncData())
 
         if (!syncDataListInsert.isEmpty()) {
             String queryInsert = getQueryToInsertDataToServerDB(schemaName, syncTableName, syncUploadDataDigester.getServerColumns());
-            logger.info("Generated insert query for table {}: {}", syncTableName, queryInsert);
-            logger.info("Data to be inserted for table {}: {}", syncTableName,  syncDataListInsert.stream()
-                      .map(Arrays::toString)
-                      .collect(Collectors.joining(", ")));
+           
             try {
                 int[] i = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
                         syncUploadDataDigester.getServerColumns(), queryInsert, syncDataListInsert);
@@ -523,8 +510,6 @@ logger.info("vanitha: sync tables in group"+tableSpecificDigester.getSyncData())
 
         if (!syncDataListUpdate.isEmpty()) {
             String queryUpdate = getQueryToUpdateDataToServerDB(schemaName, syncUploadDataDigester.getServerColumns(), syncTableName);
-            logger.info("Generated update query for table {}: {}", syncTableName, queryUpdate);
-            logger.info("Data to be updated for table {}: {}", syncTableName, syncDataListUpdate);
             // Ensure the update query is correct and matches the expected format
             try {
                 int[] j = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
@@ -568,27 +553,16 @@ logger.info("vanitha: sync tables in group"+tableSpecificDigester.getSyncData())
         queryBuilder.append(") VALUES (");
         queryBuilder.append(preparedStatementSetter);
         queryBuilder.append(")");
-        logger.info("Generated insert query for table {}: {}", tableName, queryBuilder.toString());
         return queryBuilder.toString();
     }
 
     public String getQueryToUpdateDataToServerDB(String schemaName, String serverColumns, String tableName) {
-        logger.info("schema name="+schemaName+" table name="+tableName+" server columns="+serverColumns);
         String[] columnsArr = null;
         if (serverColumns != null)
             columnsArr = serverColumns.split(",");
 
         StringBuilder preparedStatementSetter = new StringBuilder();
 
-        // if (columnsArr != null && columnsArr.length > 0) {
-        //     for (int i = 0; i < columnsArr.length; i++) {
-        //         preparedStatementSetter.append(columnsArr[i].trim());
-        //         preparedStatementSetter.append(" = ?");
-        //         if (i < columnsArr.length - 1) {
-        //             preparedStatementSetter.append(", ");
-        //         }
-        //     }
-        // }
        if (columnsArr != null && columnsArr.length > 0) {
             for (int i = 0; i < columnsArr.length; i++) {
                 String columnName = columnsArr[i].trim(); // ← NEW LINE
@@ -621,7 +595,6 @@ logger.info("vanitha: sync tables in group"+tableSpecificDigester.getSyncData())
         } else {
             queryBuilder.append(" AND VanID = ? ");
         }
-        logger.info("Generated update query for table {}: {}", tableName, queryBuilder.toString());
         return queryBuilder.toString();
     }
 
