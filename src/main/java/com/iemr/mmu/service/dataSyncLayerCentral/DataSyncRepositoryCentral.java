@@ -53,7 +53,8 @@ public class DataSyncRepositoryCentral {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 
-    private static final Set<String> VALID_SCHEMAS = Set.of("public", "db_iemr", "db_identity","apl_db_iemr","apl_db_identity","db_iemr_sync","db_identity_sync");
+    private static final Set<String> VALID_SCHEMAS = Set.of("public", "db_iemr", "db_identity", "apl_db_iemr",
+            "apl_db_identity", "db_iemr_sync", "db_identity_sync");
 
     private static final Set<String> VALID_TABLES = Set.of(
             "m_beneficiaryregidmapping", "i_beneficiaryaccount", "i_beneficiaryaddress", "i_beneficiarycontacts",
@@ -141,7 +142,7 @@ public class DataSyncRepositoryCentral {
             List<Object[]> syncDataList) {
         jdbcTemplate = getJdbcTemplate();
         try {
-            
+
             return jdbcTemplate.batchUpdate(query, syncDataList);
         } catch (Exception e) {
             logger.error("Batch sync failed for table {}: {}", tableName, e.getMessage(), e);
@@ -189,7 +190,7 @@ public class DataSyncRepositoryCentral {
             // Safe dynamic SQL: All dynamic parts (table names, columns, etc.) are
             // validated or hardcoded.
             // Parameter values are bound safely using prepared statement placeholders (?).
-            
+
             return jdbcTemplate.queryForList(queryBuilder.toString(), params.toArray());
         } catch (Exception e) {
             logger.error("Error fetching master data: {}", e.getMessage(), e);
@@ -205,6 +206,21 @@ public class DataSyncRepositoryCentral {
         String table = digester.getTableName();
         String columnNames = digester.getServerColumns();
 
+        logger.info("=== DEBUGGING VALIDATION ===");
+        logger.info("Schema: '{}'", schema);
+        logger.info("Table: '{}'", table);
+        logger.info("Column Names: '{}'", columnNames);
+        logger.info("Where Clause: '{}'", whereClause);
+        logger.info("Limit: {}, Offset: {}", limit, offset);
+
+        boolean schemaValid = isValidSchemaName(schema);
+        boolean tableValid = isValidTableName(table);
+        boolean columnsValid = isValidColumnNamesList(columnNames);
+
+        logger.info("Schema valid: {}", schemaValid);
+        logger.info("Table valid: {}", tableValid);
+        logger.info("Columns valid: {}", columnsValid);
+
         if (!isValidSchemaName(schema) || !isValidTableName(table) || !isValidColumnNamesList(columnNames)) {
             throw new IllegalArgumentException("Invalid schema, table, or column names.");
         }
@@ -215,12 +231,15 @@ public class DataSyncRepositoryCentral {
         String query = String.format("SELECT %s FROM %s.%s %s LIMIT ? OFFSET ?", columnNames, schema, table,
                 whereClause); // NOSONAR
 
-            try {
-                
-                return jdbcTemplate.queryForList(query, limit, offset);
-            } catch (Exception e) {
-                logger.error("Error fetching batch details: {}", e.getMessage(), e);
-                throw new RuntimeException("Failed to fetch batch data: " + e.getMessage(), e);
-            }
+        logger.info("Final Query: {}", query);
+        logger.info("=== END DEBUGGING ===");
+
+        try {
+
+            return jdbcTemplate.queryForList(query, limit, offset);
+        } catch (Exception e) {
+            logger.error("Error fetching batch details: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to fetch batch data: " + e.getMessage(), e);
         }
+    }
 }
