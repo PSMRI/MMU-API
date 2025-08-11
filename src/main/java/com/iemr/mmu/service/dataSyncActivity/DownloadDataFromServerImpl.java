@@ -186,7 +186,7 @@ import jakarta.servlet.http.HttpServletRequest;
 			// initializing RestTemplate
 			RestTemplate restTemplate = new RestTemplate();
 			// Provide the required second argument, e.g., an empty string or appropriate authorization token
-			HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(syncDownloadMaster, ServerAuthorization, jwtToken);
+			HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(syncDownloadMaster, ServerAuthorization, "datasync");
 			// Call rest-template to call API to download master data for given table
 			ResponseEntity<String> response = restTemplate.exchange(dataSyncDownloadUrl, HttpMethod.POST, request,
 					String.class);
