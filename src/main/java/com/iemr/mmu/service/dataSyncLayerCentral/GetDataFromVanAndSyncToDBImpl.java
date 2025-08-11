@@ -301,41 +301,134 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         return queryBuilder.toString();
     }
 
+    // public String
+    // update_I_BeneficiaryDetails_for_processed_in_batches(SyncUploadDataDigester
+    // syncUploadDataDigester) {
+    // List<Object[]> syncData = new ArrayList<>();
+
+    // String query =
+    // getQueryFor_I_BeneficiaryDetails(syncUploadDataDigester.getSchemaName(),
+    // syncUploadDataDigester.getTableName());
+
+    // int limit = 1000;
+    // int offset = 0;
+    // int totalProcessed = 0;
+
+    // String problematicWhereClause = " WHERE Processed <> 'P' AND VanID IS NOT
+    // NULL "; // Define it explicitly
+
+    // while (true) {
+    // List<Map<String, Object>> batch;
+    // try {
+
+    // batch = dataSyncRepositoryCentral.getBatchForBenDetails(
+    // syncUploadDataDigester,
+    // problematicWhereClause,
+    // limit,
+    // offset);
+    // } catch (Exception e) {
+    // logger.error("Error fetching batch for i_beneficiarydetails: {}",
+    // e.getMessage(), e);
+    // return "Error fetching data for i_beneficiarydetails: " + e.getMessage();
+    // }
+
+    // if (totalProcessed > 0 || syncData.isEmpty()) { // syncData.isEmpty() means
+    // no records to process, still a
+    // // "success"
+    // logger.info("Finished processing i_beneficiarydetails. Total records
+    // processed: {}", totalProcessed);
+    // return "data sync passed";
+    // } else {
+    // logger.error("No records were processed for i_beneficiarydetails or an
+    // unknown error occurred.");
+    // return "No data processed or sync failed for i_beneficiarydetails.";
+    // }
+    // }
+    // }
+
     public String update_I_BeneficiaryDetails_for_processed_in_batches(SyncUploadDataDigester syncUploadDataDigester) {
-        List<Object[]> syncData = new ArrayList<>();
-
-        String query = getQueryFor_I_BeneficiaryDetails(syncUploadDataDigester.getSchemaName(),
-                syncUploadDataDigester.getTableName());
-
-        int limit = 1000;
+        int limit = 1000; // batch size
         int offset = 0;
         int totalProcessed = 0;
 
-        String problematicWhereClause = " WHERE Processed <> 'P' AND VanID IS NOT NULL "; // Define it explicitly
+        String schemaName = syncUploadDataDigester.getSchemaName();
+        String tableName = syncUploadDataDigester.getTableName();
+        String queryUpdate = getQueryFor_I_BeneficiaryDetails(schemaName, tableName);
+
+        String whereClause = " WHERE Processed <> 'P' AND VanID IS NOT NULL ";
 
         while (true) {
             List<Map<String, Object>> batch;
             try {
-
-                batch = dataSyncRepositoryCentral.getBatchForBenDetails(
-                        syncUploadDataDigester,
-                        problematicWhereClause,
-                        limit,
+                batch = dataSyncRepositoryCentral.getBatchForBenDetails(syncUploadDataDigester, whereClause, limit,
                         offset);
             } catch (Exception e) {
                 logger.error("Error fetching batch for i_beneficiarydetails: {}", e.getMessage(), e);
                 return "Error fetching data for i_beneficiarydetails: " + e.getMessage();
             }
 
-            if (totalProcessed > 0 || syncData.isEmpty()) { // syncData.isEmpty() means no records to process, still a
-                                                            // "success"
-                logger.info("Finished processing i_beneficiarydetails. Total records processed: {}", totalProcessed);
-                return "data sync passed";
-            } else {
-                logger.error("No records were processed for i_beneficiarydetails or an unknown error occurred.");
-                return "No data processed or sync failed for i_beneficiarydetails.";
+            if (batch == null || batch.isEmpty()) {
+                logger.info("No more records to process for i_beneficiarydetails.");
+                break; // exit loop when no data left
             }
+
+            List<Object[]> syncDataBatch = new ArrayList<>();
+
+            for (Map<String, Object> record : batch) {
+                try {
+                    // Prepare Object[] according to update query parameters order
+                    // getSyncedBy, BeneficiaryDetailsId, VanID
+                    Object syncedBy = syncUploadDataDigester.getSyncedBy();
+                    Object beneficiaryDetailsId = record.get("BeneficiaryDetailsId");
+                    Object vanID = record.get("VanID");
+
+                    if (beneficiaryDetailsId == null || vanID == null) {
+                        logger.warn("Skipping record due to missing BeneficiaryDetailsId or VanID: {}", record);
+                        continue;
+                    }
+
+                    syncDataBatch.add(new Object[] { syncedBy, beneficiaryDetailsId, vanID });
+
+                } catch (Exception e) {
+                    logger.error("Error preparing batch record for sync: {}", e.getMessage(), e);
+                }
+            }
+
+            if (syncDataBatch.isEmpty()) {
+                logger.info("No valid records in batch to sync.");
+                break;
+            }
+
+            try {
+                int[] updateResults = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, tableName, null,
+                        queryUpdate, syncDataBatch);
+
+                // Check if all updated successfully
+                int successCount = 0;
+                for (int result : updateResults) {
+                    if (result > 0)
+                        successCount++;
+                }
+
+                if (successCount != syncDataBatch.size()) {
+                    logger.error("Partial batch update: expected {}, but updated {}", syncDataBatch.size(),
+                            successCount);
+                    return "Partial sync failed for i_beneficiarydetails.";
+                }
+
+                totalProcessed += successCount;
+                logger.info("Batch of {} records synced successfully.", successCount);
+
+            } catch (Exception e) {
+                logger.error("Error syncing batch for i_beneficiarydetails: {}", e.getMessage(), e);
+                return "Sync error for i_beneficiarydetails: " + e.getMessage();
+            }
+
+            offset += limit; // Move to next batch offset
         }
+
+        logger.info("Completed syncing i_beneficiarydetails. Total records processed: {}", totalProcessed);
+        return "data sync passed";
     }
 
     private String getQueryFor_I_BeneficiaryDetails(String schemaName, String tableName) {
