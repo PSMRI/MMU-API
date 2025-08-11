@@ -105,21 +105,26 @@ public class DataSyncRepositoryCentral {
             return false;
         }
 
-        // Relaxed regex to allow SQL functions, e.g. date_format(...)
+        columnNames = columnNames.trim();
+
+        // Remove surrounding single quotes if present
+        if (columnNames.startsWith("'") && columnNames.endsWith("'")) {
+            columnNames = columnNames.substring(1, columnNames.length() - 1);
+        }
+
         String relaxedPattern = "^[a-zA-Z0-9_\\(\\)\\%',:\\s\\.]+$";
 
         for (String col : columnNames.split(",")) {
             String trimmed = col.trim();
 
             if (trimmed.contains("(") || trimmed.contains("'")) {
-                // If it contains '(' or "'", treat as SQL expression and apply relaxed
-                // validation
                 if (!trimmed.matches(relaxedPattern)) {
+                    logger.error("Invalid SQL expression column: '{}'", trimmed);
                     return false;
                 }
             } else {
-                // Otherwise, validate as a simple column name
                 if (!isValidDatabaseIdentifierCharacter(trimmed)) {
+                    logger.error("Invalid simple column name: '{}'", trimmed);
                     return false;
                 }
             }
