@@ -64,7 +64,8 @@ public class GetMasterDataFromCentralForVanImpl implements GetMasterDataFromCent
 	}
 
 	private List<Map<String, Object>> getMasterDataFromGivenTable(SyncDownloadMaster tableDetails) throws Exception {
-		logger.info("ger master data="+ tableDetails.getSchemaName());
+		logger.info("ger master data="+ tableDetails.getTableName());
+		logger.info("Column names="+ tableDetails.getServerColumnName());
 		List<Map<String, Object>> resultSetList = new ArrayList<>();
 		resultSetList = dataSyncRepositoryCentralDownload.getMasterDataFromTable(tableDetails.getSchemaName(),
 				tableDetails.getTableName(), tableDetails.getServerColumnName(), tableDetails.getMasterType(),

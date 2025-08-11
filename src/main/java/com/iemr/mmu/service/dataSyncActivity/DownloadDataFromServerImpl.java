@@ -23,6 +23,7 @@ package com.iemr.mmu.service.dataSyncActivity;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -223,6 +224,7 @@ import jakarta.servlet.http.HttpServletRequest;
 		String query = getQueryToInsertUpdateMasterInLocalDB(syncDownloadMaster);
 
 		if (masterDataList != null && query != null) {
+
 			int[] i = dataSyncRepository.updateLatestMasterInLocal(query, masterDataList);
 			if (i.length == masterDataList.size()) {
 				int j = syncDownloadMasterRepo.updateTableSyncDownloadMasterForLastDownloadDate(
@@ -245,6 +247,7 @@ import jakarta.servlet.http.HttpServletRequest;
 
 		// temp code pointing to diff target schema
 		// syncDownloadMaster.setSchemaName("db_iemr_sync");
+logger.info("Test:columnsArr: " + columnsArr);
 
 		if (columnsArr != null && columnsArr.length > 0) {
 			int index = 0;
@@ -267,91 +270,45 @@ import jakarta.servlet.http.HttpServletRequest;
 					+ "( " + syncDownloadMaster.getVanColumnName() + ") VALUES ( " + preparedStatementSetter
 					+ " ) ON DUPLICATE KEY UPDATE " + updateStatement;
 
-
+logger.info("Test: Query to insert/update master data in local db : " + query);
 		return query;
 	}
 
-private List<Object[]> getMasterDataInFormatToInsertToDB(MasterDownloadDataDigester masterDownloadDataDigester) {
-    List<Map<String, Object>> masterList = masterDownloadDataDigester.getData();
-    List<Object[]> masterDataList = new ArrayList<>();
+	private List<Object[]> getMasterDataInFormatToInsertToDB(MasterDownloadDataDigester masterDownloadDataDigester) {
+		// get master data in the form of list of map of string & object
+		List<Map<String, Object>> masterList = masterDownloadDataDigester.getData();
+		// master data 'list of object array'
+		List<Object[]> masterDataList = new ArrayList<>();
 
-    for (Map<String, Object> map : masterList) {
-        Object[] objArr = new Object[map.size()];
-        int pointer = 0;
+		Object[] objArr;
 
-        for (Map.Entry<String, Object> entry : map.entrySet()) {
-            Object value = entry.getValue();
+		int pointer;
+		for (Map<String, Object> map : masterList) {
+			pointer = 0;
+			objArr = new Object[map.size()];
+			for (Map.Entry<String, Object> entry : map.entrySet()) {
+				if (entry.getValue() != null) {
+					if (String.valueOf(entry.getValue()).equalsIgnoreCase("false")
+							|| String.valueOf(entry.getValue()).equalsIgnoreCase("true"))
+						objArr[pointer] = entry.getValue();
+					else {
+						if(pointer==0) {
+							DecimalFormat decimalFormat = new DecimalFormat("#");
+							objArr[pointer] = decimalFormat.format(entry.getValue());
+						}else {
+							objArr[pointer] = String.valueOf(entry.getValue());
+						}
+					}
+				} else
+					objArr[pointer] = entry.getValue();
 
-            if (value != null) {
-                String strValue = String.valueOf(value).trim();
-
-                // Handle boolean values
-                if ("true".equalsIgnoreCase(strValue)) {
-                    objArr[pointer] = 1; // store as int
-                } else if ("false".equalsIgnoreCase(strValue)) {
-                    objArr[pointer] = 0; // store as int
-
-                // Handle numeric values (integer/decimal)
-                } else if (value instanceof Number) {
-                    objArr[pointer] = value;
-
-                // Special case: first column is numeric ID but sent as string
-                } else if (pointer == 0 && strValue.matches("\\d+")) {
-                    objArr[pointer] = Long.parseLong(strValue);
-
-                // Everything else as string
-                } else {
-                    objArr[pointer] = strValue;
-                }
-            } else {
-                objArr[pointer] = null;
-            }
-
-            pointer++;
-        }
-
-        masterDataList.add(objArr);
-    }
-
-    return masterDataList;
-}
-
-
-	// private List<Object[]> getMasterDataInFormatToInsertToDB(MasterDownloadDataDigester masterDownloadDataDigester) {
-	// 	// get master data in the form of list of map of string & object
-	// 	List<Map<String, Object>> masterList = masterDownloadDataDigester.getData();
-	// 	// master data 'list of object array'
-	// 	List<Object[]> masterDataList = new ArrayList<>();
-
-	// 	Object[] objArr;
-
-	// 	int pointer;
-	// 	for (Map<String, Object> map : masterList) {
-	// 		pointer = 0;
-	// 		objArr = new Object[map.size()];
-	// 		for (Map.Entry<String, Object> entry : map.entrySet()) {
-	// 			if (entry.getValue() != null) {
-	// 				if (String.valueOf(entry.getValue()).equalsIgnoreCase("false")
-	// 						|| String.valueOf(entry.getValue()).equalsIgnoreCase("true"))
-	// 					objArr[pointer] = entry.getValue();
-	// 				else {
-	// 					if(pointer==0) {
-	// 						DecimalFormat decimalFormat = new DecimalFormat("#");
-	// 						objArr[pointer] = decimalFormat.format(entry.getValue());
-	// 					}else {
-	// 						objArr[pointer] = String.valueOf(entry.getValue());
-	// 					}
-	// 				}
-	// 			} else
-	// 				objArr[pointer] = entry.getValue();
-
-	// 			pointer++;
-	// 		}
-	// 		masterDataList.add(objArr);
-	// 	}
-
-	// 	return masterDataList;
-	// }
+				pointer++;
+			}
+			logger.info("Test: Master data object array : " + Arrays.toString(objArr));
+			masterDataList.add(objArr);
+		}
+		return masterDataList;
+	}
 
 	public String getVanDetailsForMasterDownload() throws Exception {
 		List<TempVan> dataSyncGroupList = tempVanRepo.getVanID();
