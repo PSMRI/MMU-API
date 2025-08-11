@@ -99,6 +99,43 @@ public class DataSyncRepositoryCentral {
     // }
     // return true;
     // }
+    private List<String> splitColumns(String columnNames) {
+        List<String> columns = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        int parenDepth = 0;
+        boolean inSingleQuote = false;
+
+        for (int i = 0; i < columnNames.length(); i++) {
+            char c = columnNames.charAt(i);
+
+            if (c == '\'') {
+                inSingleQuote = !inSingleQuote; // toggle quote state
+                current.append(c);
+            } else if (!inSingleQuote) {
+                if (c == '(') {
+                    parenDepth++;
+                    current.append(c);
+                } else if (c == ')') {
+                    parenDepth--;
+                    current.append(c);
+                } else if (c == ',' && parenDepth == 0) {
+                    // comma outside parentheses and quotes — split here
+                    columns.add(current.toString().trim());
+                    current.setLength(0);
+                } else {
+                    current.append(c);
+                }
+            } else {
+                // inside single quote, just append
+                current.append(c);
+            }
+        }
+
+        if (current.length() > 0) {
+            columns.add(current.toString().trim());
+        }
+        return columns;
+    }
 
     private boolean isValidColumnNamesList(String columnNames) {
         if (columnNames == null || columnNames.trim().isEmpty()) {
@@ -112,9 +149,10 @@ public class DataSyncRepositoryCentral {
             columnNames = columnNames.substring(1, columnNames.length() - 1);
         }
 
+        // Relaxed regex to allow SQL functions like date_format(...)
         String relaxedPattern = "^[a-zA-Z0-9_\\(\\)\\%',:\\s\\.]+$";
 
-        for (String col : columnNames.split(",")) {
+        for (String col : splitColumns(columnNames)) {
             String trimmed = col.trim();
 
             if (trimmed.contains("(") || trimmed.contains("'")) {
