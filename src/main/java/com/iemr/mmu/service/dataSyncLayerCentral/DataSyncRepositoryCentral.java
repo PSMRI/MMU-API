@@ -144,13 +144,12 @@ public class DataSyncRepositoryCentral {
 
         columnNames = columnNames.trim();
 
-        // Remove surrounding single quotes if present
         if (columnNames.startsWith("'") && columnNames.endsWith("'")) {
             columnNames = columnNames.substring(1, columnNames.length() - 1);
         }
 
-        // Relaxed regex to allow SQL functions like date_format(...)
-        String relaxedPattern = "^[a-zA-Z0-9_\\(\\)\\%',:\\s\\.]+$";
+        // Added \- to allow dash in date format strings
+        String relaxedPattern = "^[a-zA-Z0-9_\\(\\)\\%',:\\s\\.\\-]+$";
 
         for (String col : splitColumns(columnNames)) {
             String trimmed = col.trim();
