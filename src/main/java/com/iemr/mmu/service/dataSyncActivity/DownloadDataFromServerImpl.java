@@ -100,7 +100,6 @@ import jakarta.servlet.http.HttpServletRequest;
 		 */
 		public String downloadMasterDataFromServer(String ServerAuthorization, String jwtToken, Integer vanID, Integer psmID)
 				throws Exception {
-
 			if (totalCounter != progressCounter) {
 				return "inProgress";
 			} 
@@ -127,7 +126,7 @@ import jakarta.servlet.http.HttpServletRequest;
 			table.setVanID(vanID);
 			table.setProviderServiceMapID(psmID);
 
-							int i = downloadDataFromServer(table, ServerAuthorization, jwtToken);
+							int i = downloadDataFromServer(table, ServerAuthorization);
 							if (i > 0) {
 								// successCounter++;
 							} else {
@@ -180,7 +179,7 @@ import jakarta.servlet.http.HttpServletRequest;
 			return successFlag;
 		}
 
-		private int downloadDataFromServer(SyncDownloadMaster syncDownloadMaster,String ServerAuthorization, String jwtToken)
+		private int downloadDataFromServer(SyncDownloadMaster syncDownloadMaster,String ServerAuthorization)
 				throws Exception {
 			int successFlag = 0;
 			// initializing RestTemplate
@@ -272,41 +271,87 @@ import jakarta.servlet.http.HttpServletRequest;
 		return query;
 	}
 
-	private List<Object[]> getMasterDataInFormatToInsertToDB(MasterDownloadDataDigester masterDownloadDataDigester) {
-		// get master data in the form of list of map of string & object
-		List<Map<String, Object>> masterList = masterDownloadDataDigester.getData();
-		// master data 'list of object array'
-		List<Object[]> masterDataList = new ArrayList<>();
+private List<Object[]> getMasterDataInFormatToInsertToDB(MasterDownloadDataDigester masterDownloadDataDigester) {
+    List<Map<String, Object>> masterList = masterDownloadDataDigester.getData();
+    List<Object[]> masterDataList = new ArrayList<>();
 
-		Object[] objArr;
+    for (Map<String, Object> map : masterList) {
+        Object[] objArr = new Object[map.size()];
+        int pointer = 0;
 
-		int pointer;
-		for (Map<String, Object> map : masterList) {
-			pointer = 0;
-			objArr = new Object[map.size()];
-			for (Map.Entry<String, Object> entry : map.entrySet()) {
-				if (entry.getValue() != null) {
-					if (String.valueOf(entry.getValue()).equalsIgnoreCase("false")
-							|| String.valueOf(entry.getValue()).equalsIgnoreCase("true"))
-						objArr[pointer] = entry.getValue();
-					else {
-						if(pointer==0) {
-							DecimalFormat decimalFormat = new DecimalFormat("#");
-							objArr[pointer] = decimalFormat.format(entry.getValue());
-						}else {
-							objArr[pointer] = String.valueOf(entry.getValue());
-						}
-					}
-				} else
-					objArr[pointer] = entry.getValue();
+        for (Map.Entry<String, Object> entry : map.entrySet()) {
+            Object value = entry.getValue();
 
-				pointer++;
-			}
-			masterDataList.add(objArr);
-		}
+            if (value != null) {
+                String strValue = String.valueOf(value).trim();
 
-		return masterDataList;
-	}
+                // Handle boolean values
+                if ("true".equalsIgnoreCase(strValue)) {
+                    objArr[pointer] = 1; // store as int
+                } else if ("false".equalsIgnoreCase(strValue)) {
+                    objArr[pointer] = 0; // store as int
+
+                // Handle numeric values (integer/decimal)
+                } else if (value instanceof Number) {
+                    objArr[pointer] = value;
+
+                // Special case: first column is numeric ID but sent as string
+                } else if (pointer == 0 && strValue.matches("\\d+")) {
+                    objArr[pointer] = Long.parseLong(strValue);
+
+                // Everything else as string
+                } else {
+                    objArr[pointer] = strValue;
+                }
+            } else {
+                objArr[pointer] = null;
+            }
+
+            pointer++;
+        }
+
+        masterDataList.add(objArr);
+    }
+
+    return masterDataList;
+}
+
+
+	// private List<Object[]> getMasterDataInFormatToInsertToDB(MasterDownloadDataDigester masterDownloadDataDigester) {
+	// 	// get master data in the form of list of map of string & object
+	// 	List<Map<String, Object>> masterList = masterDownloadDataDigester.getData();
+	// 	// master data 'list of object array'
+	// 	List<Object[]> masterDataList = new ArrayList<>();
+
+	// 	Object[] objArr;
+
+	// 	int pointer;
+	// 	for (Map<String, Object> map : masterList) {
+	// 		pointer = 0;
+	// 		objArr = new Object[map.size()];
+	// 		for (Map.Entry<String, Object> entry : map.entrySet()) {
+	// 			if (entry.getValue() != null) {
+	// 				if (String.valueOf(entry.getValue()).equalsIgnoreCase("false")
+	// 						|| String.valueOf(entry.getValue()).equalsIgnoreCase("true"))
+	// 					objArr[pointer] = entry.getValue();
+	// 				else {
+	// 					if(pointer==0) {
+	// 						DecimalFormat decimalFormat = new DecimalFormat("#");
+	// 						objArr[pointer] = decimalFormat.format(entry.getValue());
+	// 					}else {
+	// 						objArr[pointer] = String.valueOf(entry.getValue());
+	// 					}
+	// 				}
+	// 			} else
+	// 				objArr[pointer] = entry.getValue();
+
+	// 			pointer++;
+	// 		}
+	// 		masterDataList.add(objArr);
+	// 	}
+
+	// 	return masterDataList;
+	// }
 
 	public String getVanDetailsForMasterDownload() throws Exception {
 		List<TempVan> dataSyncGroupList = tempVanRepo.getVanID();

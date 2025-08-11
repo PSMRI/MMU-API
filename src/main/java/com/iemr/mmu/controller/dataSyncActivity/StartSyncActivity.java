@@ -115,13 +115,10 @@ public class StartSyncActivity {
 		OutputResponse response = new OutputResponse();
 		try {
 
-			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
-
-
 			JSONObject obj = new JSONObject(requestOBJ);
 			if (obj.has("vanID") && obj.get("vanID") != null && obj.has(PROVIDER_SERVICE_MAP_ID)
 					&& obj.get(PROVIDER_SERVICE_MAP_ID) != null) {
-				String s = downloadDataFromServerImpl.downloadMasterDataFromServer(serverAuthorization,jwtToken,
+				String s = downloadDataFromServerImpl.downloadMasterDataFromServer(serverAuthorization,"datasync",
 						obj.getInt("vanID"), obj.getInt(PROVIDER_SERVICE_MAP_ID));
 				if (s != null) {
 					if (s.equalsIgnoreCase("inProgress"))
