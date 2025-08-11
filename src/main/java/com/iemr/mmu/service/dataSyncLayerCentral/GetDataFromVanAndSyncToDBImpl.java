@@ -46,7 +46,6 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
     @Autowired
     private DataSyncRepositoryCentral dataSyncRepositoryCentral;
 
-    
     private static final Map<Integer, List<String>> TABLE_GROUPS = new HashMap<>();
     static {
         TABLE_GROUPS.put(1,
@@ -96,7 +95,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
 
         ObjectMapper mapper = new ObjectMapper();
         SyncUploadDataDigester syncUploadDataDigester = mapper.readValue(requestOBJ, SyncUploadDataDigester.class);
-List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
+        List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
         if (syncUploadDataDigester == null || syncUploadDataDigester.getTableName() == null) {
             logger.error("Invalid SyncUploadDataDigester object or tableName is null.");
             return "Error: Invalid sync request.";
@@ -114,6 +113,7 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
                 return "Sync failed for m_beneficiaryregidmapping.";
             }
         } else if ("i_beneficiarydetails".equalsIgnoreCase(syncTableName)) {
+            logger.error("This is beneficary details table, processing in batches.");
             String result = update_I_BeneficiaryDetails_for_processed_in_batches(syncUploadDataDigester);
             if ("data sync passed".equals(result)) {
                 return "Sync successful for i_beneficiarydetails.";
@@ -132,10 +132,10 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
             // Otherwise, iterate through all defined groups.
             if (syncTableName != null && !syncTableName.isEmpty()) {
                 boolean foundInGroup = false;
-                
-			for (Map<String, Object> map : dataToBesync) {
+
+                for (Map<String, Object> map : dataToBesync) {
                     // if (entry.getValue().contains(syncTableName.toLowerCase())) {
-                    if(map.get("tableName") != null
+                    if (map.get("tableName") != null
                             && map.get("tableName").toString().equalsIgnoreCase(syncTableName)) {
                         syncSuccess = syncTablesInGroup(syncUploadDataDigester.getSchemaName(), syncTableName,
                                 syncUploadDataDigester);
@@ -227,16 +227,19 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
         tableSpecificDigester.setServerColumns(originalDigester.getServerColumns()); // Assuming serverColumns is
                                                                                      // generic or set per table
 
-        // !!! IMPORTANT: You'll need to fetch the data for 'currentTableName' from your local DB here.
-        // The `originalDigester.getSyncData()` might not be correct for all tables in a group.
-        // For demonstration, I'm just using the original digester's data, which is likely incorrect
+        // !!! IMPORTANT: You'll need to fetch the data for 'currentTableName' from your
+        // local DB here.
+        // The `originalDigester.getSyncData()` might not be correct for all tables in a
+        // group.
+        // For demonstration, I'm just using the original digester's data, which is
+        // likely incorrect
         tableSpecificDigester.setSyncData(originalDigester.getSyncData());
         return performGenericTableSync(tableSpecificDigester);
     }
 
     private String update_M_BeneficiaryRegIdMapping_for_provisioned_benID(
             SyncUploadDataDigester syncUploadDataDigester) {
-        
+
         List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
         List<Object[]> syncData = new ArrayList<>();
 
@@ -261,7 +264,8 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
         if (!syncData.isEmpty()) {
             try {
                 int[] i = dataSyncRepositoryCentral.syncDataToCentralDB(syncUploadDataDigester.getSchemaName(),
-                        syncUploadDataDigester.getTableName(), syncUploadDataDigester.getServerColumns(), query, syncData);
+                        syncUploadDataDigester.getTableName(), syncUploadDataDigester.getServerColumns(), query,
+                        syncData);
 
                 if (i.length == syncData.size()) {
                     logger.info("Successfully updated {} records for m_beneficiaryregidmapping.", i.length);
@@ -309,10 +313,10 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
 
         String problematicWhereClause = " WHERE Processed <> 'P' AND VanID IS NOT NULL "; // Define it explicitly
 
-    while (true) {
-        List<Map<String, Object>> batch;
-        try {
-            
+        while (true) {
+            List<Map<String, Object>> batch;
+            try {
+
                 batch = dataSyncRepositoryCentral.getBatchForBenDetails(
                         syncUploadDataDigester,
                         problematicWhereClause,
@@ -375,11 +379,11 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
             map.put("SyncedDate", String.valueOf(LocalDateTime.now())); // Ensure column name matches DB
             if (map.get("CreatedDate") == null || map.get("created_date") == null) {
                 logger.info("CreatedDate was null for table: " + syncTableName + ", inserting current time");
-                if(map.get("CreatedDate") == null)
+                if (map.get("CreatedDate") == null)
                     map.put("CreatedDate", String.valueOf(LocalDateTime.now()));
-                if(map.get("created_date") == null)
+                if (map.get("created_date") == null)
                     map.put("created_date", String.valueOf(LocalDateTime.now()));
-                }
+            }
             // Facility ID processing
             if (facilityIDFromDigester != null) {
                 // Determine the 'Processed' status based on facility ID for specific tables
@@ -489,8 +493,9 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
         boolean updateSuccess = true;
 
         if (!syncDataListInsert.isEmpty()) {
-            String queryInsert = getQueryToInsertDataToServerDB(schemaName, syncTableName, syncUploadDataDigester.getServerColumns());
-           
+            String queryInsert = getQueryToInsertDataToServerDB(schemaName, syncTableName,
+                    syncUploadDataDigester.getServerColumns());
+
             try {
                 int[] i = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
                         syncUploadDataDigester.getServerColumns(), queryInsert, syncDataListInsert);
@@ -509,7 +514,8 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
         }
 
         if (!syncDataListUpdate.isEmpty()) {
-            String queryUpdate = getQueryToUpdateDataToServerDB(schemaName, syncUploadDataDigester.getServerColumns(), syncTableName);
+            String queryUpdate = getQueryToUpdateDataToServerDB(schemaName, syncUploadDataDigester.getServerColumns(),
+                    syncTableName);
             // Ensure the update query is correct and matches the expected format
             try {
                 int[] j = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
@@ -563,10 +569,10 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
 
         StringBuilder preparedStatementSetter = new StringBuilder();
 
-       if (columnsArr != null && columnsArr.length > 0) {
+        if (columnsArr != null && columnsArr.length > 0) {
             for (int i = 0; i < columnsArr.length; i++) {
                 String columnName = columnsArr[i].trim(); // ← NEW LINE
- 
+
                 // Special handling for CreatedDate - use COALESCE to prevent NULL
                 if (columnName.equalsIgnoreCase("CreatedDate")) { // ← NEW BLOCK
                     preparedStatementSetter.append(columnName);
@@ -575,7 +581,7 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
                     preparedStatementSetter.append(columnName);
                     preparedStatementSetter.append(" = ?");
                 }
- 
+
                 if (i < columnsArr.length - 1) {
                     preparedStatementSetter.append(", ");
                 }
