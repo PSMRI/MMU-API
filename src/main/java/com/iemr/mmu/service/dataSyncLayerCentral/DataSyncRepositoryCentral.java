@@ -88,13 +88,40 @@ public class DataSyncRepositoryCentral {
         return VALID_TABLES.contains(tableName.toLowerCase());
     }
 
+    // private boolean isValidColumnNamesList(String columnNames) {
+    // if (columnNames == null || columnNames.trim().isEmpty()) {
+    // return false;
+    // }
+    // for (String col : columnNames.split(",")) {
+    // if (!isValidDatabaseIdentifierCharacter(col.trim())) {
+    // return false;
+    // }
+    // }
+    // return true;
+    // }
+
     private boolean isValidColumnNamesList(String columnNames) {
         if (columnNames == null || columnNames.trim().isEmpty()) {
             return false;
         }
+
+        // Relaxed regex to allow SQL functions, e.g. date_format(...)
+        String relaxedPattern = "^[a-zA-Z0-9_\\(\\)\\%',:\\s\\.]+$";
+
         for (String col : columnNames.split(",")) {
-            if (!isValidDatabaseIdentifierCharacter(col.trim())) {
-                return false;
+            String trimmed = col.trim();
+
+            if (trimmed.contains("(") || trimmed.contains("'")) {
+                // If it contains '(' or "'", treat as SQL expression and apply relaxed
+                // validation
+                if (!trimmed.matches(relaxedPattern)) {
+                    return false;
+                }
+            } else {
+                // Otherwise, validate as a simple column name
+                if (!isValidDatabaseIdentifierCharacter(trimmed)) {
+                    return false;
+                }
             }
         }
         return true;
