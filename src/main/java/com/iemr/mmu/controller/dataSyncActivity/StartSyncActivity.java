@@ -114,7 +114,7 @@ public class StartSyncActivity {
 			@RequestHeader	(value = "ServerAuthorization") String serverAuthorization, HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
 		try {
-
+			logger.info("From master download");
 			JSONObject obj = new JSONObject(requestOBJ);
 			if (obj.has("vanID") && obj.get("vanID") != null && obj.has(PROVIDER_SERVICE_MAP_ID)
 					&& obj.get(PROVIDER_SERVICE_MAP_ID) != null) {
