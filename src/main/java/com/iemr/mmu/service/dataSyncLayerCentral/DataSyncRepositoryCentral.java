@@ -112,7 +112,7 @@ private boolean isValidColumnNamesList(String columnNames) {
             int openParenIndex = trimmed.indexOf("(");
             int commaIndex = trimmed.indexOf(",", openParenIndex);
             if (commaIndex > 0) {
-                trimmed = trimmed.substring(openParenIndex + 1, commaIndex).trim(); // get only column name
+                trimmed = trimmed.substring(openParenIndex + 1, commaIndex).trim();
             }
         }
 
@@ -122,6 +122,7 @@ private boolean isValidColumnNamesList(String columnNames) {
     }
     return true;
 }
+
 
     public int checkRecordIsAlreadyPresentOrNot(String schemaName, String tableName, String vanSerialNo, String vanID,
             String vanAutoIncColumnName, int syncFacilityID) {

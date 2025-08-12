@@ -504,50 +504,37 @@ logger.info("column name="+syncUploadDataDigester.getServerColumns());
         }
         return insertSuccess && updateSuccess;
     }
-
 private String getQueryToInsertDataToServerDB(String schemaName, String tableName, String serverColumns) {
-    logger.info("From insert query-> server columns: {}", serverColumns);
+ logger.info("Server Columns: {}", serverColumns);
     String[] columnsArr = null;
     if (serverColumns != null)
         columnsArr = serverColumns.split(",");
+ 
     StringBuilder preparedStatementSetter = new StringBuilder();
-    StringBuilder cleanedColumns = new StringBuilder();
-
+ 
     if (columnsArr != null && columnsArr.length > 0) {
         for (int i = 0; i < columnsArr.length; i++) {
-            String col = columnsArr[i].trim();
-
-            // If column starts with date_format(...), extract the real column name
-            if (col.toLowerCase().startsWith("date_format(")) {
-                int openParenIndex = col.indexOf("(");
-                int commaIndex = col.indexOf(",", openParenIndex);
-                if (commaIndex > 0) {
-                    col = col.substring(openParenIndex + 1, commaIndex).trim(); // keep only column name
-                }
-            }
-
-            cleanedColumns.append(col);
             preparedStatementSetter.append("?");
-
             if (i < columnsArr.length - 1) {
-                cleanedColumns.append(", ");
                 preparedStatementSetter.append(", ");
             }
         }
     }
-    logger.info("Cleaned columns: {}", cleanedColumns.toString());
-    logger.info("Prepared statement setter: {}", preparedStatementSetter.toString());
     StringBuilder queryBuilder = new StringBuilder("INSERT INTO ");
     queryBuilder.append(schemaName).append(".").append(tableName);
     queryBuilder.append("(");
-    queryBuilder.append(cleanedColumns);
+    queryBuilder.append(
+        serverColumns.replaceAll(
+            "(?i)date_format\\s*\\(\\s*([a-zA-Z0-9_]+)\\s*,\\s*'[^']*'\\s*\\)",
+            "$1"
+        )
+    );
     queryBuilder.append(") VALUES (");
     queryBuilder.append(preparedStatementSetter);
     queryBuilder.append(")");
-
+    logger.info("Query to Insert Data: {}", queryBuilder.toString());
     return queryBuilder.toString();
 }
-
 
     // private String getQueryToInsertDataToServerDB(String schemaName, String tableName, String serverColumns) {
     //     String[] columnsArr = null;
