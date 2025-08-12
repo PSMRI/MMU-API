@@ -646,16 +646,33 @@ private boolean isDateColumn(String columnName) {
 }
 
 private String formatDateForMySQL(String dateStr) {
-    // Convert ISO string to MySQL DATETIME format
+    logger.info("Format date value="+dateStr);
     if (dateStr == null || dateStr.isEmpty()) return null;
+    // Try ISO_LOCAL_DATE_TIME first
     try {
-        // Try parsing as LocalDateTime
         LocalDateTime ldt = LocalDateTime.parse(dateStr);
-        return ldt.toString().replace('T', ' '); // "2025-08-12 14:30:00"
-    } catch (Exception e) {
-        // If parsing fails, return as is (or handle as needed)
+        return ldt.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    } catch (Exception ignore) {}
+    // Try MySQL DATETIME format (already correct)
+    if (dateStr.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}")) {
         return dateStr;
     }
+    // Try parsing with other common formats
+    try {
+        java.time.format.DateTimeFormatter[] formatters = new java.time.format.DateTimeFormatter[] {
+            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"),
+            java.time.format.DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss"),
+            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
+        };
+        for (java.time.format.DateTimeFormatter fmt : formatters) {
+            try {
+                LocalDateTime ldt = LocalDateTime.parse(dateStr, fmt);
+                logger.info("Parsed date value="+ldt);
+                return ldt.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            } catch (Exception ignore2) {}
+        }
+    } catch (Exception ignore3) {}
+    // If all parsing fails, return null to avoid inserting invalid data
+    return null;
 }
-
 }
