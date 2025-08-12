@@ -103,7 +103,7 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
         }
 
         String syncTableName = syncUploadDataDigester.getTableName();
-
+logger.info("Syncing data for table: {}", syncTableName);
         // Handle specific tables first, if their logic is distinct
         if ("m_beneficiaryregidmapping".equalsIgnoreCase(syncTableName)) {
             String result = update_M_BeneficiaryRegIdMapping_for_provisioned_benID(syncUploadDataDigester);
@@ -113,15 +113,17 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
                 logger.error("Sync failed for m_beneficiaryregidmapping: {}", result);
                 return "Sync failed for m_beneficiaryregidmapping.";
             }
-        } else if ("i_beneficiarydetails".equalsIgnoreCase(syncTableName)) {
-            String result = update_I_BeneficiaryDetails_for_processed_in_batches(syncUploadDataDigester);
-            if ("data sync passed".equals(result)) {
-                return "Sync successful for i_beneficiarydetails.";
-            } else {
-                logger.error("Sync failed for i_beneficiarydetails: {}", result);
-                return "Sync failed for i_beneficiarydetails.";
-            }
-        } else {
+        } 
+        // else if ("i_beneficiarydetails".equalsIgnoreCase(syncTableName)) {
+        //     String result = update_I_BeneficiaryDetails_for_processed_in_batches(syncUploadDataDigester);
+        //     if ("data sync passed".equals(result)) {
+        //         return "Sync successful for i_beneficiarydetails.";
+        //     } else {
+        //         logger.error("Sync failed for i_beneficiarydetails: {}", result);
+        //         return "Sync failed for i_beneficiarydetails.";
+        //     }
+        // }
+         else {
             // Determine the group for the current table or iterate through all if no
             // specific table is given
             boolean syncSuccess = true;
@@ -149,8 +151,7 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
                     syncSuccess = performGenericTableSync(syncUploadDataDigester);
                 }
             } else {
-                // If no specific table is in the request (e.g., a general sync trigger),
-                // iterate through groups
+               
                 logger.info("No specific table provided. Attempting to sync all tables group by group.");
                 for (Map.Entry<Integer, List<String>> entry : TABLE_GROUPS.entrySet()) {
                     Integer groupId = entry.getKey();
@@ -158,17 +159,7 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
                     logger.info("Starting sync for Group {}", groupId);
                     for (String table : tablesInGroup) {
                         try {
-                            // Create a new digester for each table within the group,
-                            // or adapt if the original digester contains data for multiple tables.
-                            // For simplicity, assuming syncDataDigester needs to be tailored per table or
-                            // group.
-                            // If your requestOBJ contains data for only one table at a time, this loop
-                            // might need adjustment
-                            // to fetch data for each table in the group.
-                            // For now, it will use the syncData from the original requestOBJ, which implies
-                            // the original requestOBJ should represent data for a single table.
-                            // A more robust solution would involve fetching data for each table
-                            // dynamically.
+                         
                             boolean currentTableSyncResult = syncTablesInGroup(syncUploadDataDigester.getSchemaName(),
                                     table, syncUploadDataDigester);
                             if (!currentTableSyncResult) {
@@ -176,10 +167,8 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
                                 errorMessage += "Failed to sync table: " + table + " in Group " + groupId + ". ";
                                 logger.error("Sync failed for table '{}' in Group {}. Error: {}", table, groupId,
                                         errorMessage);
-                                // Optionally, you can choose to break here or continue to sync other tables in
-                                // the group/next group
-                                // For now, let's continue to attempt other tables within the group.
-                            } else {
+                              
+                              } else {
                                 logger.info("Successfully synced table: {} in Group {}", table, groupId);
                             }
                         } catch (Exception e) {
@@ -202,34 +191,18 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
         }
     }
 
-    /**
-     * Helper method to sync tables belonging to a specific group.
-     * This method assumes that the `syncUploadDataDigester` will be populated
-     * with relevant data for the `currentTableName` before calling this.
-     * In a real-world scenario, you might fetch data for each table here.
-     */
+  
     private boolean syncTablesInGroup(String schemaName, String currentTableName,
             SyncUploadDataDigester originalDigester) {
-        logger.info("Attempting generic sync for table: {}", currentTableName);
-        // This is a simplification. In a production system, you would likely need
-        // to retrieve the actual data for 'currentTableName' from the local DB
-        // based on the group sync approach. For this example, we'll assume the
-        // originalDigester's syncData is relevant or needs to be re-populated.
-
-        // Create a new digester instance or modify the existing one for the current
-        // table
+      logger.info("Table name from sync tables in group: {}", currentTableName);
+      logger.info("Van inc =",originalDigester.getVanAutoIncColumnName());
         SyncUploadDataDigester tableSpecificDigester = new SyncUploadDataDigester();
         tableSpecificDigester.setSchemaName(schemaName);
         tableSpecificDigester.setTableName(currentTableName);
         tableSpecificDigester.setSyncedBy(originalDigester.getSyncedBy());
         tableSpecificDigester.setFacilityID(originalDigester.getFacilityID());
         tableSpecificDigester.setVanAutoIncColumnName(originalDigester.getVanAutoIncColumnName());
-        tableSpecificDigester.setServerColumns(originalDigester.getServerColumns()); // Assuming serverColumns is
-                                                                                     // generic or set per table
-
-        // !!! IMPORTANT: You'll need to fetch the data for 'currentTableName' from your local DB here.
-        // The `originalDigester.getSyncData()` might not be correct for all tables in a group.
-        // For demonstration, I'm just using the original digester's data, which is likely incorrect
+        tableSpecificDigester.setServerColumns(originalDigester.getServerColumns()); 
         tableSpecificDigester.setSyncData(originalDigester.getSyncData());
         return performGenericTableSync(tableSpecificDigester);
     }
@@ -364,7 +337,8 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
         String vanAutoIncColumnName = syncUploadDataDigester.getVanAutoIncColumnName();
         String schemaName = syncUploadDataDigester.getSchemaName();
         Integer facilityIDFromDigester = syncUploadDataDigester.getFacilityID();
-
+logger.info("Syncing data for table: {}", syncTableName);
+        logger.info("Van Auto Increment Column Name: {}", vanAutoIncColumnName);
         for (Map<String, Object> map : dataToBesync) {
             String vanSerialNo = String.valueOf(map.get(vanAutoIncColumnName));
             String vanID = String.valueOf(map.get("VanID"));
