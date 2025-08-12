@@ -196,6 +196,8 @@ logger.info("Syncing data for table: {}", syncTableName);
             SyncUploadDataDigester originalDigester) {
       logger.info("Table name from sync tables in group: {}", currentTableName);
       logger.info("Van inc =",originalDigester.getVanAutoIncColumnName());
+      logger.info("Table data="+ originalDigester.getSyncData());
+
         SyncUploadDataDigester tableSpecificDigester = new SyncUploadDataDigester();
         tableSpecificDigester.setSchemaName(schemaName);
         tableSpecificDigester.setTableName(currentTableName);
@@ -459,7 +461,7 @@ for (String column : cleanedColumnsList) {
             // }
 
             objArr = currentRecordValues.toArray();
-
+logger.info("Object array for sync: {}", Arrays.toString(objArr));
 
             if (recordCheck == 0) {
                 syncDataListInsert.add(objArr);
@@ -646,9 +648,16 @@ private boolean isDateColumn(String columnName) {
 }
 
 private String formatDateForMySQL(String dateStr) {
-    logger.info("Format date value="+dateStr);
+    logger.info("Format date value=" + dateStr);
     if (dateStr == null || dateStr.isEmpty()) return null;
-    // Try ISO_LOCAL_DATE_TIME first
+    // Try parsing with nanoseconds
+    try {
+        // Handles "2025-08-12T15:29:15.041257900"
+        java.time.format.DateTimeFormatter nanoFormatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSSSSS");
+        LocalDateTime ldt = LocalDateTime.parse(dateStr, nanoFormatter);
+        return ldt.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    } catch (Exception ignore) {}
+    // Try ISO_LOCAL_DATE_TIME (without nanos)
     try {
         LocalDateTime ldt = LocalDateTime.parse(dateStr);
         return ldt.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
@@ -667,7 +676,7 @@ private String formatDateForMySQL(String dateStr) {
         for (java.time.format.DateTimeFormatter fmt : formatters) {
             try {
                 LocalDateTime ldt = LocalDateTime.parse(dateStr, fmt);
-                logger.info("Parsed date value="+ldt);
+                logger.info("Parsed date value=" + ldt);
                 return ldt.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             } catch (Exception ignore2) {}
         }

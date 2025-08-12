@@ -98,6 +98,9 @@ public class DataSyncRepository {
 		jdbcTemplate = getJdbcTemplate();
 		String query = "";
 
+		logger.info("Updating processed flag in table: " + tableName + " for vanSerialNos: " + vanSerialNos);
+		logger.info("autoIncreamentColumn: " + autoIncreamentColumn);
+
 		if (tableName != null && tableName.toLowerCase().equals("i_ben_flow_outreach")) {
     		query = "UPDATE " + schemaName + "." + tableName
             	+ " SET created_date = ? , processed = 'P', SyncedDate = ?, Syncedby = ? "
