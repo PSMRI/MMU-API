@@ -505,10 +505,9 @@ logger.info("column name="+syncUploadDataDigester.getServerColumns());
         return insertSuccess && updateSuccess;
     }
 private String getQueryToInsertDataToServerDB(String schemaName, String tableName, String serverColumns) {
- logger.info("Server Columns: {}", serverColumns);
     String[] columnsArr = null;
     if (serverColumns != null)
-        columnsArr = serverColumns.split(",");
+        columnsArr = serverColumns.split(",(?![^()]*\\))"); // <-- fixed split
  
     StringBuilder preparedStatementSetter = new StringBuilder();
  
@@ -520,19 +519,15 @@ private String getQueryToInsertDataToServerDB(String schemaName, String tableNam
             }
         }
     }
+ 
     StringBuilder queryBuilder = new StringBuilder("INSERT INTO ");
     queryBuilder.append(schemaName).append(".").append(tableName);
     queryBuilder.append("(");
-    queryBuilder.append(
-        serverColumns.replaceAll(
-            "(?i)date_format\\s*\\(\\s*([a-zA-Z0-9_]+)\\s*,\\s*'[^']*'\\s*\\)",
-            "$1"
-        )
-    );
+    queryBuilder.append(serverColumns);
     queryBuilder.append(") VALUES (");
     queryBuilder.append(preparedStatementSetter);
     queryBuilder.append(")");
-    logger.info("Query to Insert Data: {}", queryBuilder.toString());
+    logger.info("Generated insert query: {}", queryBuilder.toString());
     return queryBuilder.toString();
 }
 
