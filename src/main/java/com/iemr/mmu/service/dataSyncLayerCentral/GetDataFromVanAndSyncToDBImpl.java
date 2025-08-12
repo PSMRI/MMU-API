@@ -466,8 +466,10 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
             logger.info("Object array for sync: {}", Arrays.toString(objArr));
 
             if (recordCheck == 0) {
+                logger.info("Sync table name", syncTableName);
                 syncDataListInsert.add(objArr);
             } else {
+                logger.info("Sync table name else", syncTableName);
                 // For update, append the WHERE clause parameters at the end of the array
                 List<Object> updateParams = new ArrayList<>(Arrays.asList(objArr));
                 updateParams.add(String.valueOf(vanSerialNo));
@@ -491,7 +493,10 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         if (!syncDataListInsert.isEmpty()) {
             String queryInsert = getQueryToInsertDataToServerDB(schemaName, syncTableName,
                     syncUploadDataDigester.getServerColumns());
-                    logger.info("queryInsert", queryInsert);
+            logger.info("queryInsert", queryInsert);
+            if ("i_beneficiaryaddress".equalsIgnoreCase(syncTableName)) {
+                logger.info("sync data for insert for address: {}", syncDataListInsert);
+            }
 
             try {
                 int[] i = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
