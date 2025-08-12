@@ -103,6 +103,7 @@ private boolean isValidColumnNamesList(String columnNames) {
     if (columnNames == null || columnNames.trim().isEmpty()) {
         return false;
     }
+    logger.info("Validating column names: {}", columnNames);
     for (String col : columnNames.split(",")) {
         String trimmed = col.trim();
 
