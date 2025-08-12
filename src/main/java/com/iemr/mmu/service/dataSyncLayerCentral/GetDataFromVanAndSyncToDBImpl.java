@@ -46,7 +46,6 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
     @Autowired
     private DataSyncRepositoryCentral dataSyncRepositoryCentral;
 
-    
     private static final Map<Integer, List<String>> TABLE_GROUPS = new HashMap<>();
     static {
         TABLE_GROUPS.put(1,
@@ -96,14 +95,15 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
 
         ObjectMapper mapper = new ObjectMapper();
         SyncUploadDataDigester syncUploadDataDigester = mapper.readValue(requestOBJ, SyncUploadDataDigester.class);
-List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
+        List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
+        logger.info("Data to be synced: {}", dataToBesync);
         if (syncUploadDataDigester == null || syncUploadDataDigester.getTableName() == null) {
             logger.error("Invalid SyncUploadDataDigester object or tableName is null.");
             return "Error: Invalid sync request.";
         }
 
         String syncTableName = syncUploadDataDigester.getTableName();
-logger.info("Syncing data for table: {}", syncTableName);
+        logger.info("Syncing data for table: {}", syncTableName);
         // Handle specific tables first, if their logic is distinct
         if ("m_beneficiaryregidmapping".equalsIgnoreCase(syncTableName)) {
             String result = update_M_BeneficiaryRegIdMapping_for_provisioned_benID(syncUploadDataDigester);
@@ -113,17 +113,18 @@ logger.info("Syncing data for table: {}", syncTableName);
                 logger.error("Sync failed for m_beneficiaryregidmapping: {}", result);
                 return "Sync failed for m_beneficiaryregidmapping.";
             }
-        } 
+        }
         // else if ("i_beneficiarydetails".equalsIgnoreCase(syncTableName)) {
-        //     String result = update_I_BeneficiaryDetails_for_processed_in_batches(syncUploadDataDigester);
-        //     if ("data sync passed".equals(result)) {
-        //         return "Sync successful for i_beneficiarydetails.";
-        //     } else {
-        //         logger.error("Sync failed for i_beneficiarydetails: {}", result);
-        //         return "Sync failed for i_beneficiarydetails.";
-        //     }
+        // String result =
+        // update_I_BeneficiaryDetails_for_processed_in_batches(syncUploadDataDigester);
+        // if ("data sync passed".equals(result)) {
+        // return "Sync successful for i_beneficiarydetails.";
+        // } else {
+        // logger.error("Sync failed for i_beneficiarydetails: {}", result);
+        // return "Sync failed for i_beneficiarydetails.";
         // }
-         else {
+        // }
+        else {
             // Determine the group for the current table or iterate through all if no
             // specific table is given
             boolean syncSuccess = true;
@@ -134,10 +135,10 @@ logger.info("Syncing data for table: {}", syncTableName);
             // Otherwise, iterate through all defined groups.
             if (syncTableName != null && !syncTableName.isEmpty()) {
                 boolean foundInGroup = false;
-                
-			for (Map<String, Object> map : dataToBesync) {
+
+                for (Map<String, Object> map : dataToBesync) {
                     // if (entry.getValue().contains(syncTableName.toLowerCase())) {
-                    if(map.get("tableName") != null
+                    if (map.get("tableName") != null
                             && map.get("tableName").toString().equalsIgnoreCase(syncTableName)) {
                         syncSuccess = syncTablesInGroup(syncUploadDataDigester.getSchemaName(), syncTableName,
                                 syncUploadDataDigester);
@@ -151,7 +152,7 @@ logger.info("Syncing data for table: {}", syncTableName);
                     syncSuccess = performGenericTableSync(syncUploadDataDigester);
                 }
             } else {
-               
+
                 logger.info("No specific table provided. Attempting to sync all tables group by group.");
                 for (Map.Entry<Integer, List<String>> entry : TABLE_GROUPS.entrySet()) {
                     Integer groupId = entry.getKey();
@@ -159,7 +160,7 @@ logger.info("Syncing data for table: {}", syncTableName);
                     logger.info("Starting sync for Group {}", groupId);
                     for (String table : tablesInGroup) {
                         try {
-                         
+
                             boolean currentTableSyncResult = syncTablesInGroup(syncUploadDataDigester.getSchemaName(),
                                     table, syncUploadDataDigester);
                             if (!currentTableSyncResult) {
@@ -167,8 +168,8 @@ logger.info("Syncing data for table: {}", syncTableName);
                                 errorMessage += "Failed to sync table: " + table + " in Group " + groupId + ". ";
                                 logger.error("Sync failed for table '{}' in Group {}. Error: {}", table, groupId,
                                         errorMessage);
-                              
-                              } else {
+
+                            } else {
                                 logger.info("Successfully synced table: {} in Group {}", table, groupId);
                             }
                         } catch (Exception e) {
@@ -191,12 +192,11 @@ logger.info("Syncing data for table: {}", syncTableName);
         }
     }
 
-  
     private boolean syncTablesInGroup(String schemaName, String currentTableName,
             SyncUploadDataDigester originalDigester) {
-      logger.info("Table name from sync tables in group: {}", currentTableName);
-      logger.info("Van inc =",originalDigester.getVanAutoIncColumnName());
-      logger.info("Table data="+ originalDigester.getSyncData());
+        logger.info("Table name from sync tables in group: {}", currentTableName);
+        logger.info("Van inc =", originalDigester.getVanAutoIncColumnName());
+        logger.info("Table data=" + originalDigester.getSyncData());
 
         SyncUploadDataDigester tableSpecificDigester = new SyncUploadDataDigester();
         tableSpecificDigester.setSchemaName(schemaName);
@@ -204,14 +204,14 @@ logger.info("Syncing data for table: {}", syncTableName);
         tableSpecificDigester.setSyncedBy(originalDigester.getSyncedBy());
         tableSpecificDigester.setFacilityID(originalDigester.getFacilityID());
         tableSpecificDigester.setVanAutoIncColumnName(originalDigester.getVanAutoIncColumnName());
-        tableSpecificDigester.setServerColumns(originalDigester.getServerColumns()); 
+        tableSpecificDigester.setServerColumns(originalDigester.getServerColumns());
         tableSpecificDigester.setSyncData(originalDigester.getSyncData());
         return performGenericTableSync(tableSpecificDigester);
     }
 
     private String update_M_BeneficiaryRegIdMapping_for_provisioned_benID(
             SyncUploadDataDigester syncUploadDataDigester) {
-        
+
         List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
         List<Object[]> syncData = new ArrayList<>();
 
@@ -236,7 +236,8 @@ logger.info("Syncing data for table: {}", syncTableName);
         if (!syncData.isEmpty()) {
             try {
                 int[] i = dataSyncRepositoryCentral.syncDataToCentralDB(syncUploadDataDigester.getSchemaName(),
-                        syncUploadDataDigester.getTableName(), syncUploadDataDigester.getServerColumns(), query, syncData);
+                        syncUploadDataDigester.getTableName(), syncUploadDataDigester.getServerColumns(), query,
+                        syncData);
 
                 if (i.length == syncData.size()) {
                     logger.info("Successfully updated {} records for m_beneficiaryregidmapping.", i.length);
@@ -284,10 +285,10 @@ logger.info("Syncing data for table: {}", syncTableName);
 
         String problematicWhereClause = " WHERE Processed <> 'P' AND VanID IS NOT NULL "; // Define it explicitly
 
-    while (true) {
-        List<Map<String, Object>> batch;
-        try {
-            
+        while (true) {
+            List<Map<String, Object>> batch;
+            try {
+
                 batch = dataSyncRepositoryCentral.getBatchForBenDetails(
                         syncUploadDataDigester,
                         problematicWhereClause,
@@ -335,13 +336,12 @@ logger.info("Syncing data for table: {}", syncTableName);
             return true; // Nothing to sync, consider it a success
         }
 
-    
         String syncTableName = syncUploadDataDigester.getTableName();
         String vanAutoIncColumnName = syncUploadDataDigester.getVanAutoIncColumnName();
         String schemaName = syncUploadDataDigester.getSchemaName();
         Integer facilityIDFromDigester = syncUploadDataDigester.getFacilityID();
-logger.info("Syncing data for table: {}", syncTableName);
-logger.info("column name="+syncUploadDataDigester.getServerColumns());
+        logger.info("Syncing data for table: {}", syncTableName);
+        logger.info("column name=" + syncUploadDataDigester.getServerColumns());
         logger.info("Van Auto Increment Column Name: {}", vanAutoIncColumnName);
         for (Map<String, Object> map : dataToBesync) {
             String vanSerialNo = String.valueOf(map.get(vanAutoIncColumnName));
@@ -353,11 +353,11 @@ logger.info("column name="+syncUploadDataDigester.getServerColumns());
             map.put("SyncedDate", String.valueOf(LocalDateTime.now())); // Ensure column name matches DB
             if (map.get("CreatedDate") == null || map.get("created_date") == null) {
                 logger.info("CreatedDate was null for table: " + syncTableName + ", inserting current time");
-                if(map.get("CreatedDate") == null)
+                if (map.get("CreatedDate") == null)
                     map.put("CreatedDate", String.valueOf(LocalDateTime.now()));
-                if(map.get("created_date") == null)
+                if (map.get("created_date") == null)
                     map.put("created_date", String.valueOf(LocalDateTime.now()));
-                }
+            }
             // Facility ID processing
             if (facilityIDFromDigester != null) {
                 // Determine the 'Processed' status based on facility ID for specific tables
@@ -426,42 +426,44 @@ logger.info("column name="+syncUploadDataDigester.getServerColumns());
 
             // Prepare Object array for insert/update
             Object[] objArr;
-            // List<String> serverColumnsList = Arrays.asList(syncUploadDataDigester.getServerColumns().split(","));
- List<String> cleanedColumnsList = Arrays.asList(cleanColumnNames(syncUploadDataDigester.getServerColumns()).split(","));
+            // List<String> serverColumnsList =
+            // Arrays.asList(syncUploadDataDigester.getServerColumns().split(","));
+            List<String> cleanedColumnsList = Arrays
+                    .asList(cleanColumnNames(syncUploadDataDigester.getServerColumns()).split(","));
 
             List<Object> currentRecordValues = new ArrayList<>();
 
-for (String column : cleanedColumnsList) {
-    Object value = map.get(column.trim());
-    if (value instanceof Boolean) {
-        currentRecordValues.add(value);
-    } else if (value != null) {
-        // Handle date conversion for known date columns
-        if (isDateColumn(column.trim()) && value instanceof String) {
-            String formatted = formatDateForMySQL((String) value);
-            currentRecordValues.add(formatted);
-        } else {
-            currentRecordValues.add(String.valueOf(value));
-        }
-    } else {
-        currentRecordValues.add(null);
-    }
-}
+            for (String column : cleanedColumnsList) {
+                Object value = map.get(column.trim());
+                if (value instanceof Boolean) {
+                    currentRecordValues.add(value);
+                } else if (value != null) {
+                    // Handle date conversion for known date columns
+                    if (isDateColumn(column.trim()) && value instanceof String) {
+                        String formatted = formatDateForMySQL((String) value);
+                        currentRecordValues.add(formatted);
+                    } else {
+                        currentRecordValues.add(String.valueOf(value));
+                    }
+                } else {
+                    currentRecordValues.add(null);
+                }
+            }
             // for (String column : cleanedColumnsList) {
-            //     Object value = map.get(column.trim());
-            //     // Handle boolean conversion if necessary, though String.valueOf should
-            //     // generally work for prepared statements
-            //     if (value instanceof Boolean) {
-            //         currentRecordValues.add(value);
-            //     } else if (value != null) {
-            //         currentRecordValues.add(String.valueOf(value));
-            //     } else {
-            //         currentRecordValues.add(null);
-            //     }
+            // Object value = map.get(column.trim());
+            // // Handle boolean conversion if necessary, though String.valueOf should
+            // // generally work for prepared statements
+            // if (value instanceof Boolean) {
+            // currentRecordValues.add(value);
+            // } else if (value != null) {
+            // currentRecordValues.add(String.valueOf(value));
+            // } else {
+            // currentRecordValues.add(null);
+            // }
             // }
 
             objArr = currentRecordValues.toArray();
-logger.info("Object array for sync: {}", Arrays.toString(objArr));
+            logger.info("Object array for sync: {}", Arrays.toString(objArr));
 
             if (recordCheck == 0) {
                 syncDataListInsert.add(objArr);
@@ -485,9 +487,12 @@ logger.info("Object array for sync: {}", Arrays.toString(objArr));
         boolean insertSuccess = true;
         boolean updateSuccess = true;
 
+        logger.info("sync data for insert: {}", syncDataListInsert);
         if (!syncDataListInsert.isEmpty()) {
-            String queryInsert = getQueryToInsertDataToServerDB(schemaName, syncTableName, syncUploadDataDigester.getServerColumns());
-           
+            String queryInsert = getQueryToInsertDataToServerDB(schemaName, syncTableName,
+                    syncUploadDataDigester.getServerColumns());
+                    logger.info("queryInsert", queryInsert);
+
             try {
                 int[] i = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
                         syncUploadDataDigester.getServerColumns(), queryInsert, syncDataListInsert);
@@ -506,7 +511,8 @@ logger.info("Object array for sync: {}", Arrays.toString(objArr));
         }
 
         if (!syncDataListUpdate.isEmpty()) {
-            String queryUpdate = getQueryToUpdateDataToServerDB(schemaName, syncUploadDataDigester.getServerColumns(), syncTableName);
+            String queryUpdate = getQueryToUpdateDataToServerDB(schemaName, syncUploadDataDigester.getServerColumns(),
+                    syncTableName);
             // Ensure the update query is correct and matches the expected format
             try {
                 int[] j = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
@@ -526,52 +532,51 @@ logger.info("Object array for sync: {}", Arrays.toString(objArr));
         }
         return insertSuccess && updateSuccess;
     }
-private String getQueryToInsertDataToServerDB(String schemaName, String tableName, String serverColumns) {
-    String cleanedColumns = cleanColumnNames(serverColumns);
-    String[] cleanedColumnsArr = cleanedColumns.split(",");
 
-    StringBuilder preparedStatementSetter = new StringBuilder();
-    for (int i = 0; i < cleanedColumnsArr.length; i++) {
-        preparedStatementSetter.append("?");
-        if (i < cleanedColumnsArr.length - 1) {
-            preparedStatementSetter.append(", ");
+    private String getQueryToInsertDataToServerDB(String schemaName, String tableName, String serverColumns) {
+        String cleanedColumns = cleanColumnNames(serverColumns);
+        String[] cleanedColumnsArr = cleanedColumns.split(",");
+
+        StringBuilder preparedStatementSetter = new StringBuilder();
+        for (int i = 0; i < cleanedColumnsArr.length; i++) {
+            preparedStatementSetter.append("?");
+            if (i < cleanedColumnsArr.length - 1) {
+                preparedStatementSetter.append(", ");
+            }
         }
+
+        StringBuilder queryBuilder = new StringBuilder("INSERT INTO ");
+        queryBuilder.append(schemaName).append(".").append(tableName);
+        queryBuilder.append("(").append(cleanedColumns).append(") VALUES (").append(preparedStatementSetter)
+                .append(")");
+        return queryBuilder.toString();
     }
 
-    StringBuilder queryBuilder = new StringBuilder("INSERT INTO ");
-    queryBuilder.append(schemaName).append(".").append(tableName);
-    queryBuilder.append("(").append(cleanedColumns).append(") VALUES (").append(preparedStatementSetter).append(")");
-    return queryBuilder.toString();
-}
- 
- 
- 
-    // private String getQueryToInsertDataToServerDB(String schemaName, String tableName, String serverColumns) {
-    //     String[] columnsArr = null;
-    //     if (serverColumns != null)
-    //         columnsArr = serverColumns.split(",");
+    // private String getQueryToInsertDataToServerDB(String schemaName, String
+    // tableName, String serverColumns) {
+    // String[] columnsArr = null;
+    // if (serverColumns != null)
+    // columnsArr = serverColumns.split(",");
 
-    //     StringBuilder preparedStatementSetter = new StringBuilder();
+    // StringBuilder preparedStatementSetter = new StringBuilder();
 
-    //     if (columnsArr != null && columnsArr.length > 0) {
-    //         for (int i = 0; i < columnsArr.length; i++) {
-    //             preparedStatementSetter.append("?");
-    //             if (i < columnsArr.length - 1) {
-    //                 preparedStatementSetter.append(", ");
-    //             }
-    //         }
-    //     }
+    // if (columnsArr != null && columnsArr.length > 0) {
+    // for (int i = 0; i < columnsArr.length; i++) {
+    // preparedStatementSetter.append("?");
+    // if (i < columnsArr.length - 1) {
+    // preparedStatementSetter.append(", ");
+    // }
+    // }
+    // }
 
-        
-
-    //     StringBuilder queryBuilder = new StringBuilder("INSERT INTO ");
-    //     queryBuilder.append(schemaName).append(".").append(tableName);
-    //     queryBuilder.append("(");
-    //     queryBuilder.append(serverColumns);
-    //     queryBuilder.append(") VALUES (");
-    //     queryBuilder.append(preparedStatementSetter);
-    //     queryBuilder.append(")");
-    //     return queryBuilder.toString();
+    // StringBuilder queryBuilder = new StringBuilder("INSERT INTO ");
+    // queryBuilder.append(schemaName).append(".").append(tableName);
+    // queryBuilder.append("(");
+    // queryBuilder.append(serverColumns);
+    // queryBuilder.append(") VALUES (");
+    // queryBuilder.append(preparedStatementSetter);
+    // queryBuilder.append(")");
+    // return queryBuilder.toString();
     // }
 
     public String getQueryToUpdateDataToServerDB(String schemaName, String serverColumns, String tableName) {
@@ -581,10 +586,10 @@ private String getQueryToInsertDataToServerDB(String schemaName, String tableNam
 
         StringBuilder preparedStatementSetter = new StringBuilder();
 
-       if (columnsArr != null && columnsArr.length > 0) {
+        if (columnsArr != null && columnsArr.length > 0) {
             for (int i = 0; i < columnsArr.length; i++) {
                 String columnName = columnsArr[i].trim(); // ← NEW LINE
- 
+
                 // Special handling for CreatedDate - use COALESCE to prevent NULL
                 if (columnName.equalsIgnoreCase("CreatedDate")) { // ← NEW BLOCK
                     preparedStatementSetter.append(columnName);
@@ -593,7 +598,7 @@ private String getQueryToInsertDataToServerDB(String schemaName, String tableNam
                     preparedStatementSetter.append(columnName);
                     preparedStatementSetter.append(" = ?");
                 }
- 
+
                 if (i < columnsArr.length - 1) {
                     preparedStatementSetter.append(", ");
                 }
@@ -637,51 +642,59 @@ private String getQueryToInsertDataToServerDB(String schemaName, String tableNam
         logger.info("Failed records info: {}", failedRecordsInfo);
         return String.join("; ", failedRecordsInfo);
     }
-private String cleanColumnNames(String serverColumns) {
-    // Remove all date_format(...) expressions and keep only the column name
-    return serverColumns.replaceAll("date_format\\s*\\(\\s*([a-zA-Z0-9_]+)\\s*,\\s*'[^']*'\\s*\\)", "$1");
-}
 
-private boolean isDateColumn(String columnName) {
-    // List all your date/datetime columns here
-    return Arrays.asList("MarriageDate", "DOB", "CreatedDate", "LastModDate", "SyncedDate", "ReservedOn").contains(columnName);
-}
-
-private String formatDateForMySQL(String dateStr) {
-    logger.info("Format date value=" + dateStr);
-    if (dateStr == null || dateStr.isEmpty()) return null;
-    // Try parsing with nanoseconds
-    try {
-        // Handles "2025-08-12T15:29:15.041257900"
-        java.time.format.DateTimeFormatter nanoFormatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSSSSS");
-        LocalDateTime ldt = LocalDateTime.parse(dateStr, nanoFormatter);
-        return ldt.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-    } catch (Exception ignore) {}
-    // Try ISO_LOCAL_DATE_TIME (without nanos)
-    try {
-        LocalDateTime ldt = LocalDateTime.parse(dateStr);
-        return ldt.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-    } catch (Exception ignore) {}
-    // Try MySQL DATETIME format (already correct)
-    if (dateStr.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}")) {
-        return dateStr;
+    private String cleanColumnNames(String serverColumns) {
+        // Remove all date_format(...) expressions and keep only the column name
+        return serverColumns.replaceAll("date_format\\s*\\(\\s*([a-zA-Z0-9_]+)\\s*,\\s*'[^']*'\\s*\\)", "$1");
     }
-    // Try parsing with other common formats
-    try {
-        java.time.format.DateTimeFormatter[] formatters = new java.time.format.DateTimeFormatter[] {
-            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"),
-            java.time.format.DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss"),
-            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
-        };
-        for (java.time.format.DateTimeFormatter fmt : formatters) {
-            try {
-                LocalDateTime ldt = LocalDateTime.parse(dateStr, fmt);
-                logger.info("Parsed date value=" + ldt);
-                return ldt.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-            } catch (Exception ignore2) {}
+
+    private boolean isDateColumn(String columnName) {
+        // List all your date/datetime columns here
+        return Arrays.asList("MarriageDate", "DOB", "CreatedDate", "LastModDate", "SyncedDate", "ReservedOn")
+                .contains(columnName);
+    }
+
+    private String formatDateForMySQL(String dateStr) {
+        logger.info("Format date value=" + dateStr);
+        if (dateStr == null || dateStr.isEmpty())
+            return null;
+        // Try parsing with nanoseconds
+        try {
+            // Handles "2025-08-12T15:29:15.041257900"
+            java.time.format.DateTimeFormatter nanoFormatter = java.time.format.DateTimeFormatter
+                    .ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSSSSS");
+            LocalDateTime ldt = LocalDateTime.parse(dateStr, nanoFormatter);
+            return ldt.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        } catch (Exception ignore) {
         }
-    } catch (Exception ignore3) {}
-    // If all parsing fails, return null to avoid inserting invalid data
-    return null;
-}
+        // Try ISO_LOCAL_DATE_TIME (without nanos)
+        try {
+            LocalDateTime ldt = LocalDateTime.parse(dateStr);
+            return ldt.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        } catch (Exception ignore) {
+        }
+        // Try MySQL DATETIME format (already correct)
+        if (dateStr.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}")) {
+            return dateStr;
+        }
+        // Try parsing with other common formats
+        try {
+            java.time.format.DateTimeFormatter[] formatters = new java.time.format.DateTimeFormatter[] {
+                    java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"),
+                    java.time.format.DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss"),
+                    java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
+            };
+            for (java.time.format.DateTimeFormatter fmt : formatters) {
+                try {
+                    LocalDateTime ldt = LocalDateTime.parse(dateStr, fmt);
+                    logger.info("Parsed date value=" + ldt);
+                    return ldt.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                } catch (Exception ignore2) {
+                }
+            }
+        } catch (Exception ignore3) {
+        }
+        // If all parsing fails, return null to avoid inserting invalid data
+        return null;
+    }
 }
