@@ -27,7 +27,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -351,13 +350,13 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
             // Update SyncedBy and SyncedDate in the xmap itself before processing
             map.put("SyncedBy", syncUploadDataDigester.getSyncedBy());
             map.put("SyncedDate", String.valueOf(LocalDateTime.now())); // Ensure column name matches DB
-            if (map.get("CreatedDate") == null || map.get("created_date") == null) {
-                logger.info("CreatedDate was null for table: " + syncTableName + ", inserting current time");
-                if (map.get("CreatedDate") == null)
-                    map.put("CreatedDate", String.valueOf(LocalDateTime.now()));
-                if (map.get("created_date") == null)
-                    map.put("created_date", String.valueOf(LocalDateTime.now()));
-            }
+            // if (map.get("CreatedDate") == null || map.get("created_date") == null) {
+            //     logger.info("CreatedDate was null for table: " + syncTableName + ", inserting current time");
+            //     if (map.get("CreatedDate") == null)
+            //         map.put("CreatedDate", String.valueOf(LocalDateTime.now()));
+            //     if (map.get("created_date") == null)
+            //         map.put("created_date", String.valueOf(LocalDateTime.now()));
+            // }
             // Facility ID processing
             if (facilityIDFromDigester != null) {
                 // Determine the 'Processed' status based on facility ID for specific tables
@@ -426,41 +425,41 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
 
             // Prepare Object array for insert/update
             Object[] objArr;
-            // List<String> serverColumnsList =
-            // Arrays.asList(syncUploadDataDigester.getServerColumns().split(","));
-            List<String> cleanedColumnsList = Arrays
-                    .asList(cleanColumnNames(syncUploadDataDigester.getServerColumns()).split(","));
+            List<String> serverColumnsList =
+            Arrays.asList(syncUploadDataDigester.getServerColumns().split(","));
+            // List<String> cleanedColumnsList = Arrays
+            //         .asList(cleanColumnNames(syncUploadDataDigester.getServerColumns()).split(","));
 
             List<Object> currentRecordValues = new ArrayList<>();
 
-            for (String column : cleanedColumnsList) {
-                Object value = map.get(column.trim());
-                if (value instanceof Boolean) {
-                    currentRecordValues.add(value);
-                } else if (value != null) {
-                    // Handle date conversion for known date columns
-                    if (isDateColumn(column.trim()) && value instanceof String) {
-                        String formatted = formatDateForMySQL((String) value);
-                        currentRecordValues.add(formatted);
-                    } else {
-                        currentRecordValues.add(String.valueOf(value));
-                    }
-                } else {
-                    currentRecordValues.add(null);
-                }
-            }
             // for (String column : cleanedColumnsList) {
-            // Object value = map.get(column.trim());
-            // // Handle boolean conversion if necessary, though String.valueOf should
-            // // generally work for prepared statements
-            // if (value instanceof Boolean) {
-            // currentRecordValues.add(value);
-            // } else if (value != null) {
-            // currentRecordValues.add(String.valueOf(value));
-            // } else {
-            // currentRecordValues.add(null);
+            //     Object value = map.get(column.trim());
+            //     if (value instanceof Boolean) {
+            //         currentRecordValues.add(value);
+            //     } else if (value != null) {
+            //         // Handle date conversion for known date columns
+            //         if (isDateColumn(column.trim()) && value instanceof String) {
+            //             String formatted = formatDateForMySQL((String) value);
+            //             currentRecordValues.add(formatted);
+            //         } else {
+            //             currentRecordValues.add(String.valueOf(value));
+            //         }
+            //     } else {
+            //         currentRecordValues.add(null);
+            //     }
             // }
-            // }
+            for (String column : serverColumnsList) {
+            Object value = map.get(column.trim());
+            // Handle boolean conversion if necessary, though String.valueOf should
+            // generally work for prepared statements
+            if (value instanceof Boolean) {
+            currentRecordValues.add(value);
+            } else if (value != null) {
+            currentRecordValues.add(String.valueOf(value));
+            } else {
+            currentRecordValues.add(null);
+            }
+            }
 
             objArr = currentRecordValues.toArray();
             logger.info("Object array for sync: {}", Arrays.toString(objArr));
@@ -653,53 +652,53 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         return serverColumns.replaceAll("date_format\\s*\\(\\s*([a-zA-Z0-9_]+)\\s*,\\s*'[^']*'\\s*\\)", "$1");
     }
 
-    private boolean isDateColumn(String columnName) {
-        // List all your date/datetime columns here
-        return Arrays.asList("MarriageDate", "DOB", "CreatedDate", "LastModDate", "SyncedDate", "ReservedOn")
-                .contains(columnName);
-    }
+    // private boolean isDateColumn(String columnName) {
+    //     // List all your date/datetime columns here
+    //     return Arrays.asList("MarriageDate", "DOB", "CreatedDate", "LastModDate", "SyncedDate", "ReservedOn")
+    //             .contains(columnName);
+    // }
 
-    private String formatDateForMySQL(String dateStr) {
-        logger.info("Format date value=" + dateStr);
-        if (dateStr == null || dateStr.isEmpty())
-            return null;
-        // Try parsing with nanoseconds
-        try {
-            // Handles "2025-08-12T15:29:15.041257900"
-            java.time.format.DateTimeFormatter nanoFormatter = java.time.format.DateTimeFormatter
-                    .ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSSSSS");
-            LocalDateTime ldt = LocalDateTime.parse(dateStr, nanoFormatter);
-            return ldt.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-        } catch (Exception ignore) {
-        }
-        // Try ISO_LOCAL_DATE_TIME (without nanos)
-        try {
-            LocalDateTime ldt = LocalDateTime.parse(dateStr);
-            return ldt.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-        } catch (Exception ignore) {
-        }
-        // Try MySQL DATETIME format (already correct)
-        if (dateStr.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}")) {
-            return dateStr;
-        }
-        // Try parsing with other common formats
-        try {
-            java.time.format.DateTimeFormatter[] formatters = new java.time.format.DateTimeFormatter[] {
-                    java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"),
-                    java.time.format.DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss"),
-                    java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
-            };
-            for (java.time.format.DateTimeFormatter fmt : formatters) {
-                try {
-                    LocalDateTime ldt = LocalDateTime.parse(dateStr, fmt);
-                    logger.info("Parsed date value=" + ldt);
-                    return ldt.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-                } catch (Exception ignore2) {
-                }
-            }
-        } catch (Exception ignore3) {
-        }
-        // If all parsing fails, return null to avoid inserting invalid data
-        return null;
-    }
+    // private String formatDateForMySQL(String dateStr) {
+    //     logger.info("Format date value=" + dateStr);
+    //     if (dateStr == null || dateStr.isEmpty())
+    //         return null;
+    //     // Try parsing with nanoseconds
+    //     try {
+    //         // Handles "2025-08-12T15:29:15.041257900"
+    //         java.time.format.DateTimeFormatter nanoFormatter = java.time.format.DateTimeFormatter
+    //                 .ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSSSSS");
+    //         LocalDateTime ldt = LocalDateTime.parse(dateStr, nanoFormatter);
+    //         return ldt.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    //     } catch (Exception ignore) {
+    //     }
+    //     // Try ISO_LOCAL_DATE_TIME (without nanos)
+    //     try {
+    //         LocalDateTime ldt = LocalDateTime.parse(dateStr);
+    //         return ldt.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    //     } catch (Exception ignore) {
+    //     }
+    //     // Try MySQL DATETIME format (already correct)
+    //     if (dateStr.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}")) {
+    //         return dateStr;
+    //     }
+    //     // Try parsing with other common formats
+    //     try {
+    //         java.time.format.DateTimeFormatter[] formatters = new java.time.format.DateTimeFormatter[] {
+    //                 java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"),
+    //                 java.time.format.DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss"),
+    //                 java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    //         };
+    //         for (java.time.format.DateTimeFormatter fmt : formatters) {
+    //             try {
+    //                 LocalDateTime ldt = LocalDateTime.parse(dateStr, fmt);
+    //                 logger.info("Parsed date value=" + ldt);
+    //                 return ldt.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    //             } catch (Exception ignore2) {
+    //             }
+    //         }
+    //     } catch (Exception ignore3) {
+    //     }
+    //     // If all parsing fails, return null to avoid inserting invalid data
+    //     return null;
+    // }
 }
