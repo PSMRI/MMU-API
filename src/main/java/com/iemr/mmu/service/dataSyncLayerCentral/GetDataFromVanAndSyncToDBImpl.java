@@ -429,18 +429,34 @@ logger.info("column name="+syncUploadDataDigester.getServerColumns());
 
             List<Object> currentRecordValues = new ArrayList<>();
 
-            for (String column : cleanedColumnsList) {
-                Object value = map.get(column.trim());
-                // Handle boolean conversion if necessary, though String.valueOf should
-                // generally work for prepared statements
-                if (value instanceof Boolean) {
-                    currentRecordValues.add(value);
-                } else if (value != null) {
-                    currentRecordValues.add(String.valueOf(value));
-                } else {
-                    currentRecordValues.add(null);
-                }
-            }
+for (String column : cleanedColumnsList) {
+    Object value = map.get(column.trim());
+    if (value instanceof Boolean) {
+        currentRecordValues.add(value);
+    } else if (value != null) {
+        // Handle date conversion for known date columns
+        if (isDateColumn(column.trim()) && value instanceof String) {
+            String formatted = formatDateForMySQL((String) value);
+            currentRecordValues.add(formatted);
+        } else {
+            currentRecordValues.add(String.valueOf(value));
+        }
+    } else {
+        currentRecordValues.add(null);
+    }
+}
+            // for (String column : cleanedColumnsList) {
+            //     Object value = map.get(column.trim());
+            //     // Handle boolean conversion if necessary, though String.valueOf should
+            //     // generally work for prepared statements
+            //     if (value instanceof Boolean) {
+            //         currentRecordValues.add(value);
+            //     } else if (value != null) {
+            //         currentRecordValues.add(String.valueOf(value));
+            //     } else {
+            //         currentRecordValues.add(null);
+            //     }
+            // }
 
             objArr = currentRecordValues.toArray();
 
@@ -623,4 +639,23 @@ private String cleanColumnNames(String serverColumns) {
     // Remove all date_format(...) expressions and keep only the column name
     return serverColumns.replaceAll("date_format\\s*\\(\\s*([a-zA-Z0-9_]+)\\s*,\\s*'[^']*'\\s*\\)", "$1");
 }
+
+private boolean isDateColumn(String columnName) {
+    // List all your date/datetime columns here
+    return Arrays.asList("MarriageDate", "DOB", "CreatedDate", "LastModDate", "SyncedDate", "ReservedOn").contains(columnName);
+}
+
+private String formatDateForMySQL(String dateStr) {
+    // Convert ISO string to MySQL DATETIME format
+    if (dateStr == null || dateStr.isEmpty()) return null;
+    try {
+        // Try parsing as LocalDateTime
+        LocalDateTime ldt = LocalDateTime.parse(dateStr);
+        return ldt.toString().replace('T', ' '); // "2025-08-12 14:30:00"
+    } catch (Exception e) {
+        // If parsing fails, return as is (or handle as needed)
+        return dateStr;
+    }
+}
+
 }
