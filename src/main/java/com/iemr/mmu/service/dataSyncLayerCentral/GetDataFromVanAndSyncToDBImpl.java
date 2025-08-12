@@ -333,6 +333,7 @@ logger.info("Syncing data for table: {}", syncTableName);
             return true; // Nothing to sync, consider it a success
         }
 
+    
         String syncTableName = syncUploadDataDigester.getTableName();
         String vanAutoIncColumnName = syncUploadDataDigester.getVanAutoIncColumnName();
         String schemaName = syncUploadDataDigester.getSchemaName();
@@ -423,10 +424,12 @@ logger.info("column name="+syncUploadDataDigester.getServerColumns());
 
             // Prepare Object array for insert/update
             Object[] objArr;
-            List<String> serverColumnsList = Arrays.asList(syncUploadDataDigester.getServerColumns().split(","));
+            // List<String> serverColumnsList = Arrays.asList(syncUploadDataDigester.getServerColumns().split(","));
+ List<String> cleanedColumnsList = Arrays.asList(cleanColumnNames(syncUploadDataDigester.getServerColumns()).split(","));
+
             List<Object> currentRecordValues = new ArrayList<>();
 
-            for (String column : serverColumnsList) {
+            for (String column : cleanedColumnsList) {
                 Object value = map.get(column.trim());
                 // Handle boolean conversion if necessary, though String.valueOf should
                 // generally work for prepared statements
@@ -440,6 +443,7 @@ logger.info("column name="+syncUploadDataDigester.getServerColumns());
             }
 
             objArr = currentRecordValues.toArray();
+
 
             if (recordCheck == 0) {
                 syncDataListInsert.add(objArr);
@@ -505,84 +509,24 @@ logger.info("column name="+syncUploadDataDigester.getServerColumns());
         return insertSuccess && updateSuccess;
     }
 private String getQueryToInsertDataToServerDB(String schemaName, String tableName, String serverColumns) {
-
-    // Split original columns first for debugging
-
-    String[] columnsArr = null;
-
-    if (serverColumns != null)
-
-        columnsArr = serverColumns.split(",");
-
-    // Clean the server columns first
-
-    String cleanedColumns = serverColumns.replaceAll(
-
-        "(?i)date_format\\s*\\(\\s*([a-zA-Z0-9_]+)\\s*,\\s*'[^']*'\\s*\\)",
-
-        "$1"
-
-    );
-
-    // Split the CLEANED columns to get the correct count
-
+    String cleanedColumns = cleanColumnNames(serverColumns);
     String[] cleanedColumnsArr = cleanedColumns.split(",");
 
-    // Add debugging logs
-
-    logger.info("Original serverColumns: {}", serverColumns);
-
-    logger.info("Original columns count: {}", (columnsArr != null ? columnsArr.length : 0));
-
-    logger.info("Cleaned columns: {}", cleanedColumns);
-
-    logger.info("Cleaned columns count: {}", cleanedColumnsArr.length);
-
     StringBuilder preparedStatementSetter = new StringBuilder();
-
-    // Use the cleaned columns array for placeholder generation
-
-    if (cleanedColumnsArr != null && cleanedColumnsArr.length > 0) {
-
-        for (int i = 0; i < cleanedColumnsArr.length; i++) {
-
-            preparedStatementSetter.append("?");
-
-            if (i < cleanedColumnsArr.length - 1) {
-
-                preparedStatementSetter.append(", ");
-
-            }
-
+    for (int i = 0; i < cleanedColumnsArr.length; i++) {
+        preparedStatementSetter.append("?");
+        if (i < cleanedColumnsArr.length - 1) {
+            preparedStatementSetter.append(", ");
         }
-
     }
 
     StringBuilder queryBuilder = new StringBuilder("INSERT INTO ");
-
     queryBuilder.append(schemaName).append(".").append(tableName);
-
-    queryBuilder.append("(");
-
-    queryBuilder.append(cleanedColumns);  // Use cleaned columns
-
-    queryBuilder.append(") VALUES (");
-
-    queryBuilder.append(preparedStatementSetter);
-
-    queryBuilder.append(")");
-
-    // Optional: Add logging for debugging
-
-    logger.info("Cleaned columns count: {}", cleanedColumnsArr.length);
-
-    logger.info("Placeholders count: {}", cleanedColumnsArr.length);
-
-    logger.info("Final query: {}", queryBuilder.toString());
-
+    queryBuilder.append("(").append(cleanedColumns).append(") VALUES (").append(preparedStatementSetter).append(")");
     return queryBuilder.toString();
-
 }
+ 
+ 
  
     // private String getQueryToInsertDataToServerDB(String schemaName, String tableName, String serverColumns) {
     //     String[] columnsArr = null;
@@ -675,4 +619,8 @@ private String getQueryToInsertDataToServerDB(String schemaName, String tableNam
         logger.info("Failed records info: {}", failedRecordsInfo);
         return String.join("; ", failedRecordsInfo);
     }
+private String cleanColumnNames(String serverColumns) {
+    // Remove all date_format(...) expressions and keep only the column name
+    return serverColumns.replaceAll("date_format\\s*\\(\\s*([a-zA-Z0-9_]+)\\s*,\\s*'[^']*'\\s*\\)", "$1");
+}
 }
