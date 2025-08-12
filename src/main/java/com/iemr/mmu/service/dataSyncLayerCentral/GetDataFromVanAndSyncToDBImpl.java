@@ -537,51 +537,52 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         return insertSuccess && updateSuccess;
     }
 
-    private String getQueryToInsertDataToServerDB(String schemaName, String tableName, String serverColumns) {
-        String cleanedColumns = cleanColumnNames(serverColumns);
-        String[] cleanedColumnsArr = cleanedColumns.split(",");
+    // private String getQueryToInsertDataToServerDB(String schemaName, String tableName, String serverColumns) {
+    //     String cleanedColumns = cleanColumnNames(serverColumns);
+    //     String[] cleanedColumnsArr = cleanedColumns.split(",");
 
-        StringBuilder preparedStatementSetter = new StringBuilder();
-        for (int i = 0; i < cleanedColumnsArr.length; i++) {
-            preparedStatementSetter.append("?");
-            if (i < cleanedColumnsArr.length - 1) {
-                preparedStatementSetter.append(", ");
-            }
-        }
+    //     StringBuilder preparedStatementSetter = new StringBuilder();
+    //     for (int i = 0; i < cleanedColumnsArr.length; i++) {
+    //         preparedStatementSetter.append("?");
+    //         if (i < cleanedColumnsArr.length - 1) {
+    //             preparedStatementSetter.append(", ");
+    //         }
+    //     }
 
-        StringBuilder queryBuilder = new StringBuilder("INSERT INTO ");
-        queryBuilder.append(schemaName).append(".").append(tableName);
-        queryBuilder.append("(").append(cleanedColumns).append(") VALUES (").append(preparedStatementSetter)
-                .append(")");
-        return queryBuilder.toString();
+    //     StringBuilder queryBuilder = new StringBuilder("INSERT INTO ");
+    //     queryBuilder.append(schemaName).append(".").append(tableName);
+    //     queryBuilder.append("(").append(cleanedColumns).append(") VALUES (").append(preparedStatementSetter)
+    //             .append(")");
+    //     return queryBuilder.toString();
+    // }
+
+    private String getQueryToInsertDataToServerDB(String schemaName, String
+    tableName, String serverColumns) {
+    String[] columnsArr = null;
+    if (serverColumns != null)
+    columnsArr = serverColumns.split(",");
+
+    StringBuilder preparedStatementSetter = new StringBuilder();
+
+    if (columnsArr != null && columnsArr.length > 0) {
+    for (int i = 0; i < columnsArr.length; i++) {
+    preparedStatementSetter.append("?");
+    if (i < columnsArr.length - 1) {
+    preparedStatementSetter.append(", ");
+    }
+    }
     }
 
-    // private String getQueryToInsertDataToServerDB(String schemaName, String
-    // tableName, String serverColumns) {
-    // String[] columnsArr = null;
-    // if (serverColumns != null)
-    // columnsArr = serverColumns.split(",");
-
-    // StringBuilder preparedStatementSetter = new StringBuilder();
-
-    // if (columnsArr != null && columnsArr.length > 0) {
-    // for (int i = 0; i < columnsArr.length; i++) {
-    // preparedStatementSetter.append("?");
-    // if (i < columnsArr.length - 1) {
-    // preparedStatementSetter.append(", ");
-    // }
-    // }
-    // }
-
-    // StringBuilder queryBuilder = new StringBuilder("INSERT INTO ");
-    // queryBuilder.append(schemaName).append(".").append(tableName);
-    // queryBuilder.append("(");
-    // queryBuilder.append(serverColumns);
-    // queryBuilder.append(") VALUES (");
-    // queryBuilder.append(preparedStatementSetter);
-    // queryBuilder.append(")");
-    // return queryBuilder.toString();
-    // }
+    StringBuilder queryBuilder = new StringBuilder("INSERT INTO ");
+    queryBuilder.append(schemaName).append(".").append(tableName);
+    queryBuilder.append("(");
+    queryBuilder.append(serverColumns);
+    queryBuilder.append(") VALUES (");
+    queryBuilder.append(preparedStatementSetter);
+    queryBuilder.append(")");
+    logger.info("Query builder="+queryBuilder.toString());
+    return queryBuilder.toString();
+    }
 
     public String getQueryToUpdateDataToServerDB(String schemaName, String serverColumns, String tableName) {
         String[] columnsArr = null;
