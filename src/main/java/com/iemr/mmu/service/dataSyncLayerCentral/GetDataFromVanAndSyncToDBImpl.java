@@ -591,24 +591,24 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
 
         StringBuilder preparedStatementSetter = new StringBuilder();
 
-        if (columnsArr != null && columnsArr.length > 0) {
-            for (int i = 0; i < columnsArr.length; i++) {
-                String columnName = columnsArr[i].trim(); // ← NEW LINE
+        // if (columnsArr != null && columnsArr.length > 0) {
+        //     for (int i = 0; i < columnsArr.length; i++) {
+        //         String columnName = columnsArr[i].trim(); // ← NEW LINE
 
-                // Special handling for CreatedDate - use COALESCE to prevent NULL
-                if (columnName.equalsIgnoreCase("CreatedDate")) { // ← NEW BLOCK
-                    preparedStatementSetter.append(columnName);
-                    preparedStatementSetter.append(" = COALESCE(?, CURRENT_TIMESTAMP)");
-                } else {
-                    preparedStatementSetter.append(columnName);
-                    preparedStatementSetter.append(" = ?");
-                }
+        //         // Special handling for CreatedDate - use COALESCE to prevent NULL
+        //         if (columnName.equalsIgnoreCase("CreatedDate")) { // ← NEW BLOCK
+        //             preparedStatementSetter.append(columnName);
+        //             preparedStatementSetter.append(" = COALESCE(?, CURRENT_TIMESTAMP)");
+        //         } else {
+        //             preparedStatementSetter.append(columnName);
+        //             preparedStatementSetter.append(" = ?");
+        //         }
 
-                if (i < columnsArr.length - 1) {
-                    preparedStatementSetter.append(", ");
-                }
-            }
-        }
+        //         if (i < columnsArr.length - 1) {
+        //             preparedStatementSetter.append(", ");
+        //         }
+        //     }
+        // }
         StringBuilder queryBuilder = new StringBuilder(" UPDATE ");
         queryBuilder.append(schemaName).append(".").append(tableName);
         queryBuilder.append(" SET ");
@@ -648,10 +648,10 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         return String.join("; ", failedRecordsInfo);
     }
 
-    private String cleanColumnNames(String serverColumns) {
-        // Remove all date_format(...) expressions and keep only the column name
-        return serverColumns.replaceAll("date_format\\s*\\(\\s*([a-zA-Z0-9_]+)\\s*,\\s*'[^']*'\\s*\\)", "$1");
-    }
+    // private String cleanColumnNames(String serverColumns) {
+    //     // Remove all date_format(...) expressions and keep only the column name
+    //     return serverColumns.replaceAll("date_format\\s*\\(\\s*([a-zA-Z0-9_]+)\\s*,\\s*'[^']*'\\s*\\)", "$1");
+    // }
 
     // private boolean isDateColumn(String columnName) {
     //     // List all your date/datetime columns here
