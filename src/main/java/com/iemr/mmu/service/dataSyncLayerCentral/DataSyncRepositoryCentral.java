@@ -101,7 +101,11 @@ public class DataSyncRepositoryCentral {
 
     public int checkRecordIsAlreadyPresentOrNot(String schemaName, String tableName, String vanSerialNo, String vanID,
             String vanAutoIncColumnName, int syncFacilityID) {
-                logger.info("From checks records exists="+tableName+"::"+vanSerialNo+"::"+vanID+"::"+syncFacilityID);
+                logger.info("From checks records exists="+tableName);
+                logger.info("Van Auto Increment Column Name: {}", vanAutoIncColumnName);
+                logger.info("Van Serial No: {}", vanSerialNo);
+                logger.info("Van ID: {}", vanID);
+
 
         jdbcTemplate = getJdbcTemplate();
         List<Object> params = new ArrayList<>();
