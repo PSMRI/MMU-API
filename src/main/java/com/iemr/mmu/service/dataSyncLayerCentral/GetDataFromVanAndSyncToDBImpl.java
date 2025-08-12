@@ -338,6 +338,7 @@ logger.info("Syncing data for table: {}", syncTableName);
         String schemaName = syncUploadDataDigester.getSchemaName();
         Integer facilityIDFromDigester = syncUploadDataDigester.getFacilityID();
 logger.info("Syncing data for table: {}", syncTableName);
+logger.info("column name="+syncUploadDataDigester.getServerColumns());
         logger.info("Van Auto Increment Column Name: {}", vanAutoIncColumnName);
         for (Map<String, Object> map : dataToBesync) {
             String vanSerialNo = String.valueOf(map.get(vanAutoIncColumnName));
