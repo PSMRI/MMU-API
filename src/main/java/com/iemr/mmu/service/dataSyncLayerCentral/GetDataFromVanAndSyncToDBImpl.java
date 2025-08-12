@@ -505,31 +505,77 @@ logger.info("column name="+syncUploadDataDigester.getServerColumns());
         return insertSuccess && updateSuccess;
     }
 
-    private String getQueryToInsertDataToServerDB(String schemaName, String tableName, String serverColumns) {
-        String[] columnsArr = null;
-        if (serverColumns != null)
-            columnsArr = serverColumns.split(",");
+private String getQueryToInsertDataToServerDB(String schemaName, String tableName, String serverColumns) {
+    logger.info("From insert query-> server columns: {}", serverColumns);
+    String[] columnsArr = null;
+    if (serverColumns != null)
+        columnsArr = serverColumns.split(",");
+    StringBuilder preparedStatementSetter = new StringBuilder();
+    StringBuilder cleanedColumns = new StringBuilder();
 
-        StringBuilder preparedStatementSetter = new StringBuilder();
+    if (columnsArr != null && columnsArr.length > 0) {
+        for (int i = 0; i < columnsArr.length; i++) {
+            String col = columnsArr[i].trim();
 
-        if (columnsArr != null && columnsArr.length > 0) {
-            for (int i = 0; i < columnsArr.length; i++) {
-                preparedStatementSetter.append("?");
-                if (i < columnsArr.length - 1) {
-                    preparedStatementSetter.append(", ");
+            // If column starts with date_format(...), extract the real column name
+            if (col.toLowerCase().startsWith("date_format(")) {
+                int openParenIndex = col.indexOf("(");
+                int commaIndex = col.indexOf(",", openParenIndex);
+                if (commaIndex > 0) {
+                    col = col.substring(openParenIndex + 1, commaIndex).trim(); // keep only column name
                 }
             }
-        }
 
-        StringBuilder queryBuilder = new StringBuilder("INSERT INTO ");
-        queryBuilder.append(schemaName).append(".").append(tableName);
-        queryBuilder.append("(");
-        queryBuilder.append(serverColumns);
-        queryBuilder.append(") VALUES (");
-        queryBuilder.append(preparedStatementSetter);
-        queryBuilder.append(")");
-        return queryBuilder.toString();
+            cleanedColumns.append(col);
+            preparedStatementSetter.append("?");
+
+            if (i < columnsArr.length - 1) {
+                cleanedColumns.append(", ");
+                preparedStatementSetter.append(", ");
+            }
+        }
     }
+    logger.info("Cleaned columns: {}", cleanedColumns.toString());
+    logger.info("Prepared statement setter: {}", preparedStatementSetter.toString());
+    StringBuilder queryBuilder = new StringBuilder("INSERT INTO ");
+    queryBuilder.append(schemaName).append(".").append(tableName);
+    queryBuilder.append("(");
+    queryBuilder.append(cleanedColumns);
+    queryBuilder.append(") VALUES (");
+    queryBuilder.append(preparedStatementSetter);
+    queryBuilder.append(")");
+
+    return queryBuilder.toString();
+}
+
+
+    // private String getQueryToInsertDataToServerDB(String schemaName, String tableName, String serverColumns) {
+    //     String[] columnsArr = null;
+    //     if (serverColumns != null)
+    //         columnsArr = serverColumns.split(",");
+
+    //     StringBuilder preparedStatementSetter = new StringBuilder();
+
+    //     if (columnsArr != null && columnsArr.length > 0) {
+    //         for (int i = 0; i < columnsArr.length; i++) {
+    //             preparedStatementSetter.append("?");
+    //             if (i < columnsArr.length - 1) {
+    //                 preparedStatementSetter.append(", ");
+    //             }
+    //         }
+    //     }
+
+        
+
+    //     StringBuilder queryBuilder = new StringBuilder("INSERT INTO ");
+    //     queryBuilder.append(schemaName).append(".").append(tableName);
+    //     queryBuilder.append("(");
+    //     queryBuilder.append(serverColumns);
+    //     queryBuilder.append(") VALUES (");
+    //     queryBuilder.append(preparedStatementSetter);
+    //     queryBuilder.append(")");
+    //     return queryBuilder.toString();
+    // }
 
     public String getQueryToUpdateDataToServerDB(String schemaName, String serverColumns, String tableName) {
         String[] columnsArr = null;
