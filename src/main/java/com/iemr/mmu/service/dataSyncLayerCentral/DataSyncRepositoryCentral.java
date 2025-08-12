@@ -87,17 +87,40 @@ public class DataSyncRepositoryCentral {
         return VALID_TABLES.contains(tableName.toLowerCase());
     }
 
-    private boolean isValidColumnNamesList(String columnNames) {
-        if (columnNames == null || columnNames.trim().isEmpty()) {
-            return false;
-        }
-        for (String col : columnNames.split(",")) {
-            if (!isValidDatabaseIdentifierCharacter(col.trim())) {
-                return false;
+    // private boolean isValidColumnNamesList(String columnNames) {
+    //     if (columnNames == null || columnNames.trim().isEmpty()) {
+    //         return false;
+    //     }
+    //     for (String col : columnNames.split(",")) {
+    //         if (!isValidDatabaseIdentifierCharacter(col.trim())) {
+    //             return false;
+    //         }
+    //     }
+    //     return true;
+    // }
+
+private boolean isValidColumnNamesList(String columnNames) {
+    if (columnNames == null || columnNames.trim().isEmpty()) {
+        return false;
+    }
+    for (String col : columnNames.split(",")) {
+        String trimmed = col.trim();
+
+        // Handle date_format(...) style
+        if (trimmed.toLowerCase().startsWith("date_format(")) {
+            int openParenIndex = trimmed.indexOf("(");
+            int commaIndex = trimmed.indexOf(",", openParenIndex);
+            if (commaIndex > 0) {
+                trimmed = trimmed.substring(openParenIndex + 1, commaIndex).trim(); // get only column name
             }
         }
-        return true;
+
+        if (!isValidDatabaseIdentifierCharacter(trimmed)) {
+            return false;
+        }
     }
+    return true;
+}
 
     public int checkRecordIsAlreadyPresentOrNot(String schemaName, String tableName, String vanSerialNo, String vanID,
             String vanAutoIncColumnName, int syncFacilityID) {
