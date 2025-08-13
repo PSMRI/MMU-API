@@ -115,7 +115,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 	public String syncIntercepter(int vanID, String user, String Authorization, String token) throws Exception {
 
 		// sync activity trigger
-		
+
 		String serverAcknowledgement = startDataSync(vanID, user, Authorization, token);
 
 		return serverAcknowledgement;
@@ -136,11 +136,17 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 		ObjectMapper objectMapper = new ObjectMapper();
 		// fetch group masters
 		List<DataSyncGroups> dataSyncGroupList = dataSyncGroupsRepo.findByDeleted(false);
+		logger.info("Fetched DataSyncGroups: {}",
+				objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(dataSyncGroupList));
 		logger.debug("Fetched DataSyncGroups: {}",
 				objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(dataSyncGroupList));
 		for (DataSyncGroups dataSyncGroups : dataSyncGroupList) {
 			int groupId = dataSyncGroups.getSyncTableGroupID();
 			List<SyncUtilityClass> syncUtilityClassList = getVanAndServerColumns(groupId);
+			// INFO log with groupId and full list
+			logger.info("Group ID: {} -> SyncUtilityClassList: {}",
+					groupId,
+					objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(syncUtilityClassList));
 			logger.debug("Fetched SyncUtilityClass for groupId {}: {}", groupId,
 					objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(syncUtilityClassList));
 			List<Map<String, Object>> syncData;
@@ -161,7 +167,6 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 
 					logger.info("Starting batch sync for schema: {}, table: {} with {} full batches and {} remainder",
 							obj.getSchemaName(), obj.getTableName(), fullBatchCount, remainder);
-
 
 					for (int i = 0; i < fullBatchCount; i++) {
 						syncDataBatch = getBatchOfAskedSizeDataToSync(syncData, startIndex,
@@ -226,7 +231,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 			Map<String, Object> response = new HashMap<>();
 			response.put("response", "Data sync failed");
 			response.put("groupsProgress", responseStatus);
-					objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(response);
+			objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(response);
 			return objectMapper.writerWithDefaultPrettyPrinter()
 					.writeValueAsString(Collections.singletonMap("data", response));
 		} else {
@@ -316,11 +321,11 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 	 */
 
 	public String syncDataToServer(int vanID, String schemaName, String tableName, String vanAutoIncColumnName,
-			String serverColumns, List<Map<String, Object>> dataToBesync, String user, String Authorization, String token)
+			String serverColumns, List<Map<String, Object>> dataToBesync, String user, String Authorization,
+			String token)
 			throws Exception {
-		
+
 		RestTemplate restTemplate = new RestTemplate();
-		
 
 		Integer facilityID = masterVanRepo.getFacilityID(vanID);
 
@@ -340,17 +345,17 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 			dataMap.put("facilityID", facilityID);
 
 		String requestOBJ = gson.toJson(dataMap);
-		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestOBJ, Authorization,"datasync");
+		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestOBJ, Authorization, "datasync");
 		ResponseEntity<String> response = restTemplate.exchange(dataSyncUploadUrl, HttpMethod.POST, request,
 				String.class);
-		
+
 		int i = 0;
 		if (response != null && response.hasBody()) {
 			JSONObject obj = new JSONObject(response.getBody());
 			if (obj != null && obj.has("statusCode") && obj.getInt("statusCode") == 200) {
 				logger.info("Check datasync");
 				StringBuilder vanSerialNos = getVanSerialNoListForSyncedData(vanAutoIncColumnName, dataToBesync);
-				logger.info("Van serial no from response="+vanSerialNos);
+				logger.info("Van serial no from response=" + vanSerialNos);
 				i = dataSyncRepository.updateProcessedFlagInVan(schemaName, tableName, vanSerialNos,
 						vanAutoIncColumnName, user);
 			}
@@ -372,8 +377,8 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 			List<Map<String, Object>> dataToBesync) throws Exception {
 		// comma separated van serial no
 		StringBuilder vanSerialNos = new StringBuilder();
-logger.info("Data to be synced: {}", dataToBesync);
-logger.info("vanAutoIncColumnName: {}", vanAutoIncColumnName);
+		logger.info("Data to be synced: {}", dataToBesync);
+		logger.info("vanAutoIncColumnName: {}", vanAutoIncColumnName);
 		int pointer1 = 0;
 		for (Map<String, Object> map : dataToBesync) {
 			if (pointer1 == dataToBesync.size() - 1)
