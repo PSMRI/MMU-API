@@ -88,7 +88,12 @@ public class DataSyncRepository {
 			}
 
 		}
-		
+
+		logger.info("Select Query started:");
+		logger.info("Table Name: {}", table);
+
+		logger.info("Select Query: {}", baseQuery);
+
 		resultSetList = jdbcTemplate.queryForList(baseQuery);
 		return resultSetList;
 	}
@@ -102,13 +107,13 @@ public class DataSyncRepository {
 		logger.info("autoIncreamentColumn: " + autoIncreamentColumn);
 
 		if (tableName != null && tableName.toLowerCase().equals("i_ben_flow_outreach")) {
-    		query = "UPDATE " + schemaName + "." + tableName
-            	+ " SET created_date = ? , processed = 'P', SyncedDate = ?, Syncedby = ? "
-            	+ "WHERE " + autoIncreamentColumn + " IN (" + vanSerialNos + ")";
+			query = "UPDATE " + schemaName + "." + tableName
+					+ " SET created_date = ? , processed = 'P', SyncedDate = ?, Syncedby = ? "
+					+ "WHERE " + autoIncreamentColumn + " IN (" + vanSerialNos + ")";
 		} else {
-    		query = "UPDATE " + schemaName + "." + tableName
-            	+ " SET CreatedDate = ? , processed = 'P', SyncedDate = ?, Syncedby = ? "
-            	+ "WHERE " + autoIncreamentColumn + " IN (" + vanSerialNos + ")";
+			query = "UPDATE " + schemaName + "." + tableName
+					+ " SET CreatedDate = ? , processed = 'P', SyncedDate = ?, Syncedby = ? "
+					+ "WHERE " + autoIncreamentColumn + " IN (" + vanSerialNos + ")";
 		}
 
 		Timestamp syncedDate = new Timestamp(System.currentTimeMillis());
