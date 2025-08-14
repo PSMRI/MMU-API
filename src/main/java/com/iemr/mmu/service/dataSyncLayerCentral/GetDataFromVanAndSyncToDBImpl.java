@@ -27,7 +27,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +45,6 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
     @Autowired
     private DataSyncRepositoryCentral dataSyncRepositoryCentral;
 
-    
     private static final Map<Integer, List<String>> TABLE_GROUPS = new HashMap<>();
     static {
         TABLE_GROUPS.put(1,
@@ -96,14 +94,15 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
 
         ObjectMapper mapper = new ObjectMapper();
         SyncUploadDataDigester syncUploadDataDigester = mapper.readValue(requestOBJ, SyncUploadDataDigester.class);
-List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
+        List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
+        logger.info("Data to be synced: {}", dataToBesync);
         if (syncUploadDataDigester == null || syncUploadDataDigester.getTableName() == null) {
             logger.error("Invalid SyncUploadDataDigester object or tableName is null.");
             return "Error: Invalid sync request.";
         }
 
         String syncTableName = syncUploadDataDigester.getTableName();
-
+        logger.info("Syncing data for table: {}", syncTableName);
         // Handle specific tables first, if their logic is distinct
         if ("m_beneficiaryregidmapping".equalsIgnoreCase(syncTableName)) {
             String result = update_M_BeneficiaryRegIdMapping_for_provisioned_benID(syncUploadDataDigester);
@@ -113,29 +112,15 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
                 logger.error("Sync failed for m_beneficiaryregidmapping: {}", result);
                 return "Sync failed for m_beneficiaryregidmapping.";
             }
-        } else if ("i_beneficiarydetails".equalsIgnoreCase(syncTableName)) {
-            String result = update_I_BeneficiaryDetails_for_processed_in_batches(syncUploadDataDigester);
-            if ("data sync passed".equals(result)) {
-                return "Sync successful for i_beneficiarydetails.";
-            } else {
-                logger.error("Sync failed for i_beneficiarydetails: {}", result);
-                return "Sync failed for i_beneficiarydetails.";
-            }
-        } else {
-            // Determine the group for the current table or iterate through all if no
-            // specific table is given
+        }
+        else {
             boolean syncSuccess = true;
             String errorMessage = "";
-
-            // If a specific table is provided in the request, try to find its group and
-            // sync only that table.
-            // Otherwise, iterate through all defined groups.
             if (syncTableName != null && !syncTableName.isEmpty()) {
                 boolean foundInGroup = false;
-                
-			for (Map<String, Object> map : dataToBesync) {
-                    // if (entry.getValue().contains(syncTableName.toLowerCase())) {
-                    if(map.get("tableName") != null
+
+                for (Map<String, Object> map : dataToBesync) {
+                    if (map.get("tableName") != null
                             && map.get("tableName").toString().equalsIgnoreCase(syncTableName)) {
                         syncSuccess = syncTablesInGroup(syncUploadDataDigester.getSchemaName(), syncTableName,
                                 syncUploadDataDigester);
@@ -149,26 +134,13 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
                     syncSuccess = performGenericTableSync(syncUploadDataDigester);
                 }
             } else {
-                // If no specific table is in the request (e.g., a general sync trigger),
-                // iterate through groups
-                logger.info("No specific table provided. Attempting to sync all tables group by group.");
+
                 for (Map.Entry<Integer, List<String>> entry : TABLE_GROUPS.entrySet()) {
                     Integer groupId = entry.getKey();
                     List<String> tablesInGroup = entry.getValue();
-                    logger.info("Starting sync for Group {}", groupId);
                     for (String table : tablesInGroup) {
                         try {
-                            // Create a new digester for each table within the group,
-                            // or adapt if the original digester contains data for multiple tables.
-                            // For simplicity, assuming syncDataDigester needs to be tailored per table or
-                            // group.
-                            // If your requestOBJ contains data for only one table at a time, this loop
-                            // might need adjustment
-                            // to fetch data for each table in the group.
-                            // For now, it will use the syncData from the original requestOBJ, which implies
-                            // the original requestOBJ should represent data for a single table.
-                            // A more robust solution would involve fetching data for each table
-                            // dynamically.
+
                             boolean currentTableSyncResult = syncTablesInGroup(syncUploadDataDigester.getSchemaName(),
                                     table, syncUploadDataDigester);
                             if (!currentTableSyncResult) {
@@ -176,9 +148,7 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
                                 errorMessage += "Failed to sync table: " + table + " in Group " + groupId + ". ";
                                 logger.error("Sync failed for table '{}' in Group {}. Error: {}", table, groupId,
                                         errorMessage);
-                                // Optionally, you can choose to break here or continue to sync other tables in
-                                // the group/next group
-                                // For now, let's continue to attempt other tables within the group.
+
                             } else {
                                 logger.info("Successfully synced table: {} in Group {}", table, groupId);
                             }
@@ -188,7 +158,6 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
                                     + e.getMessage() + ". ";
                             logger.error("Exception during sync for table '{}' in Group {}: {}", table, groupId,
                                     e.getMessage(), e);
-                            // Continue to attempt other tables
                         }
                     }
                 }
@@ -202,41 +171,22 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
         }
     }
 
-    /**
-     * Helper method to sync tables belonging to a specific group.
-     * This method assumes that the `syncUploadDataDigester` will be populated
-     * with relevant data for the `currentTableName` before calling this.
-     * In a real-world scenario, you might fetch data for each table here.
-     */
     private boolean syncTablesInGroup(String schemaName, String currentTableName,
             SyncUploadDataDigester originalDigester) {
-        logger.info("Attempting generic sync for table: {}", currentTableName);
-        // This is a simplification. In a production system, you would likely need
-        // to retrieve the actual data for 'currentTableName' from the local DB
-        // based on the group sync approach. For this example, we'll assume the
-        // originalDigester's syncData is relevant or needs to be re-populated.
-
-        // Create a new digester instance or modify the existing one for the current
-        // table
         SyncUploadDataDigester tableSpecificDigester = new SyncUploadDataDigester();
         tableSpecificDigester.setSchemaName(schemaName);
         tableSpecificDigester.setTableName(currentTableName);
         tableSpecificDigester.setSyncedBy(originalDigester.getSyncedBy());
         tableSpecificDigester.setFacilityID(originalDigester.getFacilityID());
         tableSpecificDigester.setVanAutoIncColumnName(originalDigester.getVanAutoIncColumnName());
-        tableSpecificDigester.setServerColumns(originalDigester.getServerColumns()); // Assuming serverColumns is
-                                                                                     // generic or set per table
-
-        // !!! IMPORTANT: You'll need to fetch the data for 'currentTableName' from your local DB here.
-        // The `originalDigester.getSyncData()` might not be correct for all tables in a group.
-        // For demonstration, I'm just using the original digester's data, which is likely incorrect
+        tableSpecificDigester.setServerColumns(originalDigester.getServerColumns());
         tableSpecificDigester.setSyncData(originalDigester.getSyncData());
         return performGenericTableSync(tableSpecificDigester);
     }
 
     private String update_M_BeneficiaryRegIdMapping_for_provisioned_benID(
             SyncUploadDataDigester syncUploadDataDigester) {
-        
+
         List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
         List<Object[]> syncData = new ArrayList<>();
 
@@ -261,7 +211,8 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
         if (!syncData.isEmpty()) {
             try {
                 int[] i = dataSyncRepositoryCentral.syncDataToCentralDB(syncUploadDataDigester.getSchemaName(),
-                        syncUploadDataDigester.getTableName(), syncUploadDataDigester.getServerColumns(), query, syncData);
+                        syncUploadDataDigester.getTableName(), syncUploadDataDigester.getServerColumns(), query,
+                        syncData);
 
                 if (i.length == syncData.size()) {
                     logger.info("Successfully updated {} records for m_beneficiaryregidmapping.", i.length);
@@ -309,10 +260,10 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
 
         String problematicWhereClause = " WHERE Processed <> 'P' AND VanID IS NOT NULL "; // Define it explicitly
 
-    while (true) {
-        List<Map<String, Object>> batch;
-        try {
-            
+        while (true) {
+            List<Map<String, Object>> batch;
+            try {
+
                 batch = dataSyncRepositoryCentral.getBatchForBenDetails(
                         syncUploadDataDigester,
                         problematicWhereClause,
@@ -350,210 +301,215 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
      * Handles the generic synchronization logic for tables not covered by specific
      * handlers.
      */
+
     private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDigester) {
-        List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
-        List<Object[]> syncDataListInsert = new ArrayList<>();
-        List<Object[]> syncDataListUpdate = new ArrayList<>();
+    List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
+    List<Object[]> syncDataListInsert = new ArrayList<>();
+    List<Object[]> syncDataListUpdate = new ArrayList<>();
 
-        if (dataToBesync == null || dataToBesync.isEmpty()) {
-            logger.info("No data to sync for table: {}", syncUploadDataDigester.getTableName());
-            return true; // Nothing to sync, consider it a success
-        }
-
-        String syncTableName = syncUploadDataDigester.getTableName();
-        String vanAutoIncColumnName = syncUploadDataDigester.getVanAutoIncColumnName();
-        String schemaName = syncUploadDataDigester.getSchemaName();
-        Integer facilityIDFromDigester = syncUploadDataDigester.getFacilityID();
-
-        for (Map<String, Object> map : dataToBesync) {
-            String vanSerialNo = String.valueOf(map.get(vanAutoIncColumnName));
-            String vanID = String.valueOf(map.get("VanID"));
-            int syncFacilityID = 0;
-
-            // Update SyncedBy and SyncedDate in the xmap itself before processing
-            map.put("SyncedBy", syncUploadDataDigester.getSyncedBy());
-            map.put("SyncedDate", String.valueOf(LocalDateTime.now())); // Ensure column name matches DB
-            if (map.get("CreatedDate") == null || map.get("created_date") == null) {
-                logger.info("CreatedDate was null for table: " + syncTableName + ", inserting current time");
-                if(map.get("CreatedDate") == null)
-                    map.put("CreatedDate", String.valueOf(LocalDateTime.now()));
-                if(map.get("created_date") == null)
-                    map.put("created_date", String.valueOf(LocalDateTime.now()));
-                }
-            // Facility ID processing
-            if (facilityIDFromDigester != null) {
-                // Determine the 'Processed' status based on facility ID for specific tables
-                switch (syncTableName.toLowerCase()) {
-                    case "t_indent":
-                    case "t_indentorder": {
-                        if (map.containsKey("FromFacilityID") && map.get("FromFacilityID") instanceof Double) {
-                            Double fromFacilityID = (Double) map.get("FromFacilityID");
-                            if (fromFacilityID.intValue() == facilityIDFromDigester) {
-                                map.put("Processed", "P");
-                            }
-                        }
-                        break;
-                    }
-                    case "t_indentissue": {
-                        if (map.containsKey("ToFacilityID") && map.get("ToFacilityID") instanceof Double) {
-                            Double toFacilityID = (Double) map.get("ToFacilityID");
-                            if (toFacilityID.intValue() == facilityIDFromDigester) {
-                                map.put("Processed", "P");
-                            }
-                        }
-                        break;
-                    }
-                    case "t_stocktransfer": {
-                        if (map.containsKey("TransferToFacilityID")
-                                && map.get("TransferToFacilityID") instanceof Double) {
-                            Double transferToFacilityID = (Double) map.get("TransferToFacilityID");
-                            if (transferToFacilityID.intValue() == facilityIDFromDigester) {
-                                map.put("Processed", "P");
-                            }
-                        }
-                        break;
-                    }
-                    case "t_itemstockentry": {
-                        if (map.containsKey("FacilityID") && map.get("FacilityID") instanceof Double) {
-                            Double mapFacilityID = (Double) map.get("FacilityID");
-                            if (mapFacilityID.intValue() == facilityIDFromDigester) {
-                                map.put("Processed", "P");
-                            }
-                        }
-                        break;
-                    }
-                    default:
-                        // No specific facility ID logic for other tables, maintain existing 'Processed'
-                        // status or default
-                        break;
-                }
-            }
-
-            // Extract SyncFacilityID for checkRecordIsAlreadyPresentOrNot
-            if (map.containsKey("SyncFacilityID") && map.get("SyncFacilityID") instanceof Integer) {
-                syncFacilityID = (Integer) map.get("SyncFacilityID");
-            } else if (map.containsKey("SyncFacilityID") && map.get("SyncFacilityID") instanceof Double) {
-                syncFacilityID = ((Double) map.get("SyncFacilityID")).intValue();
-            }
-
-            int recordCheck;
-            try {
-                recordCheck = dataSyncRepositoryCentral.checkRecordIsAlreadyPresentOrNot(
-                        schemaName, syncTableName, vanSerialNo, vanID, vanAutoIncColumnName, syncFacilityID);
-            } catch (Exception e) {
-                logger.error("Error checking record existence for table {}: VanSerialNo={}, VanID={}. Error: {}",
-                        syncTableName, vanSerialNo, vanID, e.getMessage(), e);
-                return false; // Critical error, stop sync for this table
-            }
-
-            // Prepare Object array for insert/update
-            Object[] objArr;
-            List<String> serverColumnsList = Arrays.asList(syncUploadDataDigester.getServerColumns().split(","));
-            List<Object> currentRecordValues = new ArrayList<>();
-
-            for (String column : serverColumnsList) {
-                Object value = map.get(column.trim());
-                // Handle boolean conversion if necessary, though String.valueOf should
-                // generally work for prepared statements
-                if (value instanceof Boolean) {
-                    currentRecordValues.add(value);
-                } else if (value != null) {
-                    currentRecordValues.add(String.valueOf(value));
-                } else {
-                    currentRecordValues.add(null);
-                }
-            }
-
-            objArr = currentRecordValues.toArray();
-
-            if (recordCheck == 0) {
-                syncDataListInsert.add(objArr);
-            } else {
-                // For update, append the WHERE clause parameters at the end of the array
-                List<Object> updateParams = new ArrayList<>(Arrays.asList(objArr));
-                updateParams.add(String.valueOf(vanSerialNo));
-
-                if (Arrays.asList("t_patientissue", "t_physicalstockentry", "t_stockadjustment", "t_saitemmapping",
-                        "t_stocktransfer", "t_patientreturn", "t_facilityconsumption", "t_indent",
-                        "t_indentorder", "t_indentissue", "t_itemstockentry", "t_itemstockexit")
-                        .contains(syncTableName.toLowerCase()) && map.containsKey("SyncFacilityID")) {
-                    updateParams.add(String.valueOf(map.get("SyncFacilityID")));
-                } else {
-                    updateParams.add(String.valueOf(vanID));
-                }
-                syncDataListUpdate.add(updateParams.toArray());
-            }
-        }
-
-        boolean insertSuccess = true;
-        boolean updateSuccess = true;
-
-        if (!syncDataListInsert.isEmpty()) {
-            String queryInsert = getQueryToInsertDataToServerDB(schemaName, syncTableName, syncUploadDataDigester.getServerColumns());
-           
-            try {
-                int[] i = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
-                        syncUploadDataDigester.getServerColumns(), queryInsert, syncDataListInsert);
-                if (i.length != syncDataListInsert.size()) {
-                    insertSuccess = false;
-                    logger.error("Partial insert for table {}. Expected {} inserts, got {}. Failed records: {}",
-                            syncTableName, syncDataListInsert.size(), i.length,
-                            getFailedRecords(i, syncDataListInsert));
-                } else {
-                    logger.info("Successfully inserted {} records into table {}.", i.length, syncTableName);
-                }
-            } catch (Exception e) {
-                insertSuccess = false;
-                logger.error("Exception during insert for table {}: {}", syncTableName, e.getMessage(), e);
-            }
-        }
-
-        if (!syncDataListUpdate.isEmpty()) {
-            String queryUpdate = getQueryToUpdateDataToServerDB(schemaName, syncUploadDataDigester.getServerColumns(), syncTableName);
-            // Ensure the update query is correct and matches the expected format
-            try {
-                int[] j = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
-                        SERVER_COLUMNS_NOT_REQUIRED, queryUpdate, syncDataListUpdate);
-                if (j.length != syncDataListUpdate.size()) {
-                    updateSuccess = false;
-                    logger.error("Partial update for table {}. Expected {} updates, got {}. Failed records: {}",
-                            syncTableName, syncDataListUpdate.size(), j.length,
-                            getFailedRecords(j, syncDataListUpdate));
-                } else {
-                    logger.info("Successfully updated {} records in table {}.", j.length, syncTableName);
-                }
-            } catch (Exception e) {
-                updateSuccess = false;
-                logger.error("Exception during update for table {}: {}", syncTableName, e.getMessage(), e);
-            }
-        }
-        return insertSuccess && updateSuccess;
+    if (dataToBesync == null || dataToBesync.isEmpty()) {
+        logger.info("No data to sync for table: {}", syncUploadDataDigester.getTableName());
+        return true; // Nothing to sync, consider it a success
     }
 
-    private String getQueryToInsertDataToServerDB(String schemaName, String tableName, String serverColumns) {
-        String[] columnsArr = null;
-        if (serverColumns != null)
-            columnsArr = serverColumns.split(",");
+    String syncTableName = syncUploadDataDigester.getTableName();
+    String vanAutoIncColumnName = syncUploadDataDigester.getVanAutoIncColumnName();
+    String schemaName = syncUploadDataDigester.getSchemaName();
+    Integer facilityIDFromDigester = syncUploadDataDigester.getFacilityID();
+    String serverColumns = syncUploadDataDigester.getServerColumns();
 
-        StringBuilder preparedStatementSetter = new StringBuilder();
+    List<String> serverColumnsList = Arrays.asList(serverColumns.split(","));
 
-        if (columnsArr != null && columnsArr.length > 0) {
-            for (int i = 0; i < columnsArr.length; i++) {
-                preparedStatementSetter.append("?");
-                if (i < columnsArr.length - 1) {
-                    preparedStatementSetter.append(", ");
+    for (Map<String, Object> map : dataToBesync) {
+        // Create a new map with clean column names as keys
+        Map<String, Object> cleanRecord = new HashMap<>();
+        for (String key : map.keySet()) {
+            String cleanKey = key;
+            // Handle keys with SQL functions like date_format
+            if (key.startsWith("date_format(") && key.endsWith(")")) {
+                int start = key.indexOf("(") + 1;
+                int end = key.indexOf(",");
+                if (end > start) {
+                    cleanKey = key.substring(start, end).trim();
+                } else {
+                    // Fallback if format is unexpected
+                    cleanKey = key.substring(start, key.indexOf(")")).trim();
                 }
+            }
+            cleanRecord.put(cleanKey.trim(), map.get(key));
+        }
+
+        String vanSerialNo = String.valueOf(cleanRecord.get(vanAutoIncColumnName));
+        String vanID = String.valueOf(cleanRecord.get("VanID"));
+        int syncFacilityID = 0;
+
+        // Update SyncedBy and SyncedDate in the xmap itself before processing
+        cleanRecord.put("SyncedBy", syncUploadDataDigester.getSyncedBy());
+        cleanRecord.put("SyncedDate", String.valueOf(LocalDateTime.now()));
+
+        if (facilityIDFromDigester != null) {
+            // Determine the 'Processed' status based on facility ID for specific tables
+            switch (syncTableName.toLowerCase()) {
+                case "t_indent":
+                case "t_indentorder": {
+                    if (cleanRecord.containsKey("FromFacilityID") && cleanRecord.get("FromFacilityID") instanceof Number) {
+                        Number fromFacilityID = (Number) cleanRecord.get("FromFacilityID");
+                        if (fromFacilityID.intValue() == facilityIDFromDigester) {
+                            cleanRecord.put("Processed", "P");
+                        }
+                    }
+                    break;
+                }
+                case "t_indentissue": {
+                    if (cleanRecord.containsKey("ToFacilityID") && cleanRecord.get("ToFacilityID") instanceof Number) {
+                        Number toFacilityID = (Number) cleanRecord.get("ToFacilityID");
+                        if (toFacilityID.intValue() == facilityIDFromDigester) {
+                            cleanRecord.put("Processed", "P");
+                        }
+                    }
+                    break;
+                }
+                case "t_stocktransfer": {
+                    if (cleanRecord.containsKey("TransferToFacilityID")
+                            && cleanRecord.get("TransferToFacilityID") instanceof Number) {
+                        Number transferToFacilityID = (Number) cleanRecord.get("TransferToFacilityID");
+                        if (transferToFacilityID.intValue() == facilityIDFromDigester) {
+                            cleanRecord.put("Processed", "P");
+                        }
+                    }
+                    break;
+                }
+                case "t_itemstockentry": {
+                    if (cleanRecord.containsKey("FacilityID") && cleanRecord.get("FacilityID") instanceof Number) {
+                        Number mapFacilityID = (Number) cleanRecord.get("FacilityID");
+                        if (mapFacilityID.intValue() == facilityIDFromDigester) {
+                            cleanRecord.put("Processed", "P");
+                        }
+                    }
+                    break;
+                }
+                default:
+                    // No specific facility ID logic for other tables
+                    break;
             }
         }
 
-        StringBuilder queryBuilder = new StringBuilder("INSERT INTO ");
-        queryBuilder.append(schemaName).append(".").append(tableName);
-        queryBuilder.append("(");
-        queryBuilder.append(serverColumns);
-        queryBuilder.append(") VALUES (");
-        queryBuilder.append(preparedStatementSetter);
-        queryBuilder.append(")");
-        return queryBuilder.toString();
+        // Extract SyncFacilityID for checkRecordIsAlreadyPresentOrNot
+        if (cleanRecord.containsKey("SyncFacilityID") && cleanRecord.get("SyncFacilityID") instanceof Number) {
+            syncFacilityID = ((Number) cleanRecord.get("SyncFacilityID")).intValue();
+        }
+
+        int recordCheck;
+        try {
+            recordCheck = dataSyncRepositoryCentral.checkRecordIsAlreadyPresentOrNot(
+                    schemaName, syncTableName, vanSerialNo, vanID, vanAutoIncColumnName, syncFacilityID);
+        } catch (Exception e) {
+            logger.error("Error checking record existence for table {}: VanSerialNo={}, VanID={}. Error: {}",
+                    syncTableName, vanSerialNo, vanID, e.getMessage(), e);
+            return false; // Critical error, stop sync for this table
+        }
+
+        // Prepare Object array for insert/update
+        List<Object> currentRecordValues = new ArrayList<>();
+        for (String column : serverColumnsList) {
+            Object value = cleanRecord.get(column.trim());
+            if (value instanceof Boolean) {
+                currentRecordValues.add(value);
+            } else if (value != null) {
+                currentRecordValues.add(String.valueOf(value));
+            } else {
+                currentRecordValues.add(null);
+            }
+        }
+
+        Object[] objArr = currentRecordValues.toArray();
+        if (recordCheck == 0) {
+            syncDataListInsert.add(objArr);
+        } else {
+            // For update, append the WHERE clause parameters at the end of the array
+            List<Object> updateParams = new ArrayList<>(Arrays.asList(objArr));
+            updateParams.add(String.valueOf(vanSerialNo));
+
+            if (Arrays.asList("t_patientissue", "t_physicalstockentry", "t_stockadjustment", "t_saitemmapping",
+                    "t_stocktransfer", "t_patientreturn", "t_facilityconsumption", "t_indent",
+                    "t_indentorder", "t_indentissue", "t_itemstockentry", "t_itemstockexit")
+                    .contains(syncTableName.toLowerCase()) && cleanRecord.containsKey("SyncFacilityID")) {
+                updateParams.add(String.valueOf(cleanRecord.get("SyncFacilityID")));
+            } else {
+                updateParams.add(String.valueOf(vanID));
+            }
+            syncDataListUpdate.add(updateParams.toArray());
+        }
+    }
+
+    boolean insertSuccess = true;
+    boolean updateSuccess = true;
+
+    if (!syncDataListInsert.isEmpty()) {
+        String queryInsert = getQueryToInsertDataToServerDB(schemaName, syncTableName, serverColumns);
+
+        try {
+            int[] i = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
+                    serverColumns, queryInsert, syncDataListInsert);
+            if (i.length != syncDataListInsert.size()) {
+                insertSuccess = false;
+                logger.error("Partial insert for table {}. Expected {} inserts, got {}. Failed records: {}",
+                        syncTableName, syncDataListInsert.size(), i.length,
+                        getFailedRecords(i, syncDataListInsert));
+            } else {
+                logger.info("Successfully inserted {} records into table {}.", i.length, syncTableName);
+            }
+        } catch (Exception e) {
+            insertSuccess = false;
+            logger.error("Exception during insert for table {}: {}", syncTableName, e.getMessage(), e);
+        }
+    }
+
+    if (!syncDataListUpdate.isEmpty()) {
+        String queryUpdate = getQueryToUpdateDataToServerDB(schemaName, serverColumns, syncTableName);
+        try {
+            int[] j = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
+                    SERVER_COLUMNS_NOT_REQUIRED, queryUpdate, syncDataListUpdate);
+            if (j.length != syncDataListUpdate.size()) {
+                updateSuccess = false;
+                logger.error("Partial update for table {}. Expected {} updates, got {}. Failed records: {}",
+                        syncTableName, syncDataListUpdate.size(), j.length,
+                        getFailedRecords(j, syncDataListUpdate));
+            } else {
+                logger.info("Successfully updated {} records in table {}.", j.length, syncTableName);
+            }
+        } catch (Exception e) {
+            updateSuccess = false;
+            logger.error("Exception during update for table {}: {}", syncTableName, e.getMessage(), e);
+        }
+    }
+    return insertSuccess && updateSuccess;
+}
+    private String getQueryToInsertDataToServerDB(String schemaName, String
+    tableName, String serverColumns) {
+    String[] columnsArr = null;
+    if (serverColumns != null)
+    columnsArr = serverColumns.split(",");
+
+    StringBuilder preparedStatementSetter = new StringBuilder();
+
+    if (columnsArr != null && columnsArr.length > 0) {
+    for (int i = 0; i < columnsArr.length; i++) {
+    preparedStatementSetter.append("?");
+    if (i < columnsArr.length - 1) {
+    preparedStatementSetter.append(", ");
+    }
+    }
+    }
+
+    StringBuilder queryBuilder = new StringBuilder("INSERT INTO ");
+    queryBuilder.append(schemaName).append(".").append(tableName);
+    queryBuilder.append("(");
+    queryBuilder.append(serverColumns);
+    queryBuilder.append(") VALUES (");
+    queryBuilder.append(preparedStatementSetter);
+    queryBuilder.append(")");
+    return queryBuilder.toString();
     }
 
     public String getQueryToUpdateDataToServerDB(String schemaName, String serverColumns, String tableName) {
@@ -563,24 +519,6 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
 
         StringBuilder preparedStatementSetter = new StringBuilder();
 
-       if (columnsArr != null && columnsArr.length > 0) {
-            for (int i = 0; i < columnsArr.length; i++) {
-                String columnName = columnsArr[i].trim(); // ← NEW LINE
- 
-                // Special handling for CreatedDate - use COALESCE to prevent NULL
-                if (columnName.equalsIgnoreCase("CreatedDate")) { // ← NEW BLOCK
-                    preparedStatementSetter.append(columnName);
-                    preparedStatementSetter.append(" = COALESCE(?, CURRENT_TIMESTAMP)");
-                } else {
-                    preparedStatementSetter.append(columnName);
-                    preparedStatementSetter.append(" = ?");
-                }
- 
-                if (i < columnsArr.length - 1) {
-                    preparedStatementSetter.append(", ");
-                }
-            }
-        }
         StringBuilder queryBuilder = new StringBuilder(" UPDATE ");
         queryBuilder.append(schemaName).append(".").append(tableName);
         queryBuilder.append(" SET ");
@@ -619,4 +557,6 @@ List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
         logger.info("Failed records info: {}", failedRecordsInfo);
         return String.join("; ", failedRecordsInfo);
     }
+
+    
 }

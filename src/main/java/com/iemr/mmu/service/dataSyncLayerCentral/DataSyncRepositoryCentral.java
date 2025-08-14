@@ -88,19 +88,33 @@ public class DataSyncRepositoryCentral {
     }
 
     private boolean isValidColumnNamesList(String columnNames) {
-        if (columnNames == null || columnNames.trim().isEmpty()) {
-            return false;
-        }
-        for (String col : columnNames.split(",")) {
-            if (!isValidDatabaseIdentifierCharacter(col.trim())) {
-                return false;
+    if (columnNames == null || columnNames.trim().isEmpty()) {
+        return false;
+    }
+    logger.info("Validating column names: {}", columnNames);
+    for (String col : columnNames.split(",")) {
+        String trimmed = col.trim();
+
+        // Handle date_format(...) style
+        if (trimmed.toLowerCase().startsWith("date_format(")) {
+            int openParenIndex = trimmed.indexOf("(");
+            int commaIndex = trimmed.indexOf(",", openParenIndex);
+            if (commaIndex > 0) {
+                trimmed = trimmed.substring(openParenIndex + 1, commaIndex).trim();
             }
         }
-        return true;
+
+        if (!isValidDatabaseIdentifierCharacter(trimmed)) {
+            return false;
+        }
     }
+    return true;
+}
+
 
     public int checkRecordIsAlreadyPresentOrNot(String schemaName, String tableName, String vanSerialNo, String vanID,
             String vanAutoIncColumnName, int syncFacilityID) {
+              
         jdbcTemplate = getJdbcTemplate();
         List<Object> params = new ArrayList<>();
 

@@ -115,7 +115,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 	public String syncIntercepter(int vanID, String user, String Authorization, String token) throws Exception {
 
 		// sync activity trigger
-		
+
 		String serverAcknowledgement = startDataSync(vanID, user, Authorization, token);
 
 		return serverAcknowledgement;
@@ -226,7 +226,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 			Map<String, Object> response = new HashMap<>();
 			response.put("response", "Data sync failed");
 			response.put("groupsProgress", responseStatus);
-					objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(response);
+			objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(response);
 			return objectMapper.writerWithDefaultPrettyPrinter()
 					.writeValueAsString(Collections.singletonMap("data", response));
 		} else {
@@ -275,6 +275,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 
 	private List<Map<String, Object>> getDataToSync(String schemaName, String tableName, String columnNames)
 			throws Exception {
+				logger.info("Fetching data to sync for schema: {}, table: {}, columns: {}", schemaName, tableName, columnNames);
 		List<Map<String, Object>> resultSetList = dataSyncRepository.getDataForGivenSchemaAndTable(schemaName,
 				tableName, columnNames);
 		if (resultSetList != null) {
@@ -316,11 +317,11 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 	 */
 
 	public String syncDataToServer(int vanID, String schemaName, String tableName, String vanAutoIncColumnName,
-			String serverColumns, List<Map<String, Object>> dataToBesync, String user, String Authorization, String token)
+			String serverColumns, List<Map<String, Object>> dataToBesync, String user, String Authorization,
+			String token)
 			throws Exception {
-		
+
 		RestTemplate restTemplate = new RestTemplate();
-		
 
 		Integer facilityID = masterVanRepo.getFacilityID(vanID);
 
@@ -340,10 +341,10 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 			dataMap.put("facilityID", facilityID);
 
 		String requestOBJ = gson.toJson(dataMap);
-		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestOBJ, Authorization,"datasync");
+		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestOBJ, Authorization, "datasync");
 		ResponseEntity<String> response = restTemplate.exchange(dataSyncUploadUrl, HttpMethod.POST, request,
 				String.class);
-		
+
 		int i = 0;
 		if (response != null && response.hasBody()) {
 			JSONObject obj = new JSONObject(response.getBody());
