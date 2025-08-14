@@ -136,17 +136,11 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 		ObjectMapper objectMapper = new ObjectMapper();
 		// fetch group masters
 		List<DataSyncGroups> dataSyncGroupList = dataSyncGroupsRepo.findByDeleted(false);
-		logger.info("Fetched DataSyncGroups: {}",
-				objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(dataSyncGroupList));
 		logger.debug("Fetched DataSyncGroups: {}",
 				objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(dataSyncGroupList));
 		for (DataSyncGroups dataSyncGroups : dataSyncGroupList) {
 			int groupId = dataSyncGroups.getSyncTableGroupID();
 			List<SyncUtilityClass> syncUtilityClassList = getVanAndServerColumns(groupId);
-			// INFO log with groupId and full list
-			logger.info("Group ID: {} -> SyncUtilityClassList: {}",
-					groupId,
-					objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(syncUtilityClassList));
 			logger.debug("Fetched SyncUtilityClass for groupId {}: {}", groupId,
 					objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(syncUtilityClassList));
 			List<Map<String, Object>> syncData;
@@ -167,6 +161,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 
 					logger.info("Starting batch sync for schema: {}, table: {} with {} full batches and {} remainder",
 							obj.getSchemaName(), obj.getTableName(), fullBatchCount, remainder);
+
 
 					for (int i = 0; i < fullBatchCount; i++) {
 						syncDataBatch = getBatchOfAskedSizeDataToSync(syncData, startIndex,
@@ -280,6 +275,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 
 	private List<Map<String, Object>> getDataToSync(String schemaName, String tableName, String columnNames)
 			throws Exception {
+				logger.info("Fetching data to sync for schema: {}, table: {}, columns: {}", schemaName, tableName, columnNames);
 		List<Map<String, Object>> resultSetList = dataSyncRepository.getDataForGivenSchemaAndTable(schemaName,
 				tableName, columnNames);
 		if (resultSetList != null) {
@@ -353,9 +349,8 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 		if (response != null && response.hasBody()) {
 			JSONObject obj = new JSONObject(response.getBody());
 			if (obj != null && obj.has("statusCode") && obj.getInt("statusCode") == 200) {
-				logger.info("Check datasync");
 				StringBuilder vanSerialNos = getVanSerialNoListForSyncedData(vanAutoIncColumnName, dataToBesync);
-				logger.info("Van serial no from response=" + vanSerialNos);
+				
 				i = dataSyncRepository.updateProcessedFlagInVan(schemaName, tableName, vanSerialNos,
 						vanAutoIncColumnName, user);
 			}
@@ -377,8 +372,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 			List<Map<String, Object>> dataToBesync) throws Exception {
 		// comma separated van serial no
 		StringBuilder vanSerialNos = new StringBuilder();
-		logger.info("Data to be synced: {}", dataToBesync);
-		logger.info("vanAutoIncColumnName: {}", vanAutoIncColumnName);
+
 		int pointer1 = 0;
 		for (Map<String, Object> map : dataToBesync) {
 			if (pointer1 == dataToBesync.size() - 1)
@@ -388,7 +382,6 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 
 			pointer1++;
 		}
-		logger.info("Van Serial Nos: {}", vanSerialNos);
 		return vanSerialNos;
 	}
 
