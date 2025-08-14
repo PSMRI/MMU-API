@@ -598,11 +598,14 @@ class ReportCheckPostImplNewTest {
 
     @Test
     void testReport_PatientAttended_NullParams() {
-        assertThrows(Exception.class, () -> {
-            java.lang.reflect.Method m = reportCheckPostImplNew.getClass().getDeclaredMethod("report_PatientAttended", java.sql.Timestamp.class, java.sql.Timestamp.class, Integer.class, Integer.class);
+        java.lang.reflect.Method m;
+        try {
+            m = reportCheckPostImplNew.getClass().getDeclaredMethod("report_PatientAttended", java.sql.Timestamp.class, java.sql.Timestamp.class, Integer.class, Integer.class);
             m.setAccessible(true);
-            m.invoke(reportCheckPostImplNew, null, null, null, null);
-        });
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        assertThrows(Exception.class, () -> m.invoke(reportCheckPostImplNew, null, null, null, null));
     }
 
     @Test
