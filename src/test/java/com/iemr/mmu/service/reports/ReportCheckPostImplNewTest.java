@@ -820,9 +820,14 @@ class ReportCheckPostImplNewTest {
 
     @Test
     void testReport_TestConducted_NullParams() {
+        java.lang.reflect.Method m;
         try {
-            java.lang.reflect.Method m = reportCheckPostImplNew.getClass().getDeclaredMethod("report_TestConducted", java.sql.Timestamp.class, java.sql.Timestamp.class, Integer.class, Integer.class);
+            m = reportCheckPostImplNew.getClass().getDeclaredMethod("report_TestConducted", java.sql.Timestamp.class, java.sql.Timestamp.class, Integer.class, Integer.class);
             m.setAccessible(true);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        try {
             m.invoke(reportCheckPostImplNew, null, null, null, null);
             fail("Expected exception not thrown");
         } catch (Exception e) {
