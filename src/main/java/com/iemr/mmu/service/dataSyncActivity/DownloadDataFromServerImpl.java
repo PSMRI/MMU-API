@@ -337,11 +337,13 @@ import jakarta.servlet.http.HttpServletRequest;
 		// Call rest-template to call central API to generate UNIQUE ID at central
 		ResponseEntity<String> response = restTemplate.exchange(benGenUrlCentral, HttpMethod.POST, request,
 				String.class);
-
+logger.info("Respponse from central API: " + response);
+logger.info("Import url="+benImportUrlLocal);
 		if (response != null && response.hasBody()) {
 			JSONObject obj = new JSONObject(response.getBody());
 			if (obj != null && obj.has("data") && obj.has("statusCode") && obj.getInt("statusCode") == 200) {
 				// Consume the response from API and call local identity api to save data
+
 				HttpEntity<Object> request1 = RestTemplateUtil.createRequestEntity(obj.get("data").toString(), Authorization, "datasync");
 				i = 1;
 				// Call rest-template to call central API to generate UNIQUE ID at central
