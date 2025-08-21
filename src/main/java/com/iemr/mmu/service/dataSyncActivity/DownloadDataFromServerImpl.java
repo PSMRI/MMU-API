@@ -352,6 +352,7 @@ logger.info("ServerAuthorization: " + ServerAuthorization);
 				logger.info("Request to benImporturllocal: " + request1);
 				ResponseEntity<String> response1 = restTemplate.exchange(benImportUrlLocal, HttpMethod.POST, request1,
 						String.class);
+						logger.info("Response from benImportUrlLocal: " + response1);
 				if (response1 != null && response1.hasBody()) {
 					JSONObject obj1 = new JSONObject(response1.getBody());
 					if (obj1 != null && obj1.has("data") && obj1.has("statusCode")
