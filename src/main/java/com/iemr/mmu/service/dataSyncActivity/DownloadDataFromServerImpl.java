@@ -338,21 +338,21 @@ import jakarta.servlet.http.HttpServletRequest;
 		// Call rest-template to call central API to generate UNIQUE ID at central
 		ResponseEntity<String> response = restTemplate.exchange(benGenUrlCentral, HttpMethod.POST, request,
 				String.class);
-logger.info("Respponse from central API: " + response);
-logger.info("Import url="+benImportUrlLocal);
+		logger.info("Authorization before calling local api="+Authorization);
+		logger.info("Import url="+benImportUrlLocal);
 		if (response != null && response.hasBody()) {
 			JSONObject obj = new JSONObject(response.getBody());
 			if (obj != null && obj.has("data") && obj.has("statusCode") && obj.getInt("statusCode") == 200) {
 				// Consume the response from API and call local identity api to save data
-logger.info("Inside if condition of response");
-logger.info("Authorization: " + Authorization);
-logger.info("ServerAuthorization: " + ServerAuthorization);
-				HttpEntity<Object> request1 = RestTemplateUtil.createRequestEntity(obj.get("data").toString(), Authorization, "datasync");
+
+		logger.info("Authorization: " + Authorization);
+		logger.info("ServerAuthorization: " + ServerAuthorization);
+				HttpEntity<Object> request1 = RestTemplateUtil.createRequestEntity(obj.get("data").toString(), Authorization, token);
 				i = 1;
 				logger.info("Request to benImporturllocal: " + request1);
 				ResponseEntity<String> response1 = restTemplate.exchange(benImportUrlLocal, HttpMethod.POST, request1,
 						String.class);
-						logger.info("Response from benImportUrlLocal: " + response1);
+				logger.info("Response from benImportUrlLocal: " + response1);
 				if (response1 != null && response1.hasBody()) {
 					JSONObject obj1 = new JSONObject(response1.getBody());
 					if (obj1 != null && obj1.has("data") && obj1.has("statusCode")
@@ -361,22 +361,8 @@ logger.info("ServerAuthorization: " + ServerAuthorization);
 					}
 				}
 
-	// HttpEntity<Object> request2 = RestTemplateUtil.createRequestEntity(obj.get("data").toString(), Authorization, "datasync");
-	// 			i1 = 1;
-			
-	// 			ResponseEntity<String> response2 = restTemplate.exchange(benImportUrlLocal, HttpMethod.POST, request2,
-	// 					String.class);
-	// 			if (response2 != null && response2.hasBody()) {
-	// 				JSONObject obj2 = new JSONObject(response2.getBody());
-	// 				if (obj2 != null && obj2.has("data") && obj2.has("statusCode")
-	// 						&& obj2.getInt("statusCode") == 200) {
-	// 					i1= 2;
-	// 				}
-	// 			}
-
-				}
+					}
 			}
-logger.info("i: " + i );
 		} catch (Exception e) {
 			logger.error("Error while generating catch UNIQUE_ID at central server: " + e.getMessage());
 			throw new Exception("Error while generating catch UNIQUE_ID at central server: " + e.getMessage());
