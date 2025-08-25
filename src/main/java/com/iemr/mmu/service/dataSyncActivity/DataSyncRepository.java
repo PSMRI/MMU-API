@@ -28,7 +28,10 @@ import java.util.Map;
 
 import javax.sql.DataSource;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -49,6 +52,8 @@ public class DataSyncRepository {
 
 	@Autowired
 	private SyncUtilityClassRepo syncutilityClassRepo;
+
+	private Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 
 	private JdbcTemplate getJdbcTemplate() {
 		return new JdbcTemplate(dataSource);
@@ -84,22 +89,34 @@ public class DataSyncRepository {
 
 		}
 
+		logger.info("Select Query started:");
+		logger.info("Table Name: {}", table);
+
+		logger.info("Select Query: {}", baseQuery);
+
 		resultSetList = jdbcTemplate.queryForList(baseQuery);
 		return resultSetList;
 	}
 
-	
-
 	public int updateProcessedFlagInVan(String schemaName, String tableName, StringBuilder vanSerialNos,
 			String autoIncreamentColumn, String user) throws Exception {
 		jdbcTemplate = getJdbcTemplate();
-		String query = " UPDATE " + schemaName + "." + tableName
-				+ " SET processed = 'P' , SyncedDate = ?, Syncedby = ? WHERE " + autoIncreamentColumn
-				+ " IN (" + vanSerialNos + ")";
+		String query = "";
+
+		logger.info("Updating processed flag in table: " + tableName + " for vanSerialNos: " + vanSerialNos);
+	
+		if (tableName != null && tableName.toLowerCase().equals("i_ben_flow_outreach")) {
+			query = "UPDATE " + schemaName + "." + tableName
+					+ " SET created_date = ? , processed = 'P', SyncedDate = ?, Syncedby = ? "
+					+ "WHERE " + autoIncreamentColumn + " IN (" + vanSerialNos + ")";
+		} else {
+			query = "UPDATE " + schemaName + "." + tableName
+					+ " SET CreatedDate = ? , processed = 'P', SyncedDate = ?, Syncedby = ? "
+					+ "WHERE " + autoIncreamentColumn + " IN (" + vanSerialNos + ")";
+		}
 
 		Timestamp syncedDate = new Timestamp(System.currentTimeMillis());
-		int updatedRows = jdbcTemplate.update(query, syncedDate, user);
-
+		int updatedRows = jdbcTemplate.update(query, syncedDate, syncedDate, user);
 		return updatedRows;
 
 	}

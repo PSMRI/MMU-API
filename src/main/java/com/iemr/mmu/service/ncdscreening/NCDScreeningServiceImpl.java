@@ -1182,6 +1182,30 @@ public class NCDScreeningServiceImpl implements NCDScreeningService {
 			TcSpecialistSlotBookingRequestOBJ tcSpecialistSlotBookingRequestOBJ = null;
 			CommonUtilityClass commonUtilityClass = InputMapper.gson().fromJson(requestOBJ, CommonUtilityClass.class);
 
+		if (requestOBJ.has("visitDetails") && !requestOBJ.get("visitDetails").isJsonNull()) {
+			JsonObject visitWrapperObj = requestOBJ.getAsJsonObject("visitDetails");
+			JsonObject visitDetailsObj = visitWrapperObj.getAsJsonObject("visitDetails");
+
+		    if (visitDetailsObj.has("fileIDs") && visitDetailsObj.get("fileIDs").isJsonArray()) {
+		        JsonArray fileIDs = visitDetailsObj.getAsJsonArray("fileIDs");
+        		StringBuilder fileIDBuilder = new StringBuilder();
+		        for (JsonElement fileIdElement : fileIDs) {
+        		    if (!fileIdElement.isJsonNull()) {
+                	fileIDBuilder.append(fileIdElement.getAsString()).append(",");
+            	}
+        }
+
+        if (fileIDBuilder.length() > 0) {
+            fileIDBuilder.setLength(fileIDBuilder.length() - 1);
+
+            benVisitDetailRepo.updateFileID(
+                fileIDBuilder.toString(),
+                commonUtilityClass.getBeneficiaryRegID(),
+                commonUtilityClass.getVisitCode()
+            );
+        }
+    }
+}
 			if (commonUtilityClass != null && commonUtilityClass.getServiceID() != null
 					&& commonUtilityClass.getServiceID() == 4 && requestOBJ != null && requestOBJ.has("tcRequest")
 					&& requestOBJ.get("tcRequest") != null) {

@@ -595,6 +595,11 @@ public class CSServiceImpl implements CSService {
 			CancerGynecologicalExamination cancerGynecologicalExamination = InputMapper.gson()
 					.fromJson(jsnOBJ.get("gynecologicalDetails"), CancerGynecologicalExamination.class);
 
+			if (cancerGynecologicalExamination.getFileIDs() != null) {
+    				cancerGynecologicalExamination.setFilePath(
+        			String.join(",", cancerGynecologicalExamination.getFileIDs()));
+				} 
+
 			int ID = cSNurseServiceImpl.updateCancerGynecologicalExaminationDetails(cancerGynecologicalExamination);
 			if (ID > 0) {
 				// gynecologicalDetails stored successfully...
@@ -977,6 +982,12 @@ public class CSServiceImpl implements CSService {
 						.fromJson(examinationOBJ.get("gynecologicalDetails"), CancerGynecologicalExamination.class);
 				cancerGynecologicalExamination.setBenVisitID(benVisitID);
 				cancerGynecologicalExamination.setVisitCode(benVisitCode);
+
+				if (cancerGynecologicalExamination.getFileIDs() != null) {
+    				cancerGynecologicalExamination.setFilePath(
+        			String.join(",", cancerGynecologicalExamination.getFileIDs()));
+				} 
+
 				Long ID = cSNurseServiceImpl.saveCancerGynecologicalExaminationData(cancerGynecologicalExamination);
 				if (ID != null && ID > 0) {
 					// gynecologicalDetails stored successfully...

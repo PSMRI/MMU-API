@@ -186,7 +186,7 @@ import jakarta.servlet.http.HttpServletRequest;
 			// initializing RestTemplate
 			RestTemplate restTemplate = new RestTemplate();
 			// Provide the required second argument, e.g., an empty string or appropriate authorization token
-			HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(syncDownloadMaster, ServerAuthorization, jwtToken);
+			HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(syncDownloadMaster, ServerAuthorization, "datasync");
 			// Call rest-template to call API to download master data for given table
 			ResponseEntity<String> response = restTemplate.exchange(dataSyncDownloadUrl, HttpMethod.POST, request,
 					String.class);
@@ -330,23 +330,29 @@ import jakarta.servlet.http.HttpServletRequest;
 
 	public int callCentralAPIToGenerateBenIDAndimportToLocal(String requestOBJ, String Authorization,
 			String ServerAuthorization, String token) throws Exception {
-		int i = 0;
+		int i = 0, i1 = 0;
+		try{
 		// Rest template
 		RestTemplate restTemplate = new RestTemplate();
-		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestOBJ, Authorization,token);
+		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestOBJ, ServerAuthorization,"datasync");
 		// Call rest-template to call central API to generate UNIQUE ID at central
 		ResponseEntity<String> response = restTemplate.exchange(benGenUrlCentral, HttpMethod.POST, request,
 				String.class);
-
+		logger.info("Authorization before calling local api="+Authorization);
+		logger.info("Import url="+benImportUrlLocal);
 		if (response != null && response.hasBody()) {
 			JSONObject obj = new JSONObject(response.getBody());
 			if (obj != null && obj.has("data") && obj.has("statusCode") && obj.getInt("statusCode") == 200) {
 				// Consume the response from API and call local identity api to save data
+
+		logger.info("Authorization: " + Authorization);
+		logger.info("ServerAuthorization: " + ServerAuthorization);
 				HttpEntity<Object> request1 = RestTemplateUtil.createRequestEntity(obj.get("data").toString(), Authorization, token);
 				i = 1;
-				// Call rest-template to call central API to generate UNIQUE ID at central
+				logger.info("Request to benImporturllocal: " + request1);
 				ResponseEntity<String> response1 = restTemplate.exchange(benImportUrlLocal, HttpMethod.POST, request1,
 						String.class);
+				logger.info("Response from benImportUrlLocal: " + response1);
 				if (response1 != null && response1.hasBody()) {
 					JSONObject obj1 = new JSONObject(response1.getBody());
 					if (obj1 != null && obj1.has("data") && obj1.has("statusCode")
@@ -355,9 +361,12 @@ import jakarta.servlet.http.HttpServletRequest;
 					}
 				}
 
-				}
+					}
 			}
-
+		} catch (Exception e) {
+			logger.error("Error while generating catch UNIQUE_ID at central server: " + e.getMessage());
+			throw new Exception("Error while generating catch UNIQUE_ID at central server: " + e.getMessage());
+		}
 			return i;
 		}
 	}

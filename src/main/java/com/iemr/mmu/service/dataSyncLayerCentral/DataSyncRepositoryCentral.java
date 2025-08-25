@@ -25,6 +25,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.sql.DataSource;
 
@@ -34,175 +35,206 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/***
- * 
- * @author NE298657
- *
- */
+import com.iemr.mmu.data.syncActivity_syncLayer.SyncUploadDataDigester;
 
 @Service
 public class DataSyncRepositoryCentral {
-	@Autowired
-	private DataSource dataSource;
+    @Autowired
+    private DataSource dataSource;
 
-	private JdbcTemplate jdbcTemplate;
+    private JdbcTemplate jdbcTemplate;
 
-	private JdbcTemplate getJdbcTemplate() {
-		return new JdbcTemplate(dataSource);
+    private JdbcTemplate getJdbcTemplate() {
+        if (this.jdbcTemplate == null) {
+            this.jdbcTemplate = new JdbcTemplate(dataSource);
+        }
+        return this.jdbcTemplate;
+    }
 
-	}
-	
-	private Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
+    private final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 
-	// Data Upload Repository
-	public int checkRecordIsAlreadyPresentOrNot(String schemaName, String tableName, String vanSerialNo, String vanID,
-			String vanAutoIncColumnName, int syncFacilityID) {
-		jdbcTemplate = getJdbcTemplate();
+    private static final Set<String> VALID_SCHEMAS = Set.of("public", "db_iemr", "db_identity","apl_db_iemr","apl_db_identity","db_iemr_sync","db_identity_sync");
 
-		List<Object> params = new ArrayList<>();
+    private static final Set<String> VALID_TABLES = Set.of(
+            "m_beneficiaryregidmapping", "i_beneficiaryaccount", "i_beneficiaryaddress", "i_beneficiarycontacts",
+            "i_beneficiarydetails", "i_beneficiaryfamilymapping", "i_beneficiaryidentity", "i_beneficiarymapping",
+            "t_benvisitdetail", "t_phy_anthropometry", "t_phy_vitals", "t_benadherence", "t_anccare", "t_pnccare",
+            "t_ncdscreening", "t_ncdcare", "i_ben_flow_outreach", "t_covid19", "t_idrsdetails", "t_physicalactivity",
+            "t_phy_generalexam", "t_phy_headtotoe", "t_sys_obstetric", "t_sys_gastrointestinal", "t_sys_cardiovascular",
+            "t_sys_respiratory", "t_sys_centralnervous", "t_sys_musculoskeletalsystem", "t_sys_genitourinarysystem",
+            "t_ancdiagnosis", "t_ncddiagnosis", "t_pncdiagnosis", "t_benchefcomplaint", "t_benclinicalobservation",
+            "t_prescription", "t_prescribeddrug", "t_lab_testorder", "t_benreferdetails",
+            "t_lab_testresult", "t_physicalstockentry", "t_patientissue", "t_facilityconsumption", "t_itemstockentry",
+            "t_itemstockexit", "t_benmedhistory", "t_femaleobstetrichistory", "t_benmenstrualdetails",
+            "t_benpersonalhabit", "t_childvaccinedetail1", "t_childvaccinedetail2", "t_childoptionalvaccinedetail",
+            "t_ancwomenvaccinedetail", "t_childfeedinghistory", "t_benallergyhistory", "t_bencomorbiditycondition",
+            "t_benmedicationhistory", "t_benfamilyhistory", "t_perinatalhistory", "t_developmenthistory",
+            "t_cancerfamilyhistory", "t_cancerpersonalhistory", "t_cancerdiethistory", "t_cancerobstetrichistory",
+            "t_cancervitals", "t_cancersignandsymptoms", "t_cancerlymphnode", "t_canceroralexamination",
+            "t_cancerbreastexamination", "t_cancerabdominalexamination", "t_cancergynecologicalexamination",
+            "t_cancerdiagnosis", "t_cancerimageannotation", "i_beneficiaryimage", "t_stockadjustment",
+            "t_stocktransfer", "t_patientreturn", "t_indent", "t_indentissue", "t_indentorder", "t_saitemmapping");
 
-		StringBuilder queryBuilder = new StringBuilder("SELECT ");
-		queryBuilder.append(vanAutoIncColumnName);
-		queryBuilder.append(" FROM ");
-		queryBuilder.append(schemaName+"."+tableName);
+    private boolean isValidDatabaseIdentifierCharacter(String identifier) {
+        return identifier != null && identifier.matches("^[a-zA-Z_][a-zA-Z0-9_]*$");
+    }
 
-		//params.add(vanAutoIncColumnName);
-		//params.add(schemaName);
-		//params.add(tableName);
+    private boolean isValidSchemaName(String schemaName) {
+        return VALID_SCHEMAS.contains(schemaName.toLowerCase());
+    }
 
-		StringBuilder whereClause = new StringBuilder();
-		whereClause.append(" WHERE ");
-		whereClause.append("VanSerialNo = ?");
-		params.add(vanSerialNo);
+    private boolean isValidTableName(String tableName) {
+        return VALID_TABLES.contains(tableName.toLowerCase());
+    }
 
-		if ((tableName.equalsIgnoreCase("t_patientissue") || tableName.equalsIgnoreCase("t_physicalstockentry")
-				|| tableName.equalsIgnoreCase("t_stockadjustment") || tableName.equalsIgnoreCase("t_saitemmapping")
-				|| tableName.equalsIgnoreCase("t_stocktransfer") || tableName.equalsIgnoreCase("t_patientreturn")
-				|| tableName.equalsIgnoreCase("t_facilityconsumption") || tableName.equalsIgnoreCase("t_indent")
-				|| tableName.equalsIgnoreCase("t_indentorder") || tableName.equalsIgnoreCase("t_indentissue")
-				|| tableName.equalsIgnoreCase("t_itemstockentry") || tableName.equalsIgnoreCase("t_itemstockexit"))
-				&& syncFacilityID > 0) {
+    private boolean isValidColumnNamesList(String columnNames) {
+    if (columnNames == null || columnNames.trim().isEmpty()) {
+        return false;
+    }
+    logger.info("Validating column names: {}", columnNames);
+    for (String col : columnNames.split(",")) {
+        String trimmed = col.trim();
 
-			whereClause.append(" AND ");
-			whereClause.append("SyncFacilityID = ?");
-			params.add(syncFacilityID);
+        // Handle date_format(...) style
+        if (trimmed.toLowerCase().startsWith("date_format(")) {
+            int openParenIndex = trimmed.indexOf("(");
+            int commaIndex = trimmed.indexOf(",", openParenIndex);
+            if (commaIndex > 0) {
+                trimmed = trimmed.substring(openParenIndex + 1, commaIndex).trim();
+            }
+        }
 
-		}
+        if (!isValidDatabaseIdentifierCharacter(trimmed)) {
+            return false;
+        }
+    }
+    return true;
+}
 
-		else {
 
-			whereClause.append(" AND ");
-			whereClause.append("VanID = ?");
-			params.add(vanID);
+    public int checkRecordIsAlreadyPresentOrNot(String schemaName, String tableName, String vanSerialNo, String vanID,
+            String vanAutoIncColumnName, int syncFacilityID) {
+              
+        jdbcTemplate = getJdbcTemplate();
+        List<Object> params = new ArrayList<>();
 
-		}
+        if (!isValidSchemaName(schemaName) || !isValidTableName(tableName) ||
+                !isValidDatabaseIdentifierCharacter(vanAutoIncColumnName)) {
+            logger.error("Invalid identifiers: schema={}, table={}, column={}", schemaName, tableName,
+                    vanAutoIncColumnName);
+            throw new IllegalArgumentException("Invalid identifiers provided.");
+        }
 
-		queryBuilder.append(whereClause);
-		String query = queryBuilder.toString();
-		Object[] queryParams = params.toArray();
-		List<Map<String, Object>> resultSet = jdbcTemplate.queryForList(query, queryParams);
-		if (resultSet != null && resultSet.size() > 0)
-			return 1;
-		else
-			return 0;
-	}
+        StringBuilder queryBuilder = new StringBuilder("SELECT ")
+                .append(vanAutoIncColumnName).append(" FROM ")
+                .append(schemaName).append(".").append(tableName).append(" WHERE VanSerialNo = ?");
 
-	// Method for synchronization of data to central DB
-	public int[] syncDataToCentralDB(String schema, String tableName, String serverColumns, String query,
-			List<Object[]> syncDataList) {
-		jdbcTemplate = getJdbcTemplate();
-		if (query.startsWith("INSERT")) {
-			for (int i = 0; i < syncDataList.size(); i++) {
-				Object[] array = syncDataList.get(i);// Arrey 1
+        params.add(vanSerialNo);
 
-				if (query.startsWith("INSERT")) {
-//					array = new Object[] {serverColumns, array };
-					syncDataList.set(i, array);
-				}
-			}
-		} else {
-			for (int i = 0; i < syncDataList.size(); i++) {
+        if (List.of("t_patientissue", "t_physicalstockentry", "t_stockadjustment", "t_saitemmapping",
+                "t_stocktransfer", "t_patientreturn", "t_facilityconsumption", "t_indent",
+                "t_indentorder", "t_indentissue", "t_itemstockentry", "t_itemstockexit")
+                .contains(tableName.toLowerCase()) && syncFacilityID > 0) {
+            queryBuilder.append(" AND SyncFacilityID = ?");
+            params.add(syncFacilityID);
+        } else {
+            queryBuilder.append(" AND VanID = ?");
+            params.add(vanID);
+        }
 
-				Object[] array = syncDataList.get(i);// Arrey 1
-				String[] columnsArray = null;
-				if(null != serverColumns)
-				columnsArray = serverColumns.split(","); // arrey 2
+        try {
+            List<Map<String, Object>> resultSet = jdbcTemplate.queryForList(queryBuilder.toString(), params.toArray());
+            return (resultSet != null && !resultSet.isEmpty()) ? 1 : 0;
+        } catch (Exception e) {
+            logger.error("Error checking record presence: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to check record existence: " + e.getMessage(), e);
+        }
+    }
 
-				List<Object> Newarray = new ArrayList<>();
+    public int[] syncDataToCentralDB(String schema, String tableName, String serverColumns, String query,
+            List<Object[]> syncDataList) {
+        jdbcTemplate = getJdbcTemplate();
+        try {
+            
+            return jdbcTemplate.batchUpdate(query, syncDataList);
+        } catch (Exception e) {
+            logger.error("Batch sync failed for table {}: {}", tableName, e.getMessage(), e);
+            throw new RuntimeException("Batch sync failed: " + e.getMessage(), e);
+        }
+    }
 
-				int arrayIndex = 0;
-				int columnsArrayIndex = 0;
-				//Newarray.add(schema);
-				//Newarray.add(tableName);
-				//while (columnsArrayIndex < columnsArray.length || arrayIndex < array.length) {
-					if (null != columnsArray && columnsArrayIndex < columnsArray.length) {
-						Newarray.add(columnsArray[columnsArrayIndex]);
-						columnsArrayIndex++;
-					}
+    public List<Map<String, Object>> getMasterDataFromTable(String schema, String table, String columnNames,
+            String masterType, Timestamp lastDownloadDate, Integer vanID, Integer psmID) {
+        jdbcTemplate = getJdbcTemplate();
+        List<Object> params = new ArrayList<>();
 
-					/*
-					 * if (arrayIndex < array.length) { Newarray.add(array); arrayIndex++; }
-					 */
-				//}
+        if (!isValidSchemaName(schema) || !isValidTableName(table) || !isValidColumnNamesList(columnNames)) {
+            throw new IllegalArgumentException("Invalid schema, table, or column names.");
+        }
 
-				// Convert Newarray back to an array
-				//Object[] resultArray = Newarray.toArray(new Object[0]);
-				syncDataList.set(i, array);
+        StringBuilder queryBuilder = new StringBuilder("SELECT ").append(columnNames)
+                .append(" FROM ").append(schema).append(".").append(table);
 
-			}
-		}
-		// start batch insert/update
-		int[] i = jdbcTemplate.batchUpdate(query, syncDataList);
-		return i;
+        if (masterType != null) {
+            if (lastDownloadDate != null) {
+                queryBuilder.append(" WHERE LastModDate >= ?");
+                params.add(lastDownloadDate);
 
-	}
+                if ("V".equalsIgnoreCase(masterType)) {
+                    queryBuilder.append(" AND VanID = ?");
+                    params.add(vanID);
+                } else if ("P".equalsIgnoreCase(masterType)) {
+                    queryBuilder.append(" AND ProviderServiceMapID = ?");
+                    params.add(psmID);
+                }
+            } else {
+                queryBuilder.append(" WHERE ");
+                if ("V".equalsIgnoreCase(masterType)) {
+                    queryBuilder.append("VanID = ?");
+                    params.add(vanID);
+                } else if ("P".equalsIgnoreCase(masterType)) {
+                    queryBuilder.append("ProviderServiceMapID = ?");
+                    params.add(psmID);
+                }
+            }
+        }
 
-	// End of Data Upload Repository
+        try {
+            // Safe dynamic SQL: All dynamic parts (table names, columns, etc.) are
+            // validated or hardcoded.
+            // Parameter values are bound safely using prepared statement placeholders (?).
+            
+            return jdbcTemplate.queryForList(queryBuilder.toString(), params.toArray());
+        } catch (Exception e) {
+            logger.error("Error fetching master data: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to fetch master data: " + e.getMessage(), e);
+        }
+    }
 
-	public List<Map<String, Object>> getMasterDataFromTable(String schema, String table, String columnNames,
-			String masterType, Timestamp lastDownloadDate, Integer vanID, Integer psmID) throws Exception {
-		jdbcTemplate = getJdbcTemplate();
-		List<Map<String, Object>> resultSetList =new ArrayList<>();
-        String baseQuery = "";
-		if (masterType != null) {
-			if (lastDownloadDate != null) {
-				if (masterType.equalsIgnoreCase("A")) {
-					baseQuery += " SELECT " + columnNames + " FROM " + schema + "." + table
-							+ " WHERE LastModDate >= ? ";
-					resultSetList = jdbcTemplate.queryForList(baseQuery,lastDownloadDate);
-					
-				}
-				else if (masterType.equalsIgnoreCase("V")) {
-					baseQuery += " SELECT " + columnNames + " FROM " + schema + "." + table
-							+ " WHERE LastModDate >= ? AND VanID = ? ";
-					resultSetList = jdbcTemplate.queryForList(baseQuery,lastDownloadDate,vanID);
-				}
-				else if (masterType.equalsIgnoreCase("P")) {
-					baseQuery += " SELECT " + columnNames + " FROM " + schema + "." + table
-							+ " WHERE LastModDate >= ? AND ProviderServiceMapID = ? ";
-					resultSetList = jdbcTemplate.queryForList(baseQuery,lastDownloadDate,psmID);
-				}
-			} else {
-				if (masterType.equalsIgnoreCase("A")) {
-					baseQuery += " SELECT " + columnNames + " FROM " + schema + "." + table;
-					resultSetList = jdbcTemplate.queryForList(baseQuery);
-				}
-				else if (masterType.equalsIgnoreCase("V")) {
-					baseQuery += " SELECT " + columnNames + " FROM " + schema + "." + table + " WHERE VanID = ? ";
-					resultSetList = jdbcTemplate.queryForList(baseQuery,vanID);
-				}
-				else if (masterType.equalsIgnoreCase("P")) {
-					baseQuery += " SELECT " + columnNames + " FROM " + schema + "." + table
-							+ " WHERE ProviderServiceMapID = ? ";
-					resultSetList = jdbcTemplate.queryForList(baseQuery,psmID);
-				}
-			}
-		}
-		logger.info("Select query central: " + baseQuery);
-		logger.info("Last Downloaded Date " + lastDownloadDate);
-		logger.info("Result set Details: " + resultSetList);
-		return resultSetList;
-	}
+    public List<Map<String, Object>> getBatchForBenDetails(SyncUploadDataDigester digester,
+            String whereClause, int limit, int offset) {
+        jdbcTemplate = getJdbcTemplate();
 
-	// End of Data Download Repository
+        String schema = digester.getSchemaName();
+        String table = digester.getTableName();
+        String columnNames = digester.getServerColumns();
+
+        if (!isValidSchemaName(schema) || !isValidTableName(table) || !isValidColumnNamesList(columnNames)) {
+            throw new IllegalArgumentException("Invalid schema, table, or column names.");
+        }
+        // Safe dynamic SQL: Schema, table, and column names are validated against
+        // predefined whitelists.
+        // Only trusted values are used in the query string.
+        // limit and offset are passed as parameters to prevent SQL injection.
+        String query = String.format("SELECT %s FROM %s.%s %s LIMIT ? OFFSET ?", columnNames, schema, table,
+                whereClause); // NOSONAR
+
+            try {
+                
+                return jdbcTemplate.queryForList(query, limit, offset);
+            } catch (Exception e) {
+                logger.error("Error fetching batch details: {}", e.getMessage(), e);
+                throw new RuntimeException("Failed to fetch batch data: " + e.getMessage(), e);
+            }
+        }
 }
