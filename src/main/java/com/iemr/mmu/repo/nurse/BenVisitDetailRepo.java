@@ -68,7 +68,7 @@ public interface BenVisitDetailRepo extends CrudRepository<BeneficiaryVisitDetai
 			+ "bvd.reportFilePath,sp.serviceProviderName from BeneficiaryVisitDetail bvd "
 			+ "INNER JOIN bvd.providerServiceMapping p " + "INNER JOIN p.serviceProvider sp "
 			+ "WHERE bvd.beneficiaryRegID = :benRegID AND bvd.visitCode = :visitCode ")
-	public List<Objects[]> getBeneficiaryVisitDetails(@Param("benRegID") Long benRegID,
+	public List<Object[]> getBeneficiaryVisitDetails(@Param("benRegID") Long benRegID,
 			@Param("visitCode") Long visitCode);
 
 	@Query(" SELECT COUNT(benVisitID) FROM BeneficiaryVisitDetail WHERE beneficiaryRegID = :benRegID GROUP BY beneficiaryRegID ")

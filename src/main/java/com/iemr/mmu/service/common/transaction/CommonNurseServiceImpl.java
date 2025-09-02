@@ -1086,6 +1086,11 @@ public class CommonNurseServiceImpl implements CommonNurseService {
 		columns.add(column);
 
 		column = new HashMap<String, Object>();
+		column.put("columnName", "Number Per Week");
+		column.put("keyName", "numberperWeek");
+    	columns.add(column);
+
+		column = new HashMap<String, Object>();
 		column.put("columnName", "Tobacco Use Start Date");
 		column.put("keyName", "tobacco_use_duration");
 		columns.add(column);
@@ -1100,8 +1105,8 @@ public class CommonNurseServiceImpl implements CommonNurseService {
 			for (Object[] obj : benPersonalHabits) {
 
 				BenPersonalHabit benPersonalHabit = new BenPersonalHabit((Date) obj[0], (String) obj[1],
-						(String) obj[2], (String) obj[3], (String) obj[4], (String) obj[5], (Short) obj[6],
-						(Date) obj[7], (Character) obj[8]);
+						(String) obj[2], (String) obj[3], (String) obj[4], (String) obj[5], (Short) obj[6], (Short) obj[7],
+						 (Date) obj[8], (Character) obj[9]);
 
 				personalHabits.add(benPersonalHabit);
 			}

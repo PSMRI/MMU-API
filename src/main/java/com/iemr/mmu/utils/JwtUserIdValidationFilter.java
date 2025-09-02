@@ -38,13 +38,10 @@ public class JwtUserIdValidationFilter implements Filter {
 
 		String origin = request.getHeader("Origin");
 
-		logger.debug("Incoming Origin: {}", origin);
-		logger.debug("Allowed Origins Configured: {}", allowedOrigins);
-
 		if (origin != null && isOriginAllowed(origin)) {
 			response.setHeader("Access-Control-Allow-Origin", origin);
 			response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-			response.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept, Jwttoken");
+			response.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept, Jwttoken,serverAuthorization, ServerAuthorization, serverauthorization, Serverauthorization");
 			response.setHeader("Vary", "Origin");
 			response.setHeader("Access-Control-Allow-Credentials", "true");
 		} else {
@@ -59,7 +56,6 @@ public class JwtUserIdValidationFilter implements Filter {
 
 		String path = request.getRequestURI();
 		String contextPath = request.getContextPath();
-		logger.info("JwtUserIdValidationFilter invoked for path: " + path);
 
 		// Log cookies for debugging
 		Cookie[] cookies = request.getCookies();
@@ -76,7 +72,6 @@ public class JwtUserIdValidationFilter implements Filter {
 
 		// Log headers for debugging
 		String jwtTokenFromHeader = request.getHeader("Jwttoken");
-		logger.info("JWT token from header: ");
 
 		// Skip login and public endpoints
 		if (path.equals(contextPath + "/user/userAuthenticate")
@@ -104,7 +99,6 @@ public class JwtUserIdValidationFilter implements Filter {
 					return;
 				}
 			} else if (jwtFromHeader != null) {
-				logger.info("Validating JWT token from header");
 				if (jwtAuthenticationUtil.validateUserIdAndJwtToken(jwtFromHeader)) {
 					AuthorizationHeaderRequestWrapper authorizationHeaderRequestWrapper = new AuthorizationHeaderRequestWrapper(
 							request, "");
@@ -113,7 +107,6 @@ public class JwtUserIdValidationFilter implements Filter {
 				}
 			} else {
 				String userAgent = request.getHeader("User-Agent");
-				logger.info("User-Agent: " + userAgent);
 				if (userAgent != null && isMobileClient(userAgent) && authHeader != null) {
 					try {
 						UserAgentContext.setUserAgent(userAgent);
@@ -123,6 +116,7 @@ public class JwtUserIdValidationFilter implements Filter {
 					}
 					return;
 				}
+
 			}
 
 			logger.warn("No valid authentication token found");
@@ -156,7 +150,8 @@ public class JwtUserIdValidationFilter implements Filter {
 		if (userAgent == null)
 			return false;
 		userAgent = userAgent.toLowerCase();
-		return userAgent.contains("okhttp"); // iOS (custom clients)
+		logger.info("User-Agent: " + userAgent);
+		return userAgent.contains("okhttp") || userAgent.contains("java/"); // iOS (custom clients)
 	}
 
 	private String getJwtTokenFromCookies(HttpServletRequest request) {

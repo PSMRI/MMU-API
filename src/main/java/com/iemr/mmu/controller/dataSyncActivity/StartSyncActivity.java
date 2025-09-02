@@ -25,7 +25,6 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -37,8 +36,8 @@ import com.google.gson.Gson;
 import com.iemr.mmu.service.dataSyncActivity.DownloadDataFromServerImpl;
 import com.iemr.mmu.service.dataSyncActivity.DownloadDataFromServerTransactionalImpl;
 import com.iemr.mmu.service.dataSyncActivity.UploadDataToServerImpl;
-import com.iemr.mmu.utils.response.OutputResponse;
 import com.iemr.mmu.utils.CookieUtil;
+import com.iemr.mmu.utils.response.OutputResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
@@ -181,6 +180,8 @@ public class StartSyncActivity {
 		OutputResponse response = new OutputResponse();
 		try {
 			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+			logger.info("Authorization from controller="+ authorization);
+
 			int i = downloadDataFromServerImpl.callCentralAPIToGenerateBenIDAndimportToLocal(requestOBJ, authorization,
 					serverAuthorization, jwtToken);
 			if (i == 0) {

@@ -324,7 +324,7 @@ public class BeneficiaryFlowStatus {
 	public BeneficiaryFlowStatus(Long benFlowID, Long benRegID, Timestamp visitDate, String benName, String age,
 			Integer ageVal, Short genderID, String genderName, String villageName, String districtName,
 			Long beneficiaryID, String servicePoint, String VisitReason, String VisitCategory, Long benVisitID,
-			Timestamp regDate, Timestamp benVisitDate, Long visitCode, Timestamp consultationDate) {
+			Timestamp regDate, Timestamp benVisitDate, Long visitCode, Timestamp consultationDate, String fatherName, String preferredPhoneNum) {
 		this.benFlowID = benFlowID;
 		this.beneficiaryRegID = benRegID;
 		this.serviceDate = benVisitDate;
@@ -344,6 +344,8 @@ public class BeneficiaryFlowStatus {
 		this.visitCode = visitCode;
 		this.consultationDate = consultationDate;
 		this.bloodGroup = null;
+		this.fatherName = fatherName;
+		this.preferredPhoneNum = preferredPhoneNum;
 
 	}
 
@@ -366,7 +368,8 @@ public class BeneficiaryFlowStatus {
 						(String) objArr[3], (String) objArr[4], (Integer) objArr[5], (Short) objArr[6],
 						(String) objArr[7], (String) objArr[8], (String) objArr[9], (Long) objArr[10],
 						(String) objArr[11], (String) objArr[12], (String) objArr[13], (Long) objArr[14],
-						(Timestamp) objArr[15], (Timestamp) objArr[16], (Long) objArr[17], (Timestamp) objArr[18]);
+						(Timestamp) objArr[15], (Timestamp) objArr[16], (Long) objArr[17], (Timestamp) objArr[18], 
+						(String) objArr[19], (String) objArr[20]);
 			}
 		}
 		return obj;
