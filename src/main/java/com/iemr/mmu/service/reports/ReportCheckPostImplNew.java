@@ -344,74 +344,61 @@ public class ReportCheckPostImplNew implements ReportCheckPost {
 			ArrayList<Object[]> RS3 = reportMasterRepo.get_report_SP_PrescribedDrug(fromDate, toDate, psmID, vanID);
 
 			if (RS3 != null && RS3.size() > 0) {
-				for (Report_ModifiedAnc rmANC : report_PatientVisitInfo) {
-					for (Object[] rs3 : RS3) {
-						int count = 1;
-						if (rs3[3].equals(rmANC.getVisitCode()) && rs3[0].equals(rmANC.getBeneficiaryRegId())
-								&& count < 11) {
-							rmANC.setReferredToInstituteID((Integer) rs3[10]);
-							rmANC.setReferredToInstitute((String) rs3[11]);
-							rmANC.setDiagnosisProvided((String) rs3[9]);
-							switch (count) {
-							case 1:
-								rmANC.setDrug_1((String) rs3[4]);
-								rmANC.setDrug_prescribed1((Integer) rs3[6]);
-								break;
-
-							case 2:
-								rmANC.setDrug_2((String) rs3[4]);
-								rmANC.setDrug_prescribed2((Integer) rs3[6]);
-								break;
-
-							case 3:
-								rmANC.setDrug_3((String) rs3[4]);
-								rmANC.setDrug_prescribed3((Integer) rs3[6]);
-								break;
-
-							case 4:
-								rmANC.setDrug_4((String) rs3[4]);
-								rmANC.setDrug_prescribed4((Integer) rs3[6]);
-								break;
-
-							case 5:
-								rmANC.setDrug_5((String) rs3[4]);
-								rmANC.setDrug_prescribed5((Integer) rs3[6]);
-								break;
-
-							case 6:
-								rmANC.setDrug_6((String) rs3[4]);
-								rmANC.setDrug_prescribed6((Integer) rs3[6]);
-								break;
-
-							case 7:
-								rmANC.setDrug_7((String) rs3[4]);
-								rmANC.setDrug_prescribed7((Integer) rs3[6]);
-								break;
-
-							case 8:
-								rmANC.setDrug_8((String) rs3[4]);
-								rmANC.setDrug_prescribed8((Integer) rs3[6]);
-								break;
-
-							case 9:
-								rmANC.setDrug_9((String) rs3[4]);
-								rmANC.setDrug_prescribed9((Integer) rs3[6]);
-								break;
-
-							case 10:
-								rmANC.setDrug_10((String) rs3[4]);
-								rmANC.setDrug_prescribed10((Integer) rs3[6]);
-								break;
-
-							default:
-
-							}
-							count++;
-
-							break;
-						}
-					}
-				}
+				   for (Report_ModifiedAnc rmANC : report_PatientVisitInfo) {
+					   int count = 1;
+					   for (Object[] rs3 : RS3) {
+						   if (rs3[3].equals(rmANC.getVisitCode()) && rs3[0].equals(rmANC.getBeneficiaryRegId()) && count < 11) {
+							   rmANC.setReferredToInstituteID((Integer) rs3[10]);
+							   rmANC.setReferredToInstitute((String) rs3[11]);
+							   rmANC.setDiagnosisProvided((String) rs3[9]);
+							   switch (count) {
+								   case 1:
+									   rmANC.setDrug_1((String) rs3[4]);
+									   rmANC.setDrug_prescribed1((Integer) rs3[6]);
+									   break;
+								   case 2:
+									   rmANC.setDrug_2((String) rs3[4]);
+									   rmANC.setDrug_prescribed2((Integer) rs3[6]);
+									   break;
+								   case 3:
+									   rmANC.setDrug_3((String) rs3[4]);
+									   rmANC.setDrug_prescribed3((Integer) rs3[6]);
+									   break;
+								   case 4:
+									   rmANC.setDrug_4((String) rs3[4]);
+									   rmANC.setDrug_prescribed4((Integer) rs3[6]);
+									   break;
+								   case 5:
+									   rmANC.setDrug_5((String) rs3[4]);
+									   rmANC.setDrug_prescribed5((Integer) rs3[6]);
+									   break;
+								   case 6:
+									   rmANC.setDrug_6((String) rs3[4]);
+									   rmANC.setDrug_prescribed6((Integer) rs3[6]);
+									   break;
+								   case 7:
+									   rmANC.setDrug_7((String) rs3[4]);
+									   rmANC.setDrug_prescribed7((Integer) rs3[6]);
+									   break;
+								   case 8:
+									   rmANC.setDrug_8((String) rs3[4]);
+									   rmANC.setDrug_prescribed8((Integer) rs3[6]);
+									   break;
+								   case 9:
+									   rmANC.setDrug_9((String) rs3[4]);
+									   rmANC.setDrug_prescribed9((Integer) rs3[6]);
+									   break;
+								   case 10:
+									   rmANC.setDrug_10((String) rs3[4]);
+									   rmANC.setDrug_prescribed10((Integer) rs3[6]);
+									   break;
+								   default:
+									   // default case intentionally left blank
+							   }
+							   count++;
+						   }
+					   }
+				   }
 			}
 
 			return OutputMapper.gson().toJson(report_PatientVisitInfo);

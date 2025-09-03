@@ -49,7 +49,7 @@ public class ReportGateway {
 
 	@Operation(summary = "Get report")
 	@PostMapping(value = { "/getReport" }, consumes = "application/json", produces = "application/json")
-	public String getReportByReportID(@RequestBody String requestOBJ) {
+	public String getReportByReportID(@RequestBody(required = false) String requestOBJ) {
 		OutputResponse response = new OutputResponse();
 
 		try {
@@ -70,7 +70,7 @@ public class ReportGateway {
 
 	@Operation(summary = "Get report by report id")
 	@PostMapping(value = { "/getReportNew" }, consumes = "application/json", produces = "application/json")
-	public String getReportByReportID1(@RequestBody String requestOBJ) {
+	public String getReportByReportID1(@RequestBody(required = false) String requestOBJ) {
 		OutputResponse response = new OutputResponse();
 
 		try {
