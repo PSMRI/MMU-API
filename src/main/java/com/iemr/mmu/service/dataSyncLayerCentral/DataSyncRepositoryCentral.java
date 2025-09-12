@@ -117,7 +117,9 @@ public class DataSyncRepositoryCentral {
               
         jdbcTemplate = getJdbcTemplate();
         List<Object> params = new ArrayList<>();
-
+logger.info("Schema Name Test="+schemaName);
+logger.info("Table Name Test="+tableName);
+logger.info("vanAutoIncColumnName Test="+vanAutoIncColumnName);
         if (!isValidSchemaName(schemaName) || !isValidTableName(tableName) ||
                 !isValidDatabaseIdentifierCharacter(vanAutoIncColumnName)) {
             logger.error("Invalid identifiers: schema={}, table={}, column={}", schemaName, tableName,

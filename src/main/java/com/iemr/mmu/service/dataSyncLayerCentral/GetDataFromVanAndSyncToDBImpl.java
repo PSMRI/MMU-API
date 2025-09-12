@@ -96,6 +96,9 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         SyncUploadDataDigester syncUploadDataDigester = mapper.readValue(requestOBJ, SyncUploadDataDigester.class);
         List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
         logger.info("Data to be synced: {}", dataToBesync);
+        logger.info("Test: Sync Upload Data digester="+syncUploadDataDigester.getTableName());
+        logger.info("Test: Sync Upload Data digester="+syncUploadDataDigester.getSchemaName());
+
         if (syncUploadDataDigester == null || syncUploadDataDigester.getTableName() == null) {
             logger.error("Invalid SyncUploadDataDigester object or tableName is null.");
             return "Error: Invalid sync request.";
@@ -120,6 +123,8 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                 boolean foundInGroup = false;
 
                 for (Map<String, Object> map : dataToBesync) {
+                    logger.info("Test: Table="+map.get("tableName"));
+                    logger.info("Test: Schema="+map.get("schemaName"));
                     if (map.get("tableName") != null
                             && map.get("tableName").toString().equalsIgnoreCase(syncTableName)) {
                         syncSuccess = syncTablesInGroup(syncUploadDataDigester.getSchemaName(), syncTableName,
