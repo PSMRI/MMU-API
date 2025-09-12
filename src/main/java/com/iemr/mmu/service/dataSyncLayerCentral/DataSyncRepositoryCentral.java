@@ -120,7 +120,7 @@ public class DataSyncRepositoryCentral {
 logger.info("Schema Name Test="+schemaName);
 logger.info("Table Name Test="+tableName);
 logger.info("vanAutoIncColumnName Test="+vanAutoIncColumnName);
-        if (!isValidSchemaName(schemaName) || !isValidTableName(tableName) ||
+        if (!isValidSchemaName(schemaName.trim()) || !isValidTableName(tableName) ||
                 !isValidDatabaseIdentifierCharacter(vanAutoIncColumnName)) {
             logger.error("Invalid identifiers: schema={}, table={}, column={}", schemaName, tableName,
                     vanAutoIncColumnName);
