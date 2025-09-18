@@ -21,6 +21,11 @@
 */
 package com.iemr.mmu.controller.quickconsult;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +38,8 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -124,7 +131,25 @@ public class QuickConsultController {
 			Integer i = quickConsultationServiceImpl.quickConsultDoctorDataInsert(quickConsultDoctorOBJ, authorization);
 
 			if (i != null && i > 0) {
-				response.setResponse("Data saved successfully");
+				// Check if drug IDs were saved and added to the JsonObject
+				List<Long> prescribedDrugIDs = new ArrayList<>();
+				if (quickConsultDoctorOBJ.has("savedDrugIDs")
+						&& !quickConsultDoctorOBJ.get("savedDrugIDs").isJsonNull()) {
+					JsonArray drugIDsArray = quickConsultDoctorOBJ.getAsJsonArray("savedDrugIDs");
+					for (int j = 0; j < drugIDsArray.size(); j++) {
+						prescribedDrugIDs.add(drugIDsArray.get(j).getAsLong());
+					}
+				}
+
+				// Create response data with message and drug IDs
+				Map<String, Object> responseData = new HashMap<>();
+				responseData.put("message", "Data saved successfully");
+				responseData.put("prescribedDrugIDs", prescribedDrugIDs);
+
+				// Convert to JSON string and set response
+				Gson gson = new Gson();
+				String responseJson = gson.toJson(responseData);
+				response.setResponse(responseJson);
 			} else {
 				response.setError(5000, "Unable to save data");
 			}
