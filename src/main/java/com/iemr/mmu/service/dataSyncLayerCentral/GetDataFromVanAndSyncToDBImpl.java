@@ -527,7 +527,17 @@ logger.info("Query Insert="+queryInsert);
 
         StringBuilder preparedStatementSetter = new StringBuilder();
 
-        StringBuilder queryBuilder = new StringBuilder(" UPDATE ");
+        if (columnsArr != null && columnsArr.length > 0) {
+            for (int i = 0; i < columnsArr.length; i++) {
+                String column = columnsArr[i].trim();
+                preparedStatementSetter.append(column).append(" = ?");
+                if (i < columnsArr.length - 1) {
+                    preparedStatementSetter.append(", ");
+                }
+            }
+        }
+
+        StringBuilder queryBuilder = new StringBuilder("UPDATE ");
         queryBuilder.append(schemaName).append(".").append(tableName);
         queryBuilder.append(" SET ");
         queryBuilder.append(preparedStatementSetter);
