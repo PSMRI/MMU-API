@@ -592,6 +592,7 @@ private Map<String, List<String>> getRecordStatus(int[] results, List<Object[]> 
             columnsArr = serverColumns.split(",");
 
         StringBuilder preparedStatementSetter = new StringBuilder();
+logger.info("Prepared Statement Setter="+preparedStatementSetter);
 
         StringBuilder queryBuilder = new StringBuilder(" UPDATE ");
         queryBuilder.append(schemaName).append(".").append(tableName);
@@ -607,6 +608,7 @@ private Map<String, List<String>> getRecordStatus(int[] results, List<Object[]> 
         } else {
             queryBuilder.append(" AND VanID = ? ");
         }
+        logger.info("Update Query="+queryBuilder.toString());
         return queryBuilder.toString();
     }
 
