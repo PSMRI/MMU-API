@@ -176,6 +176,7 @@
     responseMap.put("message", "Data sync completed");
     responseMap.put("records", syncResults);
     logger.info("Response = "+responseMap);
+    logger.info("Sync Results = "+syncResults);
     return new ObjectMapper().writeValueAsString(responseMap);
 
             }
