@@ -404,7 +404,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
             recordCheck = dataSyncRepositoryCentral.checkRecordIsAlreadyPresentOrNot(
                     schemaName, syncTableName, vanSerialNo, vanID, vanAutoIncColumnName, syncFacilityID);
                     logger.info("Test Record check="+recordCheck);
-                    logger.info("Test all the data="+ schemaName ":: Tble="+ syncTableName+":: vanSerialNo="+vanSerialNo+":: vanID="+vanID+":: vanAutoIncColumnName="+vanAutoIncColumnName+":: syncFacilityID="+syncFacilityID);
+                    logger.info("Test all the data="+ schemaName +":: Tble="+ syncTableName+":: vanSerialNo="+vanSerialNo+":: vanID="+vanID+":: vanAutoIncColumnName="+vanAutoIncColumnName+":: syncFacilityID="+syncFacilityID);
         } catch (Exception e) {
             logger.error("Error checking record existence for table {}: VanSerialNo={}, VanID={}. Error: {}",
                     syncTableName, vanSerialNo, vanID, e.getMessage(), e);
@@ -425,7 +425,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         }
 
         Object[] objArr = currentRecordValues.toArray();
-        logger.info("Test Obj Arr-",objArr);
+        logger.info("Test Obj Arr {}",objArr);
         if (recordCheck == 0) {
             syncDataListInsert.add(objArr);
         } else {
