@@ -403,6 +403,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         try {
             recordCheck = dataSyncRepositoryCentral.checkRecordIsAlreadyPresentOrNot(
                     schemaName, syncTableName, vanSerialNo, vanID, vanAutoIncColumnName, syncFacilityID);
+                    logger.info("Test Record check="+recordCheck);
         } catch (Exception e) {
             logger.error("Error checking record existence for table {}: VanSerialNo={}, VanID={}. Error: {}",
                     syncTableName, vanSerialNo, vanID, e.getMessage(), e);
@@ -423,6 +424,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         }
 
         Object[] objArr = currentRecordValues.toArray();
+        logger.info("Test Obj Arr-",objArr);
         if (recordCheck == 0) {
             syncDataListInsert.add(objArr);
         } else {
