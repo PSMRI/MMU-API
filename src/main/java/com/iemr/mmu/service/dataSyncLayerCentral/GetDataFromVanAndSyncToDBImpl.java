@@ -533,6 +533,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         } else {
             queryBuilder.append(" AND VanID = ? ");
         }
+        logger.info("Test Query Builder: {}", queryBuilder.toString());
         return queryBuilder.toString();
     }
 
