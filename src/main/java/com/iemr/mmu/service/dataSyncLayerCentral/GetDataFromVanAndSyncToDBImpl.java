@@ -35,6 +35,7 @@ import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iemr.mmu.data.syncActivity_syncLayer.SyncUploadDataDigester;
+import com.iemr.mmu.service.dataSyncActivity.SyncResult;
 
 @Service
 public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB {
@@ -168,6 +169,13 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
             } else {
                 return "Overall data sync failed. Details: " + errorMessage;
             }
+//             Map<String, Object> responseMap = new HashMap<>();
+// responseMap.put("statusCode", 200);
+// responseMap.put("message", "Data sync completed");
+// responseMap.put("records", syncResults);
+// logger.info("Response = "+responseMap);
+// return new ObjectMapper().writeValueAsString(responseMap);
+
         }
     }
 
@@ -306,6 +314,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
     List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
     List<Object[]> syncDataListInsert = new ArrayList<>();
     List<Object[]> syncDataListUpdate = new ArrayList<>();
+    List<SyncResult> syncResults = new ArrayList<>();
 
     if (dataToBesync == null || dataToBesync.isEmpty()) {
         logger.info("No data to sync for table: {}", syncUploadDataDigester.getTableName());
@@ -317,6 +326,8 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
     String schemaName = syncUploadDataDigester.getSchemaName();
     Integer facilityIDFromDigester = syncUploadDataDigester.getFacilityID();
     String serverColumns = syncUploadDataDigester.getServerColumns();
+
+ int vanSerialIndex = Arrays.asList(serverColumns.split(",")).indexOf(vanAutoIncColumnName);
 
     List<String> serverColumnsList = Arrays.asList(serverColumns.split(","));
 
@@ -428,6 +439,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         logger.info("Test Obj Arr {}",objArr);
         if (recordCheck == 0) {
             syncDataListInsert.add(objArr);
+              syncResults.add(new SyncResult(schemaName, syncTableName, vanSerialNo, syncUploadDataDigester.getSyncedBy(), true, null));
         } else {
             // For update, append the WHERE clause parameters at the end of the array
             List<Object> updateParams = new ArrayList<>(Arrays.asList(objArr));
@@ -442,6 +454,8 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                 updateParams.add(String.valueOf(vanID));
             }
             syncDataListUpdate.add(updateParams.toArray());
+            syncResults.add(new SyncResult(schemaName, syncTableName, vanSerialNo, syncUploadDataDigester.getSyncedBy(), true, null));
+
         }
     }
 
@@ -451,47 +465,81 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
     if (!syncDataListInsert.isEmpty()) {
         String queryInsert = getQueryToInsertDataToServerDB(schemaName, syncTableName, serverColumns);
 logger.info("Query Insert="+queryInsert);
-        try {
-            int[] i = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
-                    serverColumns, queryInsert, syncDataListInsert);
-                    logger.info("Insert result array length: {}", i.length);
-                    logger.info("Expected insert size: {}", syncDataListInsert.size());
-            if (i.length != syncDataListInsert.size()) {
-                insertSuccess = false;
-                logger.error("Partial insert for table {}. Expected {} inserts, got {}. Failed records: {}",
-                        syncTableName, syncDataListInsert.size(), i.length,
-                        getFailedRecords(i, syncDataListInsert));
-            } else {
-                logger.info("Successfully inserted {} records into table {}.", i.length, syncTableName);
-            }
-        } catch (Exception e) {
-            insertSuccess = false;
-            logger.error("Get failed records="+getFailedRecords(new int[] {}, syncDataListInsert));
-            logger.error("Exception during insert for table {}: {}", syncTableName, e.getMessage(), e);
+try {
+    int[] i = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName, serverColumns, queryInsert, syncDataListInsert);
+    for (int k = 0; k < i.length; k++) {
+        if (i[k] < 1) {
+            syncResults.set(k, new SyncResult(schemaName, syncTableName,
+                String.valueOf(syncDataListInsert.get(k)[vanSerialIndex]), // VanSerialNo position
+                syncUploadDataDigester.getSyncedBy(), false, "Insert failed"));
         }
+    }
+} catch (Exception e) {
+    for (int k = 0; k < syncDataListInsert.size(); k++) {
+        syncResults.add(new SyncResult(schemaName, syncTableName,
+            String.valueOf(syncDataListInsert.get(k)[vanSerialIndex]),
+            syncUploadDataDigester.getSyncedBy(), false, e.getMessage()));
+    }
+}
+
+        // try {
+        //     int[] i = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
+        //             serverColumns, queryInsert, syncDataListInsert);
+        //             logger.info("Insert result array length: {}", i.length);
+        //             logger.info("Expected insert size: {}", syncDataListInsert.size());
+        //     if (i.length != syncDataListInsert.size()) {
+        //         insertSuccess = false;
+        //         logger.error("Partial insert for table {}. Expected {} inserts, got {}. Failed records: {}",
+        //                 syncTableName, syncDataListInsert.size(), i.length,
+        //                 getFailedRecords(i, syncDataListInsert));
+        //     } else {
+        //         logger.info("Successfully inserted {} records into table {}.", i.length, syncTableName);
+        //     }
+        // } catch (Exception e) {
+        //     insertSuccess = false;
+        //     logger.error("Get failed records="+getFailedRecords(new int[] {}, syncDataListInsert));
+        //     logger.error("Exception during insert for table {}: {}", syncTableName, e.getMessage(), e);
+        // }
     }
 
     if (!syncDataListUpdate.isEmpty()) {
         String queryUpdate = getQueryToUpdateDataToServerDB(schemaName, serverColumns, syncTableName);
         logger.info("Query Update="+queryUpdate);
         try {
-            int[] j = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
-                    SERVER_COLUMNS_NOT_REQUIRED, queryUpdate, syncDataListUpdate);
-                    logger.info("Update result array length: {}", j.length);
-                    logger.info("Expected update size: {}", syncDataListUpdate.size());
-            if (j.length != syncDataListUpdate.size()) {
-                updateSuccess = false;
-                logger.error("Partial update for table {}. Expected {} updates, got {}. Failed records: {}",
-                        syncTableName, syncDataListUpdate.size(), j.length,
-                        getFailedRecords(j, syncDataListUpdate));
-            } else {
-                logger.info("Successfully updated {} records in table {}.", j.length, syncTableName);
-            }
-        } catch (Exception e) {
-            updateSuccess = false;
-            logger.error("Get failed records="+getFailedRecords(new int[] {}, syncDataListUpdate));
-            logger.error("Exception during update for table {}: {}", syncTableName, e.getMessage(), e);
+    int[] i = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName, serverColumns, queryUpdate, syncDataListUpdate);
+    for (int k = 0; k < i.length; k++) {
+        if (i[k] < 1) {
+            syncResults.set(k, new SyncResult(schemaName, syncTableName,
+                String.valueOf(syncDataListUpdate.get(k)[vanSerialIndex]), // VanSerialNo position
+                syncUploadDataDigester.getSyncedBy(), false, "Update failed"));
         }
+    }
+} catch (Exception e) {
+    for (int k = 0; k < syncDataListUpdate.size(); k++) {
+        syncResults.add(new SyncResult(schemaName, syncTableName,
+            String.valueOf(syncDataListUpdate.get(k)[vanSerialIndex]),
+            syncUploadDataDigester.getSyncedBy(), false, e.getMessage()));
+    }
+}
+
+        // try {
+        //     int[] j = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
+        //             SERVER_COLUMNS_NOT_REQUIRED, queryUpdate, syncDataListUpdate);
+        //             logger.info("Update result array length: {}", j.length);
+        //             logger.info("Expected update size: {}", syncDataListUpdate.size());
+        //     if (j.length != syncDataListUpdate.size()) {
+        //         updateSuccess = false;
+        //         logger.error("Partial update for table {}. Expected {} updates, got {}. Failed records: {}",
+        //                 syncTableName, syncDataListUpdate.size(), j.length,
+        //                 getFailedRecords(j, syncDataListUpdate));
+        //     } else {
+        //         logger.info("Successfully updated {} records in table {}.", j.length, syncTableName);
+        //     }
+        // } catch (Exception e) {
+        //     updateSuccess = false;
+        //     logger.error("Get failed records="+getFailedRecords(new int[] {}, syncDataListUpdate));
+        //     logger.error("Exception during update for table {}: {}", syncTableName, e.getMessage(), e);
+        // }
     }
     return insertSuccess && updateSuccess;
 }
