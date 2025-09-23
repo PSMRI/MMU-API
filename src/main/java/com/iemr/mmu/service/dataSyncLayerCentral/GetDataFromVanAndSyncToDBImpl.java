@@ -612,6 +612,7 @@ return mapper.writeValueAsString(response);
  if (!syncDataListUpdate.isEmpty()) {
         String queryUpdate = getQueryToUpdateDataToServerDB(schemaName, serverColumns, syncTableName);
         logger.info("Query Update="+queryUpdate);
+        logger.info("Check the update sync");
         try {
             int[] updateResults = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
                     SERVER_COLUMNS_NOT_REQUIRED, queryUpdate, syncDataListUpdate);
