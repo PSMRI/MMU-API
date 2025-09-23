@@ -322,10 +322,12 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
     List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
     List<Object[]> syncDataListInsert = new ArrayList<>();
     List<Object[]> syncDataListUpdate = new ArrayList<>();
+    List<String> vanSerialNosInsert = new ArrayList<>();
+    List<String> vanSerialNosUpdate = new ArrayList<>();
 
     if (dataToBesync == null || dataToBesync.isEmpty()) {
         logger.info("No data to sync for table: {}", syncUploadDataDigester.getTableName());
-        return true; // Nothing to sync, consider it a success
+        return true;
     }
 
     String syncTableName = syncUploadDataDigester.getTableName();
@@ -337,18 +339,15 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
     List<String> serverColumnsList = Arrays.asList(serverColumns.split(","));
 
     for (Map<String, Object> map : dataToBesync) {
-        // Create a new map with clean column names as keys
         Map<String, Object> cleanRecord = new HashMap<>();
         for (String key : map.keySet()) {
             String cleanKey = key;
-            // Handle keys with SQL functions like date_format
             if (key.startsWith("date_format(") && key.endsWith(")")) {
                 int start = key.indexOf("(") + 1;
                 int end = key.indexOf(",");
                 if (end > start) {
                     cleanKey = key.substring(start, end).trim();
                 } else {
-                    // Fallback if format is unexpected
                     cleanKey = key.substring(start, key.indexOf(")")).trim();
                 }
             }
@@ -359,15 +358,13 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         String vanID = String.valueOf(cleanRecord.get("VanID"));
         int syncFacilityID = 0;
 
-        // Update SyncedBy and SyncedDate in the xmap itself before processing
         cleanRecord.put("SyncedBy", syncUploadDataDigester.getSyncedBy());
         cleanRecord.put("SyncedDate", String.valueOf(LocalDateTime.now()));
 
         if (facilityIDFromDigester != null) {
-            // Determine the 'Processed' status based on facility ID for specific tables
             switch (syncTableName.toLowerCase()) {
                 case "t_indent":
-                case "t_indentorder": {
+                case "t_indentorder":
                     if (cleanRecord.containsKey("FromFacilityID") && cleanRecord.get("FromFacilityID") instanceof Number) {
                         Number fromFacilityID = (Number) cleanRecord.get("FromFacilityID");
                         if (fromFacilityID.intValue() == facilityIDFromDigester) {
@@ -375,8 +372,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                         }
                     }
                     break;
-                }
-                case "t_indentissue": {
+                case "t_indentissue":
                     if (cleanRecord.containsKey("ToFacilityID") && cleanRecord.get("ToFacilityID") instanceof Number) {
                         Number toFacilityID = (Number) cleanRecord.get("ToFacilityID");
                         if (toFacilityID.intValue() == facilityIDFromDigester) {
@@ -384,8 +380,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                         }
                     }
                     break;
-                }
-                case "t_stocktransfer": {
+                case "t_stocktransfer":
                     if (cleanRecord.containsKey("TransferToFacilityID")
                             && cleanRecord.get("TransferToFacilityID") instanceof Number) {
                         Number transferToFacilityID = (Number) cleanRecord.get("TransferToFacilityID");
@@ -394,8 +389,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                         }
                     }
                     break;
-                }
-                case "t_itemstockentry": {
+                case "t_itemstockentry":
                     if (cleanRecord.containsKey("FacilityID") && cleanRecord.get("FacilityID") instanceof Number) {
                         Number mapFacilityID = (Number) cleanRecord.get("FacilityID");
                         if (mapFacilityID.intValue() == facilityIDFromDigester) {
@@ -403,14 +397,11 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                         }
                     }
                     break;
-                }
                 default:
-                    // No specific facility ID logic for other tables
                     break;
             }
         }
 
-        // Extract SyncFacilityID for checkRecordIsAlreadyPresentOrNot
         if (cleanRecord.containsKey("SyncFacilityID") && cleanRecord.get("SyncFacilityID") instanceof Number) {
             syncFacilityID = ((Number) cleanRecord.get("SyncFacilityID")).intValue();
         }
@@ -422,10 +413,9 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         } catch (Exception e) {
             logger.error("Error checking record existence for table {}: VanSerialNo={}, VanID={}. Error: {}",
                     syncTableName, vanSerialNo, vanID, e.getMessage(), e);
-            return false; // Critical error, stop sync for this table
+            return false;
         }
 
-        // Prepare Object array for insert/update
         List<Object> currentRecordValues = new ArrayList<>();
         for (String column : serverColumnsList) {
             Object value = cleanRecord.get(column.trim());
@@ -441,11 +431,10 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         Object[] objArr = currentRecordValues.toArray();
         if (recordCheck == 0) {
             syncDataListInsert.add(objArr);
+            vanSerialNosInsert.add(vanSerialNo);
         } else {
-            // For update, append the WHERE clause parameters at the end of the array
             List<Object> updateParams = new ArrayList<>(Arrays.asList(objArr));
             updateParams.add(String.valueOf(vanSerialNo));
-
             if (Arrays.asList("t_patientissue", "t_physicalstockentry", "t_stockadjustment", "t_saitemmapping",
                     "t_stocktransfer", "t_patientreturn", "t_facilityconsumption", "t_indent",
                     "t_indentorder", "t_indentissue", "t_itemstockentry", "t_itemstockexit")
@@ -455,23 +444,29 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                 updateParams.add(String.valueOf(vanID));
             }
             syncDataListUpdate.add(updateParams.toArray());
+            vanSerialNosUpdate.add(vanSerialNo);
         }
     }
 
     boolean insertSuccess = true;
     boolean updateSuccess = true;
 
+    // Helper to get success/failure vanSerialNos
+    Map<String, List<String>> insertStatusMap = new HashMap<>();
+    Map<String, List<String>> updateStatusMap = new HashMap<>();
+
     if (!syncDataListInsert.isEmpty()) {
         String queryInsert = getQueryToInsertDataToServerDB(schemaName, syncTableName, serverColumns);
-
         try {
             int[] i = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
                     serverColumns, queryInsert, syncDataListInsert);
+
+            insertStatusMap = getRecordStatus(i, syncDataListInsert, vanSerialNosInsert);
+
             if (i.length != syncDataListInsert.size()) {
                 insertSuccess = false;
                 logger.error("Partial insert for table {}. Expected {} inserts, got {}. Failed records: {}",
-                        syncTableName, syncDataListInsert.size(), i.length,
-                        getFailedRecords(i, syncDataListInsert));
+                        syncTableName, syncDataListInsert.size(), i.length, insertStatusMap.get("failure"));
             } else {
                 logger.info("Successfully inserted {} records into table {}.", i.length, syncTableName);
             }
@@ -486,11 +481,13 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         try {
             int[] j = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
                     SERVER_COLUMNS_NOT_REQUIRED, queryUpdate, syncDataListUpdate);
+
+            updateStatusMap = getRecordStatus(j, syncDataListUpdate, vanSerialNosUpdate);
+
             if (j.length != syncDataListUpdate.size()) {
                 updateSuccess = false;
                 logger.error("Partial update for table {}. Expected {} updates, got {}. Failed records: {}",
-                        syncTableName, syncDataListUpdate.size(), j.length,
-                        getFailedRecords(j, syncDataListUpdate));
+                        syncTableName, syncDataListUpdate.size(), j.length, updateStatusMap.get("failure"));
             } else {
                 logger.info("Successfully updated {} records in table {}.", j.length, syncTableName);
             }
@@ -499,7 +496,30 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
             logger.error("Exception during update for table {}: {}", syncTableName, e.getMessage(), e);
         }
     }
+
+    // You can now use insertStatusMap and updateStatusMap to update processed flags as needed
+
     return insertSuccess && updateSuccess;
+}
+
+// Helper to get success and failure vanSerialNos for any table
+private Map<String, List<String>> getRecordStatus(int[] results, List<Object[]> data, List<String> vanSerialNos) {
+    List<String> failedRecords = new ArrayList<>();
+    List<String> successRecords = new ArrayList<>();
+    for (int k = 0; k < results.length; k++) {
+        String vanSerialNo = (vanSerialNos.size() > k) ? vanSerialNos.get(k) : "unknown";
+        if (results[k] < 1) {
+            failedRecords.add(vanSerialNo);
+        } else {
+            successRecords.add(vanSerialNo);
+        }
+    }
+    Map<String, List<String>> statusMap = new HashMap<>();
+    statusMap.put("success", successRecords);
+    statusMap.put("failure", failedRecords);
+    logger.info("Success vanSerialNos: {}", successRecords);
+    logger.info("Failed vanSerialNos: {}", failedRecords);
+    return statusMap;
 }
     private String getQueryToInsertDataToServerDB(String schemaName, String
     tableName, String serverColumns) {
