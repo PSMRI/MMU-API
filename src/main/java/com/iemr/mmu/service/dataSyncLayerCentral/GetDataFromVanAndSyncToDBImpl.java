@@ -447,10 +447,12 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
 
     if (!syncDataListInsert.isEmpty()) {
         String queryInsert = getQueryToInsertDataToServerDB(schemaName, syncTableName, serverColumns);
-
+logger.info("Query Insert="+queryInsert);
         try {
             int[] i = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
                     serverColumns, queryInsert, syncDataListInsert);
+                    logger.info("Insert result array length: {}", i.length);
+                    logger.info("Expected insert size: {}", syncDataListInsert.size());
             if (i.length != syncDataListInsert.size()) {
                 insertSuccess = false;
                 logger.error("Partial insert for table {}. Expected {} inserts, got {}. Failed records: {}",
@@ -461,15 +463,19 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
             }
         } catch (Exception e) {
             insertSuccess = false;
+            logger.error("Get failed records="+getFailedRecords(new int[] {}, syncDataListInsert));
             logger.error("Exception during insert for table {}: {}", syncTableName, e.getMessage(), e);
         }
     }
 
     if (!syncDataListUpdate.isEmpty()) {
         String queryUpdate = getQueryToUpdateDataToServerDB(schemaName, serverColumns, syncTableName);
+        logger.info("Query Update="+queryUpdate);
         try {
             int[] j = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
                     SERVER_COLUMNS_NOT_REQUIRED, queryUpdate, syncDataListUpdate);
+                    logger.info("Update result array length: {}", j.length);
+                    logger.info("Expected update size: {}", syncDataListUpdate.size());
             if (j.length != syncDataListUpdate.size()) {
                 updateSuccess = false;
                 logger.error("Partial update for table {}. Expected {} updates, got {}. Failed records: {}",
@@ -480,6 +486,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
             }
         } catch (Exception e) {
             updateSuccess = false;
+            logger.error("Get failed records="+getFailedRecords(new int[] {}, syncDataListUpdate));
             logger.error("Exception during update for table {}: {}", syncTableName, e.getMessage(), e);
         }
     }
@@ -509,6 +516,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
     queryBuilder.append(") VALUES (");
     queryBuilder.append(preparedStatementSetter);
     queryBuilder.append(")");
+    logger.info("Test Query Builder: {}", queryBuilder.toString());
     return queryBuilder.toString();
     }
 
@@ -539,6 +547,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
 
     // Helper to get information about failed records (for logging purposes)
     private String getFailedRecords(int[] results, List<Object[]> data) {
+        logger.info("Inside get Failed Records");
         List<String> failedRecordsInfo = new ArrayList<>();
         for (int k = 0; k < results.length; k++) {
             // In Spring JDBC batchUpdate, a value of Statement.EXECUTE_FAILED or
