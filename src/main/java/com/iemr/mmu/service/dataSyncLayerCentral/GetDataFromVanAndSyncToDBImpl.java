@@ -507,6 +507,8 @@ try {
         logger.info("Query Update="+queryUpdate);
         try {
     int[] i = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName, serverColumns, queryUpdate, syncDataListUpdate);
+    logger.info("Test Update result array length: {}", i.length);
+    logger.info("Test Expected update size: {}", syncDataListUpdate.size());
     for (int k = 0; k < i.length; k++) {
         if (i[k] < 1) {
             syncResults.set(k, new SyncResult(schemaName, syncTableName,
