@@ -31,6 +31,8 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -110,16 +112,15 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
             String result = update_M_BeneficiaryRegIdMapping_for_provisioned_benID(syncUploadDataDigester);
             if ("data sync passed".equals(result)) {
                 
-                 SyncResponse response = new SyncResponse();
-            response.setOverallSuccess(true);
-            response.setMessage("Sync successful for m_beneficiaryregidmapping.");
-            return ResponseEntity.ok(mapper.writeValueAsString(response));
-            } else {
                 SyncResponse response = new SyncResponse();
-            response.setOverallSuccess(false);
-            response.setMessage("Sync failed for m_beneficiaryregidmapping.");
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(mapper.writeValueAsString(response));
+response.setOverallSuccess(true);
+response.setMessage("Sync successful for m_beneficiaryregidmapping.");
+return mapper.writeValueAsString(response);
+            } else {
+               SyncResponse response = new SyncResponse();
+response.setOverallSuccess(false);
+response.setMessage("Sync failed for m_beneficiaryregidmapping.");
+return mapper.writeValueAsString(response);
             }
         }
 //         else {
