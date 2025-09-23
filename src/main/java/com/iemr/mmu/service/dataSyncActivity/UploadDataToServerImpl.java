@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -347,21 +348,67 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 				String.class);
 logger.info("Response for thes erver="+response);
 logger.info("Response body="+response.getBody());
-		int i = 0;
-		if (response != null && response.hasBody()) {
-			JSONObject obj = new JSONObject(response.getBody());
-			if (obj != null && obj.has("statusCode") && obj.getInt("statusCode") == 200) {
-				StringBuilder vanSerialNos = getVanSerialNoListForSyncedData(vanAutoIncColumnName, dataToBesync);
+ int successCount = 0;
+        int failCount = 0;
+        List<String> successVanSerialNos = new ArrayList<>();
+        List<String> failedVanSerialNos = new ArrayList<>();
+
+        if (response != null && response.hasBody()) {
+            JSONObject obj = new JSONObject(response.getBody());
+            if (obj.has("data")) {
+                JSONObject dataObj = obj.getJSONObject("data");
+                if (dataObj.has("records")) {
+                    JSONArray recordsArr = dataObj.getJSONArray("records");
+                    for (int i = 0; i < recordsArr.length(); i++) {
+                        JSONObject record = recordsArr.getJSONObject(i);
+                        String vanSerialNo = record.getString("vanSerialNo");
+                        boolean success = record.getBoolean("success");
+                        if (success) {
+                            successVanSerialNos.add(vanSerialNo);
+                            successCount++;
+                        } else {
+                            failedVanSerialNos.add(vanSerialNo);
+                            failCount++;
+                        }
+                    }
+                }
+            }
+        }
+
+logger.info("Success Van Serial No="+successVanSerialNos.toString());
+logger.info("Failed Van Serial No="+failedVanSerialNos.toString());
+        // Update processed flag for success and failed vanSerialNos
+        if (!successVanSerialNos.isEmpty()) {
+            dataSyncRepository.updateProcessedFlagInVan(schemaName, tableName, successVanSerialNos,
+                    vanAutoIncColumnName, user, "P");
+        }
+        if (!failedVanSerialNos.isEmpty()) {
+            dataSyncRepository.updateProcessedFlagInVan(schemaName, tableName, failedVanSerialNos,
+                    vanAutoIncColumnName, user, "F");
+        }
+
+        if (successCount > 0 && failCount == 0)
+            return "Data successfully synced";
+        else if (successCount > 0 && failCount > 0)
+            return "Partial success: " + successCount + " records synced, " + failCount + " failed";
+        else
+            return "Sync failed";
+    }
+	// 	int i = 0;
+	// 	if (response != null && response.hasBody()) {
+	// 		JSONObject obj = new JSONObject(response.getBody());
+	// 		if (obj != null && obj.has("statusCode") && obj.getInt("statusCode") == 200) {
+	// 			StringBuilder vanSerialNos = getVanSerialNoListForSyncedData(vanAutoIncColumnName, dataToBesync);
 				
-				i = dataSyncRepository.updateProcessedFlagInVan(schemaName, tableName, vanSerialNos,
-						vanAutoIncColumnName, user);
-			}
-		}
-		if (i > 0)
-			return "Data successfully synced";
-		else
-			return null;
-	}
+	// 			i = dataSyncRepository.updateProcessedFlagInVan(schemaName, tableName, vanSerialNos,
+	// 					vanAutoIncColumnName, user);
+	// 		}
+	// 	}
+	// 	if (i > 0)
+	// 		return "Data successfully synced";
+	// 	else
+	// 		return null;
+	// }
 
 	/**
 	 * 
