@@ -103,7 +103,7 @@ public class DataSyncRepository {
 		jdbcTemplate = getJdbcTemplate();
 		String query = "";
 
-		logger.info("Updating processed flag in table: " + tableName + " for vanSerialNos: " + vanSerialNos);
+		logger.info("Updating processed flag in table: " + tableName + "Auto increament:" + autoIncreamentColumn + " for vanSerialNos: " + vanSerialNos);
 	
 		if (tableName != null && tableName.toLowerCase().equals("i_ben_flow_outreach")) {
 			query = "UPDATE " + schemaName + "." + tableName
@@ -120,6 +120,28 @@ public class DataSyncRepository {
 		return updatedRows;
 
 	}
+
+	public int updateProcessedFlagInVanToFailed(String schemaName, String tableName, StringBuilder vanSerialNos,
+        String autoIncreamentColumn, String user) throws Exception {
+    jdbcTemplate = getJdbcTemplate();
+    String query = "";
+
+    logger.info("Updating processed flag to 'F' in table: " + tableName + " for vanSerialNos: " + vanSerialNos);
+
+    if (tableName != null && tableName.toLowerCase().equals("i_ben_flow_outreach")) {
+        query = "UPDATE " + schemaName + "." + tableName
+                + " SET created_date = ? , processed = 'F', SyncedDate = ?, Syncedby = ? "
+                + "WHERE " + autoIncreamentColumn + " IN (" + vanSerialNos + ")";
+    } else {
+        query = "UPDATE " + schemaName + "." + tableName
+                + " SET CreatedDate = ? , processed = 'F', SyncedDate = ?, Syncedby = ? "
+                + "WHERE " + autoIncreamentColumn + " IN (" + vanSerialNos + ")";
+    }
+
+    Timestamp syncedDate = new Timestamp(System.currentTimeMillis());
+    int updatedRows = jdbcTemplate.update(query, syncedDate, syncedDate, user);
+    return updatedRows;
+}
 
 	// ---------------------------------- End of Upload repository
 

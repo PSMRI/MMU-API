@@ -43,6 +43,8 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -345,21 +347,74 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 		ResponseEntity<String> response = restTemplate.exchange(dataSyncUploadUrl, HttpMethod.POST, request,
 				String.class);
 
-		int i = 0;
+		// int i = 0;
 		if (response != null && response.hasBody()) {
-			JSONObject obj = new JSONObject(response.getBody());
-			if (obj != null && obj.has("statusCode") && obj.getInt("statusCode") == 200) {
-				StringBuilder vanSerialNos = getVanSerialNoListForSyncedData(vanAutoIncColumnName, dataToBesync);
+			ObjectMapper mapper = new ObjectMapper();
+        try {
+            // Parse the response to get individual record status
+            JsonNode responseNode = mapper.readTree(response.getBody());
+            
+            if (responseNode.has("successfulVanSerialNos") && responseNode.has("failedVanSerialNos")) {
+                List<String> successfulVanSerialNos = mapper.convertValue(
+                        responseNode.get("successfulVanSerialNos"), 
+                        new TypeReference<List<String>>(){});
+                List<String> failedVanSerialNos = mapper.convertValue(
+                        responseNode.get("failedVanSerialNos"), 
+                        new TypeReference<List<String>>(){});
+                
+                // Update successful records to 'P'
+                if (!successfulVanSerialNos.isEmpty()) {
+                    StringBuilder successVanSerialNos = new StringBuilder();
+                    for (int i = 0; i < successfulVanSerialNos.size(); i++) {
+                        successVanSerialNos.append(successfulVanSerialNos.get(i));
+                        if (i < successfulVanSerialNos.size() - 1) {
+                            successVanSerialNos.append(",");
+                        }
+                    }
+                    dataSyncRepository.updateProcessedFlagInVan(schemaName, tableName, 
+                            successVanSerialNos, vanAutoIncColumnName, user);
+                }
+                
+                // Update failed records to 'F'
+                if (!failedVanSerialNos.isEmpty()) {
+                    StringBuilder failedVanSerialNosStr = new StringBuilder();
+                    for (int i = 0; i < failedVanSerialNos.size(); i++) {
+                        failedVanSerialNosStr.append(failedVanSerialNos.get(i));
+                        if (i < failedVanSerialNos.size() - 1) {
+                            failedVanSerialNosStr.append(",");
+                        }
+                    }
+                    dataSyncRepository.updateProcessedFlagInVanToFailed(schemaName, tableName, 
+                            failedVanSerialNosStr, vanAutoIncColumnName, user);
+                }
+                
+                if (!successfulVanSerialNos.isEmpty()) {
+                    return String.format("Data sync completed. Success: %d, Failed: %d", 
+                            successfulVanSerialNos.size(), failedVanSerialNos.size());
+                } else {
+                    return "Data sync failed for all records";
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error parsing sync response: {}", e.getMessage(), e);
+        }
+    }
+    
+    return "Data sync failed - no valid response";
+}
+	// 		JSONObject obj = new JSONObject(response.getBody());
+	// 		if (obj != null && obj.has("statusCode") && obj.getInt("statusCode") == 200) {
+	// 			StringBuilder vanSerialNos = getVanSerialNoListForSyncedData(vanAutoIncColumnName, dataToBesync);
 				
-				i = dataSyncRepository.updateProcessedFlagInVan(schemaName, tableName, vanSerialNos,
-						vanAutoIncColumnName, user);
-			}
-		}
-		if (i > 0)
-			return "Data successfully synced";
-		else
-			return null;
-	}
+	// 			i = dataSyncRepository.updateProcessedFlagInVan(schemaName, tableName, vanSerialNos,
+	// 					vanAutoIncColumnName, user);
+	// 		}
+	// 	}
+	// 	if (i > 0)
+	// 		return "Data successfully synced";
+	// 	else
+	// 		return null;
+	// }
 
 	/**
 	 * 
