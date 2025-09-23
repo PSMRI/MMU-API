@@ -353,27 +353,66 @@ logger.info("Response body="+response.getBody());
         List<String> successVanSerialNos = new ArrayList<>();
         List<String> failedVanSerialNos = new ArrayList<>();
 
-        if (response != null && response.hasBody()) {
-            JSONObject obj = new JSONObject(response.getBody());
-            if (obj.has("data")) {
-                JSONObject dataObj = obj.getJSONObject("data");
-                if (dataObj.has("records")) {
-                    JSONArray recordsArr = dataObj.getJSONArray("records");
-                    for (int i = 0; i < recordsArr.length(); i++) {
-                        JSONObject record = recordsArr.getJSONObject(i);
-                        String vanSerialNo = record.getString("vanSerialNo");
-                        boolean success = record.getBoolean("success");
-                        if (success) {
-                            successVanSerialNos.add(vanSerialNo);
-                            successCount++;
-                        } else {
-                            failedVanSerialNos.add(vanSerialNo);
-                            failCount++;
-                        }
-                    }
+        // if (response != null && response.hasBody()) {
+        //     JSONObject obj = new JSONObject(response.getBody());
+        //     if (obj.has("data")) {
+        //         JSONObject dataObj = obj.getJSONObject("data");
+        //         if (dataObj.has("records")) {
+        //             JSONArray recordsArr = dataObj.getJSONArray("records");
+        //             for (int i = 0; i < recordsArr.length(); i++) {
+        //                 JSONObject record = recordsArr.getJSONObject(i);
+        //                 String vanSerialNo = record.getString("vanSerialNo");
+        //                 boolean success = record.getBoolean("success");
+        //                 if (success) {
+        //                     successVanSerialNos.add(vanSerialNo);
+        //                     successCount++;
+        //                 } else {
+        //                     failedVanSerialNos.add(vanSerialNo);
+        //                     failCount++;
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
+
+		if (response != null && response.hasBody()) {
+    JSONObject obj = new JSONObject(response.getBody());
+    if (obj.has("data")) {
+        JSONObject dataObj = obj.getJSONObject("data");
+        if (dataObj.has("records")) {
+            JSONArray recordsArr = dataObj.getJSONArray("records");
+            for (int i = 0; i < recordsArr.length(); i++) {
+                JSONObject record = recordsArr.getJSONObject(i);
+                String vanSerialNo = record.getString("vanSerialNo");
+                boolean success = record.getBoolean("success");
+                if (success) {
+                    successVanSerialNos.add(vanSerialNo);
+                    successCount++;
+                } else {
+                    failedVanSerialNos.add(vanSerialNo);
+                    failCount++;
                 }
             }
+        } else if (tableName.equalsIgnoreCase("m_beneficiaryregidmapping")) {
+            // Handle summary response for m_beneficiaryregidmapping
+            String respMsg = dataObj.optString("response", "");
+            int statusCode = obj.optInt("statusCode", 0);
+            if (respMsg.toLowerCase().contains("success") && statusCode == 200) {
+                // All records are successful
+                for (Map<String, Object> map : dataToBesync) {
+                    successVanSerialNos.add(String.valueOf(map.get(vanAutoIncColumnName)));
+                }
+                successCount = successVanSerialNos.size();
+            } else {
+                // All records failed
+                for (Map<String, Object> map : dataToBesync) {
+                    failedVanSerialNos.add(String.valueOf(map.get(vanAutoIncColumnName)));
+                }
+                failCount = failedVanSerialNos.size();
+            }
         }
+    }
+}
 
 logger.info("Success Van Serial No="+successVanSerialNos.toString());
 logger.info("Failed Van Serial No="+failedVanSerialNos.toString());
