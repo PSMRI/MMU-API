@@ -312,6 +312,10 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
     List<Object[]> syncDataListInsert = new ArrayList<>();
     List<Object[]> syncDataListUpdate = new ArrayList<>();
 
+  List<String> vanSerialNosInsert = new ArrayList<>();
+  List<String> vanSerialNosUpdate = new ArrayList<>();
+
+
     if (dataToBesync == null || dataToBesync.isEmpty()) {
         logger.info("No data to sync for table: {}", syncUploadDataDigester.getTableName());
         return true; // Nothing to sync, consider it a success
@@ -430,6 +434,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         Object[] objArr = currentRecordValues.toArray();
         if (recordCheck == 0) {
             syncDataListInsert.add(objArr);
+             vanSerialNosInsert.add(vanSerialNo);
         } else {
             // For update, append the WHERE clause parameters at the end of the array
             List<Object> updateParams = new ArrayList<>(Arrays.asList(objArr));
@@ -444,11 +449,16 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                 updateParams.add(String.valueOf(vanID));
             }
             syncDataListUpdate.add(updateParams.toArray());
+            vanSerialNosUpdate.add(vanSerialNo);
         }
     }
 
     boolean insertSuccess = true;
     boolean updateSuccess = true;
+
+ // Helper to get success/failure vanSerialNos
+    Map<String, List<String>> insertStatusMap = new HashMap<>();
+    Map<String, List<String>> updateStatusMap = new HashMap<>();
 
     if (!syncDataListInsert.isEmpty()) {
         String queryInsert = getQueryToInsertDataToServerDB(schemaName, syncTableName, serverColumns);
@@ -456,11 +466,13 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         try {
             int[] i = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
                     serverColumns, queryInsert, syncDataListInsert);
+                      insertStatusMap = getRecordStatus(i, syncDataListInsert, vanSerialNosInsert);
             if (i.length != syncDataListInsert.size()) {
                 insertSuccess = false;
                 logger.error("Partial insert for table {}. Expected {} inserts, got {}. Failed records: {}",
                         syncTableName, syncDataListInsert.size(), i.length,
-                        getFailedRecords(i, syncDataListInsert));
+                        insertStatusMap.get("failure"));
+                        // getFailedRecords(i, syncDataListInsert));
             } else {
                 logger.info("Successfully inserted {} records into table {}.", i.length, syncTableName);
             }
@@ -475,11 +487,13 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         try {
             int[] j = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
                     SERVER_COLUMNS_NOT_REQUIRED, queryUpdate, syncDataListUpdate);
+                    updateStatusMap = getRecordStatus(j, syncDataListUpdate, vanSerialNosUpdate);
             if (j.length != syncDataListUpdate.size()) {
                 updateSuccess = false;
                 logger.error("Partial update for table {}. Expected {} updates, got {}. Failed records: {}",
                         syncTableName, syncDataListUpdate.size(), j.length,
-                        getFailedRecords(j, syncDataListUpdate));
+                        updateStatusMap.get("failure"));
+                        // getFailedRecords(j, syncDataListUpdate));
             } else {
                 logger.info("Successfully updated {} records in table {}.", j.length, syncTableName);
             }
@@ -490,6 +504,61 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
     }
     return insertSuccess && updateSuccess;
 }
+
+private Map<String, List<String>> getRecordStatus(int[] results, List<Object[]> data, List<String> vanSerialNos) {
+
+
+
+    List<String> failedRecords = new ArrayList<>();
+
+
+    List<String> successRecords = new ArrayList<>();
+
+
+    for (int k = 0; k < results.length; k++) {
+
+
+        String vanSerialNo = (vanSerialNos.size() > k) ? vanSerialNos.get(k) : "unknown";
+
+
+        if (results[k] < 1) {
+
+
+            failedRecords.add(vanSerialNo);
+
+
+        } else {
+
+
+            successRecords.add(vanSerialNo);
+
+
+        }
+
+
+    }
+
+
+    Map<String, List<String>> statusMap = new HashMap<>();
+
+
+    statusMap.put("success", successRecords);
+
+
+    statusMap.put("failure", failedRecords);
+
+
+    logger.info("Success vanSerialNos: {}", successRecords);
+
+
+    logger.info("Failed vanSerialNos: {}", failedRecords);
+
+
+    return statusMap;
+
+
+}
+
     private String getQueryToInsertDataToServerDB(String schemaName, String
     tableName, String serverColumns) {
     String[] columnsArr = null;
