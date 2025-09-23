@@ -31,8 +31,6 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -92,8 +90,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
 
     }
 
-    // public String syncDataToServer(String requestOBJ, String Authorization) throws Exception {
-    public ResponseEntity<String> syncDataToServer(String requestOBJ, String Authorization) throws Exception {
+    public String syncDataToServer(String requestOBJ, String Authorization) throws Exception {
 
         ObjectMapper mapper = new ObjectMapper();
         SyncUploadDataDigester syncUploadDataDigester = mapper.readValue(requestOBJ, SyncUploadDataDigester.class);
@@ -104,7 +101,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
 
         if (syncUploadDataDigester == null || syncUploadDataDigester.getTableName() == null) {
             logger.error("Invalid SyncUploadDataDigester object or tableName is null.");
-            return ResponseEntity.badRequest().body("Error: Invalid sync request.");
+            return "Error: Invalid sync request.";
         }
 
         String syncTableName = syncUploadDataDigester.getTableName();
@@ -113,11 +110,10 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         if ("m_beneficiaryregidmapping".equalsIgnoreCase(syncTableName)) {
             String result = update_M_BeneficiaryRegIdMapping_for_provisioned_benID(syncUploadDataDigester);
             if ("data sync passed".equals(result)) {
-                return ResponseEntity.ok("Sync successful for m_beneficiaryregidmapping.");
+                return "Sync successful for m_beneficiaryregidmapping.";
             } else {
                 logger.error("Sync failed for m_beneficiaryregidmapping: {}", result);
-                return ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body("Sync failed for m_beneficiaryregidmapping.");
+                return "Sync failed for m_beneficiaryregidmapping.";
             }
         }
         else {
@@ -163,27 +159,20 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                             }
                         } catch (Exception e) {
                             syncSuccess = false;
-                            errorMessage+= "Exception during sync for table: " + table + " in Group " + groupId + ": "
+                            errorMessage += "Exception during sync for table: " + table + " in Group " + groupId + ": "
                                     + e.getMessage() + ". ";
                             logger.error("Exception during sync for table '{}' in Group {}: {}", table, groupId,
                                     e.getMessage(), e);
                         }
                     }
-                }   
+                }
             }
 
-            // if (syncSuccess) {
-            //     return "Overall data sync passed.";
-            // } else {
-            //     return "Overall data sync failed. Details: " + errorMessage;
-            // }
             if (syncSuccess) {
-    return ResponseEntity.ok("Overall data sync passed.");
-} else {
-    logger.info("Test executing elese block failure");
-    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body("Test Overall data sync failed. Details: " + errorMessage);
-}
+                return "Overall data sync passed.";
+            } else {
+                return "Overall data sync failed. Details: " + errorMessage;
+            }
         }
     }
 
