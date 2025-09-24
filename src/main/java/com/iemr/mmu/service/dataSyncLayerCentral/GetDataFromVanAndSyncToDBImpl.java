@@ -21,7 +21,6 @@
 */
 package com.iemr.mmu.service.dataSyncLayerCentral;
 
-import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -682,7 +681,6 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         queryBuilder.append(") VALUES (");
         queryBuilder.append(preparedStatementSetter);
         queryBuilder.append(")");
-        logger.info("Test Query Builder: {}", queryBuilder.toString());
         return queryBuilder.toString();
     }
 

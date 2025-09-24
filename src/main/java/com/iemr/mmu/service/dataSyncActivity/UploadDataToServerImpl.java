@@ -497,7 +497,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 
 	logger.info("Success Van Serial No=" + successVanSerialNos.toString());
 	logger.info("Failed Van Serial No=" + failedVanSerialNos.toString());
-	
+	logger.info("Failure Reasons=" + failureReasons.toString());
 	// Update processed flag for success and failed vanSerialNos
 	if (!successVanSerialNos.isEmpty()) {
 		dataSyncRepository.updateProcessedFlagInVan(schemaName, tableName, successVanSerialNos,
