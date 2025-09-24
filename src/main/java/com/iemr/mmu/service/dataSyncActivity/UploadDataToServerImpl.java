@@ -774,7 +774,6 @@ public Map<String, Object> syncDataToServer(int vanID, String schemaName, String
 	
 	result.put("successCount", successCount);
 	result.put("failCount", failCount);
-	result.put("failureReasons", failureReasons);
 	
 	return result;
 }
