@@ -477,28 +477,29 @@
                     syncUploadDataDigester.getSyncedBy(), false, "Insert failed"));
             }
         }
-    } catch (Exception e) {
-
-        String shortReason;
-if (e.getMessage() != null) {
-    if (e.getMessage().contains("duplicate") || e.getMessage().contains("Duplicate")) {
-        shortReason = "Duplicate entry";
-    } else if (e.getMessage().contains("constraint")) {
-        shortReason = "Constraint violation";
-    } else if (e.getMessage().contains("timeout")) {
-        shortReason = "DB timeout";
-    } else {
-        shortReason = "Insert/Update failed";
-    }
-} else {
-    shortReason = "Unknown DB error";
-}
-        for (int k = 0; k < syncDataListInsert.size(); k++) {
-            syncResults.add(new SyncResult(schemaName, syncTableName,
-                String.valueOf(syncDataListInsert.get(k)[vanSerialIndex]),
-                syncUploadDataDigester.getSyncedBy(), false, shortReason));
+    } 
+    catch (Exception e) {
+    String shortReason;
+    if (e.getMessage() != null) {
+        if (e.getMessage().toLowerCase().contains("duplicate")) {
+            shortReason = "Duplicate entry";
+        } else if (e.getMessage().toLowerCase().contains("constraint")) {
+            shortReason = "Constraint violation";
+        } else if (e.getMessage().toLowerCase().contains("timeout")) {
+            shortReason = "DB timeout";
+        } else {
+            shortReason = "Insert/Update failed";
         }
+    } else {
+        shortReason = "Unknown DB error";
     }
+    // Always add, never set, to avoid index errors
+    for (int k = 0; k < syncDataListInsert.size(); k++) {
+        syncResults.add(new SyncResult(schemaName, syncTableName,
+            String.valueOf(syncDataListInsert.get(k)[vanSerialIndex]),
+            syncUploadDataDigester.getSyncedBy(), false, shortReason));
+    }
+}
 
             // try {
             //     int[] i = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
@@ -534,27 +535,28 @@ if (e.getMessage() != null) {
                     syncUploadDataDigester.getSyncedBy(), false, "Update failed"));
             }
         }
-    } catch (Exception e) {
-               String shortReason;
-if (e.getMessage() != null) {
-    if (e.getMessage().contains("duplicate") || e.getMessage().contains("Duplicate")) {
-        shortReason = "Duplicate entry";
-    } else if (e.getMessage().contains("constraint")) {
-        shortReason = "Constraint violation";
-    } else if (e.getMessage().contains("timeout")) {
-        shortReason = "DB timeout";
-    } else {
-        shortReason = "Insert/Update failed";
-    }
-} else {
-    shortReason = "Unknown DB error";
-}
-        for (int k = 0; k < syncDataListUpdate.size(); k++) {
-            syncResults.add(new SyncResult(schemaName, syncTableName,
-                String.valueOf(syncDataListUpdate.get(k)[vanSerialIndex]),
-                syncUploadDataDigester.getSyncedBy(), false, shortReason ));
+    } 
+    catch (Exception e) {
+    String shortReason;
+    if (e.getMessage() != null) {
+        if (e.getMessage().toLowerCase().contains("duplicate")) {
+            shortReason = "Duplicate entry";
+        } else if (e.getMessage().toLowerCase().contains("constraint")) {
+            shortReason = "Constraint violation";
+        } else if (e.getMessage().toLowerCase().contains("timeout")) {
+            shortReason = "DB timeout";
+        } else {
+            shortReason = "Insert/Update failed";
         }
+    } else {
+        shortReason = "Unknown DB error";
     }
+    for (int k = 0; k < syncDataListUpdate.size(); k++) {
+        syncResults.add(new SyncResult(schemaName, syncTableName,
+            String.valueOf(syncDataListUpdate.get(k)[vanSerialIndex]),
+            syncUploadDataDigester.getSyncedBy(), false, shortReason));
+    }
+}
 
             // try {
             //     int[] j = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,

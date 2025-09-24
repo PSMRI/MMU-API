@@ -375,8 +375,48 @@ logger.info("Response body="+response.getBody());
         //     }
         // }
 
-		if (response != null && response.hasBody()) {
+// 		if (response != null && response.hasBody()) {
+//     JSONObject obj = new JSONObject(response.getBody());
+//     if (obj.has("data")) {
+//         JSONObject dataObj = obj.getJSONObject("data");
+//         if (dataObj.has("records")) {
+//             JSONArray recordsArr = dataObj.getJSONArray("records");
+//             for (int i = 0; i < recordsArr.length(); i++) {
+//                 JSONObject record = recordsArr.getJSONObject(i);
+//                 String vanSerialNo = record.getString("vanSerialNo");
+//                 boolean success = record.getBoolean("success");
+//                 if (success) {
+//                     successVanSerialNos.add(vanSerialNo);
+//                     successCount++;
+//                 } else {
+//                     failedVanSerialNos.add(vanSerialNo);
+//                     failCount++;
+//                 }
+//             }
+//         } else if (tableName.equalsIgnoreCase("m_beneficiaryregidmapping")) {
+//             // Handle summary response for m_beneficiaryregidmapping
+//             String respMsg = dataObj.optString("response", "");
+//             int statusCode = obj.optInt("statusCode", 0);
+//             if (respMsg.toLowerCase().contains("success") && statusCode == 200) {
+//                 // All records are successful
+//                 for (Map<String, Object> map : dataToBesync) {
+//                     successVanSerialNos.add(String.valueOf(map.get(vanAutoIncColumnName)));
+//                 }
+//                 successCount = successVanSerialNos.size();
+//             } else {
+//                 // All records failed
+//                 for (Map<String, Object> map : dataToBesync) {
+//                     failedVanSerialNos.add(String.valueOf(map.get(vanAutoIncColumnName)));
+//                 }
+//                 failCount = failedVanSerialNos.size();
+//             }
+//         }
+//     }
+// }
+
+if (response != null && response.hasBody()) {
     JSONObject obj = new JSONObject(response.getBody());
+    boolean handled = false;
     if (obj.has("data")) {
         JSONObject dataObj = obj.getJSONObject("data");
         if (dataObj.has("records")) {
@@ -393,23 +433,35 @@ logger.info("Response body="+response.getBody());
                     failCount++;
                 }
             }
+            handled = true;
         } else if (tableName.equalsIgnoreCase("m_beneficiaryregidmapping")) {
-            // Handle summary response for m_beneficiaryregidmapping
             String respMsg = dataObj.optString("response", "");
             int statusCode = obj.optInt("statusCode", 0);
             if (respMsg.toLowerCase().contains("success") && statusCode == 200) {
-                // All records are successful
                 for (Map<String, Object> map : dataToBesync) {
                     successVanSerialNos.add(String.valueOf(map.get(vanAutoIncColumnName)));
                 }
                 successCount = successVanSerialNos.size();
             } else {
-                // All records failed
                 for (Map<String, Object> map : dataToBesync) {
                     failedVanSerialNos.add(String.valueOf(map.get(vanAutoIncColumnName)));
                 }
                 failCount = failedVanSerialNos.size();
             }
+            handled = true;
+        }
+    }
+    // Handle unexpected error response (like statusCode 5000)
+    if (!handled) {
+        int statusCode = obj.optInt("statusCode", 0);
+        String errorMsg = obj.optString("errorMessage", "Unknown error");
+        if (statusCode >= 5000) {
+            // Mark all as failed and log error
+            for (Map<String, Object> map : dataToBesync) {
+                failedVanSerialNos.add(String.valueOf(map.get(vanAutoIncColumnName)));
+            }
+            failCount = failedVanSerialNos.size();
+            logger.error("Server error for table {}: {}", tableName, errorMsg);
         }
     }
 }
