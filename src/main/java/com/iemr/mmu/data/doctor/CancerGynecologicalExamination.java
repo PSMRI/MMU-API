@@ -39,7 +39,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.gson.annotations.Expose;
 import lombok.Data;
 
-import lombok.Data;
 
 @Entity
 @Data
