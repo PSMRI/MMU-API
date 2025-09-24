@@ -142,153 +142,310 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 			List<Map<String, Object>> tableDetailsList = new ArrayList<>();
 			boolean groupHasFailures = false;
 
-			for (SyncUtilityClass obj : syncUtilityClassList) {
-				String tableKey = obj.getSchemaName() + "." + obj.getTableName();
-				boolean tableHasError = false; // Move this to the correct scope
+			// for (SyncUtilityClass obj : syncUtilityClassList) {
+			// 	String tableKey = obj.getSchemaName() + "." + obj.getTableName();
+			// 	boolean tableHasError = false; // Move this to the correct scope
 
-				// get data from DB to sync to server
-				List<Map<String, Object>> syncData = getDataToSync(obj.getSchemaName(), obj.getTableName(),
-						obj.getVanColumnName());
-				logger.debug("Fetched syncData for schema {} and table {}: {}", obj.getSchemaName(), obj.getTableName(),
-						objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(syncData));
+			// 	// get data from DB to sync to server
+			// 	List<Map<String, Object>> syncData = getDataToSync(obj.getSchemaName(), obj.getTableName(),
+			// 			obj.getVanColumnName());
+			// 	logger.debug("Fetched syncData for schema {} and table {}: {}", obj.getSchemaName(), obj.getTableName(),
+			// 			objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(syncData));
 
-				if (syncData != null && syncData.size() > 0) {
-					int dataSize = syncData.size();
-					int startIndex = 0;
-					int fullBatchCount = dataSize / BATCH_SIZE;
-					int remainder = dataSize % BATCH_SIZE;
+			// 	if (syncData != null && syncData.size() > 0) {
+			// 		int dataSize = syncData.size();
+			// 		int startIndex = 0;
+			// 		int fullBatchCount = dataSize / BATCH_SIZE;
+			// 		int remainder = dataSize % BATCH_SIZE;
 
-					// Track table-level success/failure counts
-					int totalRecords = dataSize;
-					int successfulRecords = 0;
-					int failedRecords = 0;
+			// 		// Track table-level success/failure counts
+			// 		int totalRecords = dataSize;
+			// 		int successfulRecords = 0;
+			// 		int failedRecords = 0;
 
-					logger.info("Starting batch sync for schema: {}, table: {} with {} full batches and {} remainder",
-							obj.getSchemaName(), obj.getTableName(), fullBatchCount, remainder);
+			// 		logger.info("Starting batch sync for schema: {}, table: {} with {} full batches and {} remainder",
+			// 				obj.getSchemaName(), obj.getTableName(), fullBatchCount, remainder);
 
-					// Process full batches
-					for (int i = 0; i < fullBatchCount && !tableHasError; i++) {
-						List<Map<String, Object>> syncDataBatch = getBatchOfAskedSizeDataToSync(syncData, startIndex,
-								BATCH_SIZE);
-						serverAcknowledgement = syncDataToServer(vanID, obj.getSchemaName(), obj.getTableName(),
-								obj.getVanAutoIncColumnName(), obj.getServerColumnName(), syncDataBatch, user,
-								Authorization, token);
-						logger.debug("Server acknowledgement for batch {}: {}", i, serverAcknowledgement);
+			// 		// Process full batches
+			// 		for (int i = 0; i < fullBatchCount && !tableHasError; i++) {
+			// 			List<Map<String, Object>> syncDataBatch = getBatchOfAskedSizeDataToSync(syncData, startIndex,
+			// 					BATCH_SIZE);
+			// 			serverAcknowledgement = syncDataToServer(vanID, obj.getSchemaName(), obj.getTableName(),
+			// 					obj.getVanAutoIncColumnName(), obj.getServerColumnName(), syncDataBatch, user,
+			// 					Authorization, token);
+			// 			logger.debug("Server acknowledgement for batch {}: {}", i, serverAcknowledgement);
 
-						// Parse the string response from syncDataToServer method
-						if (serverAcknowledgement == null) {
-							logger.error("Sync failed for batch {} in schema: {}, table: {}", i, obj.getSchemaName(),
-									obj.getTableName());
-							tableHasError = true;
-							failedRecords += syncDataBatch.size();
-							groupHasFailures = true;
-							break;
-						} else if ("Data successfully synced".equals(serverAcknowledgement)) {
-							successfulRecords += syncDataBatch.size();
-						} else if (serverAcknowledgement.startsWith("Partial success:")) {
-							// Parse "Partial success: X records synced, Y failed"
-							try {
-								String[] parts = serverAcknowledgement.split(" ");
-								int batchSuccess = Integer.parseInt(parts[2]);
-								int batchFailed = Integer.parseInt(parts[5]);
-								successfulRecords += batchSuccess;
-								failedRecords += batchFailed;
-							} catch (Exception e) {
-								logger.warn("Could not parse partial success counts for batch {}: {}", i,
-										serverAcknowledgement);
-								// Assume half successful, half failed as fallback
-								successfulRecords += syncDataBatch.size() / 2;
-								failedRecords += syncDataBatch.size() - (syncDataBatch.size() / 2);
-							}
-						} else if ("Sync failed".equals(serverAcknowledgement)) {
-							failedRecords += syncDataBatch.size();
-							groupHasFailures = true;
-						}
+			// 			// Parse the string response from syncDataToServer method
+			// 			if (serverAcknowledgement == null) {
+			// 				logger.error("Sync failed for batch {} in schema: {}, table: {}", i, obj.getSchemaName(),
+			// 						obj.getTableName());
+			// 				tableHasError = true;
+			// 				failedRecords += syncDataBatch.size();
+			// 				groupHasFailures = true;
+			// 				break;
+			// 			} else if ("Data successfully synced".equals(serverAcknowledgement)) {
+			// 				successfulRecords += syncDataBatch.size();
+			// 			} else if (serverAcknowledgement.startsWith("Partial success:")) {
+			// 				// Parse "Partial success: X records synced, Y failed"
+			// 				try {
+			// 					String[] parts = serverAcknowledgement.split(" ");
+			// 					int batchSuccess = Integer.parseInt(parts[2]);
+			// 					int batchFailed = Integer.parseInt(parts[5]);
+			// 					successfulRecords += batchSuccess;
+			// 					failedRecords += batchFailed;
+			// 				} catch (Exception e) {
+			// 					logger.warn("Could not parse partial success counts for batch {}: {}", i,
+			// 							serverAcknowledgement);
+			// 					// Assume half successful, half failed as fallback
+			// 					successfulRecords += syncDataBatch.size() / 2;
+			// 					failedRecords += syncDataBatch.size() - (syncDataBatch.size() / 2);
+			// 				}
+			// 			} else if ("Sync failed".equals(serverAcknowledgement)) {
+			// 				failedRecords += syncDataBatch.size();
+			// 				groupHasFailures = true;
+			// 			}
 
-						startIndex += BATCH_SIZE;
-					}
+			// 			startIndex += BATCH_SIZE;
+			// 		}
 
-					// Process remainder batch if no error occurred
-					if (!tableHasError && remainder > 0) {
-						List<Map<String, Object>> syncDataBatch = getBatchOfAskedSizeDataToSync(syncData, startIndex,
-								remainder);
-						serverAcknowledgement = syncDataToServer(vanID, obj.getSchemaName(), obj.getTableName(),
-								obj.getVanAutoIncColumnName(), obj.getServerColumnName(), syncDataBatch, user,
-								Authorization, token);
+			// 		// Process remainder batch if no error occurred
+			// 		if (!tableHasError && remainder > 0) {
+			// 			List<Map<String, Object>> syncDataBatch = getBatchOfAskedSizeDataToSync(syncData, startIndex,
+			// 					remainder);
+			// 			serverAcknowledgement = syncDataToServer(vanID, obj.getSchemaName(), obj.getTableName(),
+			// 					obj.getVanAutoIncColumnName(), obj.getServerColumnName(), syncDataBatch, user,
+			// 					Authorization, token);
 
-						if (serverAcknowledgement == null) {
-							logger.error("Sync failed for remaining data in schema: {}, table: {}", obj.getSchemaName(),
-									obj.getTableName());
-							failedRecords += syncDataBatch.size();
-							groupHasFailures = true;
-						} else if ("Data successfully synced".equals(serverAcknowledgement)) {
-							successfulRecords += syncDataBatch.size();
-						} else if (serverAcknowledgement.startsWith("Partial success:")) {
-							try {
-								String[] parts = serverAcknowledgement.split(" ");
-								int batchSuccess = Integer.parseInt(parts[2]);
-								int batchFailed = Integer.parseInt(parts[5]);
-								successfulRecords += batchSuccess;
-								failedRecords += batchFailed;
-							} catch (Exception e) {
-								logger.warn("Could not parse partial success counts for remainder: {}",
-										serverAcknowledgement);
-								successfulRecords += syncDataBatch.size() / 2;
-								failedRecords += syncDataBatch.size() - (syncDataBatch.size() / 2);
-							}
-						} else if ("Sync failed".equals(serverAcknowledgement)) {
-							failedRecords += syncDataBatch.size();
-							groupHasFailures = true;
-						}
-					}
+			// 			if (serverAcknowledgement == null) {
+			// 				logger.error("Sync failed for remaining data in schema: {}, table: {}", obj.getSchemaName(),
+			// 						obj.getTableName());
+			// 				failedRecords += syncDataBatch.size();
+			// 				groupHasFailures = true;
+			// 			} else if ("Data successfully synced".equals(serverAcknowledgement)) {
+			// 				successfulRecords += syncDataBatch.size();
+			// 			} else if (serverAcknowledgement.startsWith("Partial success:")) {
+			// 				try {
+			// 					String[] parts = serverAcknowledgement.split(" ");
+			// 					int batchSuccess = Integer.parseInt(parts[2]);
+			// 					int batchFailed = Integer.parseInt(parts[5]);
+			// 					successfulRecords += batchSuccess;
+			// 					failedRecords += batchFailed;
+			// 				} catch (Exception e) {
+			// 					logger.warn("Could not parse partial success counts for remainder: {}",
+			// 							serverAcknowledgement);
+			// 					successfulRecords += syncDataBatch.size() / 2;
+			// 					failedRecords += syncDataBatch.size() - (syncDataBatch.size() / 2);
+			// 				}
+			// 			} else if ("Sync failed".equals(serverAcknowledgement)) {
+			// 				failedRecords += syncDataBatch.size();
+			// 				groupHasFailures = true;
+			// 			}
+			// 		}
 
-					// Determine table status based on success/failure counts
-					String tableStatus;
-					if (successfulRecords == totalRecords && failedRecords == 0) {
-						tableStatus = "success";
-					} else if (failedRecords == totalRecords && successfulRecords == 0) {
-						tableStatus = "failed";
-						groupHasFailures = true;
-					} else if (successfulRecords > 0 && failedRecords > 0) {
-						tableStatus = "partial";
-					} else {
-						tableStatus = "failed"; // Default to failed if unclear
-						groupHasFailures = true;
-					}
+			// 		// Determine table status based on success/failure counts
+			// 		String tableStatus;
+			// 		if (successfulRecords == totalRecords && failedRecords == 0) {
+			// 			tableStatus = "success";
+			// 		} else if (failedRecords == totalRecords && successfulRecords == 0) {
+			// 			tableStatus = "failed";
+			// 			groupHasFailures = true;
+			// 		} else if (successfulRecords > 0 && failedRecords > 0) {
+			// 			tableStatus = "partial";
+			// 		} else {
+			// 			tableStatus = "failed"; // Default to failed if unclear
+			// 			groupHasFailures = true;
+			// 		}
 
-					// Create detailed table info
-					Map<String, Object> tableDetails = new HashMap<>();
-					tableDetails.put("tableName", obj.getTableName());
-					tableDetails.put("schemaName", obj.getSchemaName());
-					tableDetails.put("status", tableStatus);
-					tableDetails.put("totalRecords", totalRecords);
-					tableDetails.put("successfulRecords", successfulRecords);
-					tableDetails.put("failedRecords", failedRecords);
-					tableDetailsList.add(tableDetails);
+			// 		// Create detailed table info
+			// 		Map<String, Object> tableDetails = new HashMap<>();
+			// 		tableDetails.put("tableName", obj.getTableName());
+			// 		tableDetails.put("schemaName", obj.getSchemaName());
+			// 		tableDetails.put("status", tableStatus);
+			// 		tableDetails.put("totalRecords", totalRecords);
+			// 		tableDetails.put("successfulRecords", successfulRecords);
+			// 		tableDetails.put("failedRecords", failedRecords);
+			// 		tableDetailsList.add(tableDetails);
 
-					logger.info("Table sync summary - {}: {} (Success: {}, Failed: {}, Total: {})",
-							tableKey, tableStatus, successfulRecords, failedRecords, totalRecords);
+			// 		logger.info("Table sync summary - {}: {} (Success: {}, Failed: {}, Total: {})",
+			// 				tableKey, tableStatus, successfulRecords, failedRecords, totalRecords);
 
-				} else {
-					logger.info("No data to sync for schema {} and table {}", obj.getSchemaName(), obj.getTableName());
+			// 	} else {
+			// 		logger.info("No data to sync for schema {} and table {}", obj.getSchemaName(), obj.getTableName());
 
-					Map<String, Object> tableDetails = new HashMap<>();
-					tableDetails.put("tableName", obj.getTableName());
-					tableDetails.put("schemaName", obj.getSchemaName());
-					tableDetails.put("status", "no_data");
-					tableDetails.put("totalRecords", 0);
-					tableDetails.put("successfulRecords", 0);
-					tableDetails.put("failedRecords", 0);
-					tableDetailsList.add(tableDetails);
-				}
+			// 		Map<String, Object> tableDetails = new HashMap<>();
+			// 		tableDetails.put("tableName", obj.getTableName());
+			// 		tableDetails.put("schemaName", obj.getSchemaName());
+			// 		tableDetails.put("status", "no_data");
+			// 		tableDetails.put("totalRecords", 0);
+			// 		tableDetails.put("successfulRecords", 0);
+			// 		tableDetails.put("failedRecords", 0);
+			// 		tableDetailsList.add(tableDetails);
+			// 	}
 
-				// If this table had critical failures, stop processing this group
-				if (tableHasError) {
-					hasSyncFailed = true;
-					break;
-				}
-			}
+			// 	// If this table had critical failures, stop processing this group
+			// 	if (tableHasError) {
+			// 		hasSyncFailed = true;
+			// 		break;
+			// 	}
+			// }
 
+// Updated portion of startDataSync method - replace the batch processing section
+for (SyncUtilityClass obj : syncUtilityClassList) {
+    String tableKey = obj.getSchemaName() + "." + obj.getTableName();
+    boolean tableHasError = false;
+
+    // get data from DB to sync to server
+    List<Map<String, Object>> syncData = getDataToSync(obj.getSchemaName(), obj.getTableName(),
+            obj.getVanColumnName());
+    logger.debug("Fetched syncData for schema {} and table {}: {}", obj.getSchemaName(), obj.getTableName(),
+            objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(syncData));
+
+    if (syncData != null && syncData.size() > 0) {
+        int dataSize = syncData.size();
+        int startIndex = 0;
+        int fullBatchCount = dataSize / BATCH_SIZE;
+        int remainder = dataSize % BATCH_SIZE;
+
+        // Track table-level success/failure counts
+        int totalRecords = dataSize;
+        int successfulRecords = 0;
+        int failedRecords = 0;
+        List<String> tableFailureReasons = new ArrayList<>(); // Collect all failure reasons for this table
+
+        logger.info("Starting batch sync for schema: {}, table: {} with {} full batches and {} remainder",
+                obj.getSchemaName(), obj.getTableName(), fullBatchCount, remainder);
+
+        // Process full batches
+        for (int i = 0; i < fullBatchCount && !tableHasError; i++) {
+            List<Map<String, Object>> syncDataBatch = getBatchOfAskedSizeDataToSync(syncData, startIndex,
+                    BATCH_SIZE);
+            
+            // Updated to handle Map<String, Object> return type
+            Map<String, Object> syncResult = syncDataToServer(vanID, obj.getSchemaName(), obj.getTableName(),
+                    obj.getVanAutoIncColumnName(), obj.getServerColumnName(), syncDataBatch, user,
+                    Authorization, token);
+            
+            if (syncResult == null) {
+                logger.error("Sync failed for batch {} in schema: {}, table: {}", i, obj.getSchemaName(),
+                        obj.getTableName());
+                tableHasError = true;
+                failedRecords += syncDataBatch.size();
+                groupHasFailures = true;
+                break;
+            }
+            
+            String status = (String) syncResult.get("status");
+            int batchSuccessCount = (Integer) syncResult.get("successCount");
+            int batchFailCount = (Integer) syncResult.get("failCount");
+            @SuppressWarnings("unchecked")
+            List<String> batchFailureReasons = (List<String>) syncResult.get("failureReasons");
+            
+            successfulRecords += batchSuccessCount;
+            failedRecords += batchFailCount;
+            
+            // Add batch failure reasons to table failure reasons
+            if (batchFailureReasons != null && !batchFailureReasons.isEmpty()) {
+                tableFailureReasons.addAll(batchFailureReasons);
+                groupHasFailures = true;
+            }
+            
+            if (status.equals("Sync failed")) {
+                tableHasError = true;
+                break;
+            }
+
+            startIndex += BATCH_SIZE;
+        }
+
+        // Process remainder batch if no error occurred
+        if (!tableHasError && remainder > 0) {
+            List<Map<String, Object>> syncDataBatch = getBatchOfAskedSizeDataToSync(syncData, startIndex,
+                    remainder);
+            
+            Map<String, Object> syncResult = syncDataToServer(vanID, obj.getSchemaName(), obj.getTableName(),
+                    obj.getVanAutoIncColumnName(), obj.getServerColumnName(), syncDataBatch, user,
+                    Authorization, token);
+
+            if (syncResult == null) {
+                logger.error("Sync failed for remaining data in schema: {}, table: {}", obj.getSchemaName(),
+                        obj.getTableName());
+                failedRecords += syncDataBatch.size();
+                groupHasFailures = true;
+            } else {
+                String status = (String) syncResult.get("status");
+                int batchSuccessCount = (Integer) syncResult.get("successCount");
+                int batchFailCount = (Integer) syncResult.get("failCount");
+                @SuppressWarnings("unchecked")
+                List<String> batchFailureReasons = (List<String>) syncResult.get("failureReasons");
+                
+                successfulRecords += batchSuccessCount;
+                failedRecords += batchFailCount;
+                
+                // Add remainder failure reasons to table failure reasons
+                if (batchFailureReasons != null && !batchFailureReasons.isEmpty()) {
+                    tableFailureReasons.addAll(batchFailureReasons);
+                    groupHasFailures = true;
+                }
+                
+                if (status.equals("Sync failed")) {
+                    groupHasFailures = true;
+                }
+            }
+        }
+
+        // Determine table status based on success/failure counts
+        String tableStatus;
+        if (successfulRecords == totalRecords && failedRecords == 0) {
+            tableStatus = "success";
+        } else if (failedRecords == totalRecords && successfulRecords == 0) {
+            tableStatus = "failed";
+            groupHasFailures = true;
+        } else if (successfulRecords > 0 && failedRecords > 0) {
+            tableStatus = "partial";
+        } else {
+            tableStatus = "failed"; // Default to failed if unclear
+            groupHasFailures = true;
+        }
+
+        // Create detailed table info with failure reasons
+        Map<String, Object> tableDetails = new HashMap<>();
+        tableDetails.put("tableName", obj.getTableName());
+        tableDetails.put("schemaName", obj.getSchemaName());
+        tableDetails.put("status", tableStatus);
+        tableDetails.put("totalRecords", totalRecords);
+        tableDetails.put("successfulRecords", successfulRecords);
+        tableDetails.put("failedRecords", failedRecords);
+        
+        // Add failure reasons only if there are any failures
+        if (!tableFailureReasons.isEmpty()) {
+            tableDetails.put("failureReasons", tableFailureReasons);
+        }
+        
+        tableDetailsList.add(tableDetails);
+
+        logger.info("Table sync summary - {}: {} (Success: {}, Failed: {}, Total: {}, Failure Reasons: {})",
+                tableKey, tableStatus, successfulRecords, failedRecords, totalRecords, 
+                tableFailureReasons.isEmpty() ? "None" : tableFailureReasons);
+
+    } else {
+        logger.info("No data to sync for schema {} and table {}", obj.getSchemaName(), obj.getTableName());
+
+        Map<String, Object> tableDetails = new HashMap<>();
+        tableDetails.put("tableName", obj.getTableName());
+        tableDetails.put("schemaName", obj.getSchemaName());
+        tableDetails.put("status", "no_data");
+        tableDetails.put("totalRecords", 0);
+        tableDetails.put("successfulRecords", 0);
+        tableDetails.put("failedRecords", 0);
+        tableDetailsList.add(tableDetails);
+    }
+
+    // If this table had critical failures, stop processing this group
+    if (tableHasError) {
+        hasSyncFailed = true;
+        break;
+    }
+}
 			// Determine overall group status
 			String groupStatus;
 			long successTables = tableDetailsList.stream()
@@ -311,8 +468,8 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 
 			// Create group response
 			Map<String, Object> groupResponse = new HashMap<>();
-			groupResponse.put("groupId", groupId);
-			groupResponse.put("groupName", groupName != null ? groupName : "Group " + groupId);
+			groupResponse.put("syncTableGroupID", groupId);
+			groupResponse.put("syncTableGroupName", groupName != null ? groupName : "Group " + groupId);
 			groupResponse.put("status", groupStatus);
 			groupResponse.put("tables", tableDetailsList);
 			groupResponse.put("summary", Map.of(
@@ -328,8 +485,8 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 				for (int j = dataSyncGroupList.indexOf(dataSyncGroups) + 1; j < dataSyncGroupList.size(); j++) {
 					DataSyncGroups remainingGroup = dataSyncGroupList.get(j);
 					Map<String, Object> pendingGroupResponse = new HashMap<>();
-					pendingGroupResponse.put("groupId", remainingGroup.getSyncTableGroupID());
-					pendingGroupResponse.put("groupName",
+					pendingGroupResponse.put("syncTableGroupID", remainingGroup.getSyncTableGroupID());
+					pendingGroupResponse.put("syncTableGroupName",
 							remainingGroup.getSyncTableGroupName() != null ? remainingGroup.getSyncTableGroupName()
 									: "Group " + remainingGroup.getSyncTableGroupID());
 					pendingGroupResponse.put("status", "pending");
@@ -351,7 +508,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 			finalResponse.put("response", "Data sync failed");
 			finalResponse.put("groupsProgress", responseStatus);
 			return objectMapper.writerWithDefaultPrettyPrinter()
-					.writeValueAsString(Collections.singletonMap("data", finalResponse));
+					.writeValueAsString(finalResponse);
 		} else {
 			// Check if there was any data to sync
 			boolean hasData = responseStatus.stream()
@@ -368,7 +525,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 				finalResponse.put("response", "Data sync completed");
 				finalResponse.put("groupsProgress", responseStatus);
 				return objectMapper.writerWithDefaultPrettyPrinter()
-						.writeValueAsString(Collections.singletonMap("data", finalResponse));
+						.writeValueAsString(finalResponse);
 			}
 		}
 	}
@@ -411,100 +568,216 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 	/**
 	 * syncDataToServer method - UNCHANGED, works with existing logic
 	 */
-	public String syncDataToServer(int vanID, String schemaName, String tableName, String vanAutoIncColumnName,
-			String serverColumns, List<Map<String, Object>> dataToBesync, String user, String Authorization,
-			String token) throws Exception {
+	// public String syncDataToServer(int vanID, String schemaName, String tableName, String vanAutoIncColumnName,
+	// 		String serverColumns, List<Map<String, Object>> dataToBesync, String user, String Authorization,
+	// 		String token) throws Exception {
 
-		RestTemplate restTemplate = new RestTemplate();
-		Integer facilityID = masterVanRepo.getFacilityID(vanID);
+	// 	RestTemplate restTemplate = new RestTemplate();
+	// 	Integer facilityID = masterVanRepo.getFacilityID(vanID);
 
-		// serialize null
-		GsonBuilder gsonBuilder = new GsonBuilder();
-		gsonBuilder.serializeNulls();
-		Gson gson = gsonBuilder.create();
+	// 	// serialize null
+	// 	GsonBuilder gsonBuilder = new GsonBuilder();
+	// 	gsonBuilder.serializeNulls();
+	// 	Gson gson = gsonBuilder.create();
 
-		Map<String, Object> dataMap = new HashMap<>();
-		dataMap.put("schemaName", schemaName);
-		dataMap.put("tableName", tableName);
-		dataMap.put("vanAutoIncColumnName", vanAutoIncColumnName);
-		dataMap.put("serverColumns", serverColumns);
-		dataMap.put("syncData", dataToBesync);
-		dataMap.put("syncedBy", user);
-		if (facilityID != null)
-			dataMap.put("facilityID", facilityID);
+	// 	Map<String, Object> dataMap = new HashMap<>();
+	// 	dataMap.put("schemaName", schemaName);
+	// 	dataMap.put("tableName", tableName);
+	// 	dataMap.put("vanAutoIncColumnName", vanAutoIncColumnName);
+	// 	dataMap.put("serverColumns", serverColumns);
+	// 	dataMap.put("syncData", dataToBesync);
+	// 	dataMap.put("syncedBy", user);
+	// 	if (facilityID != null)
+	// 		dataMap.put("facilityID", facilityID);
 
-		String requestOBJ = gson.toJson(dataMap);
-		logger.info("Request obj=" + requestOBJ);
-		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestOBJ, Authorization, "datasync");
-		ResponseEntity<String> response = restTemplate.exchange(dataSyncUploadUrl, HttpMethod.POST, request,
-				String.class);
-		logger.info("Response for the server=" + response);
-		logger.info("Response body=" + response.getBody());
+	// 	String requestOBJ = gson.toJson(dataMap);
+	// 	logger.info("Request obj=" + requestOBJ);
+	// 	HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestOBJ, Authorization, "datasync");
+	// 	ResponseEntity<String> response = restTemplate.exchange(dataSyncUploadUrl, HttpMethod.POST, request,
+	// 			String.class);
+	// 	logger.info("Response for the server=" + response);
+	// 	logger.info("Response body=" + response.getBody());
 
-		int successCount = 0;
-		int failCount = 0;
-		List<String> successVanSerialNos = new ArrayList<>();
-		List<String> failedVanSerialNos = new ArrayList<>();
+	// 	int successCount = 0;
+	// 	int failCount = 0;
+	// 	List<String> successVanSerialNos = new ArrayList<>();
+	// 	List<String> failedVanSerialNos = new ArrayList<>();
 
-		if (response != null && response.hasBody()) {
-			JSONObject obj = new JSONObject(response.getBody());
-			if (obj.has("data")) {
-				JSONObject dataObj = obj.getJSONObject("data");
-				if (dataObj.has("records")) {
-					JSONArray recordsArr = dataObj.getJSONArray("records");
-					for (int i = 0; i < recordsArr.length(); i++) {
-						JSONObject record = recordsArr.getJSONObject(i);
-						String vanSerialNo = record.getString("vanSerialNo");
-						boolean success = record.getBoolean("success");
-						if (success) {
-							successVanSerialNos.add(vanSerialNo);
-							successCount++;
-						} else {
-							failedVanSerialNos.add(vanSerialNo);
-							failCount++;
-						}
-					}
-				} else if (tableName.equalsIgnoreCase("m_beneficiaryregidmapping")) {
-					// Handle summary response for m_beneficiaryregidmapping
-					String respMsg = dataObj.optString("response", "");
-					int statusCode = obj.optInt("statusCode", 0);
-					if (respMsg.toLowerCase().contains("success") && statusCode == 200) {
-						// All records are successful
-						for (Map<String, Object> map : dataToBesync) {
-							successVanSerialNos.add(String.valueOf(map.get(vanAutoIncColumnName)));
-						}
-						successCount = successVanSerialNos.size();
+	// 	if (response != null && response.hasBody()) {
+	// 		JSONObject obj = new JSONObject(response.getBody());
+	// 		if (obj.has("data")) {
+	// 			JSONObject dataObj = obj.getJSONObject("data");
+	// 			if (dataObj.has("records")) {
+	// 				JSONArray recordsArr = dataObj.getJSONArray("records");
+	// 				for (int i = 0; i < recordsArr.length(); i++) {
+	// 					JSONObject record = recordsArr.getJSONObject(i);
+	// 					String vanSerialNo = record.getString("vanSerialNo");
+	// 					boolean success = record.getBoolean("success");
+	// 					if (success) {
+	// 						successVanSerialNos.add(vanSerialNo);
+	// 						successCount++;
+	// 					} else {
+	// 						failedVanSerialNos.add(vanSerialNo);
+	// 						failCount++;
+	// 					}
+	// 				}
+	// 			} else if (tableName.equalsIgnoreCase("m_beneficiaryregidmapping")) {
+	// 				// Handle summary response for m_beneficiaryregidmapping
+	// 				String respMsg = dataObj.optString("response", "");
+	// 				int statusCode = obj.optInt("statusCode", 0);
+	// 				if (respMsg.toLowerCase().contains("success") && statusCode == 200) {
+	// 					// All records are successful
+	// 					for (Map<String, Object> map : dataToBesync) {
+	// 						successVanSerialNos.add(String.valueOf(map.get(vanAutoIncColumnName)));
+	// 					}
+	// 					successCount = successVanSerialNos.size();
+	// 				} else {
+	// 					// All records failed
+	// 					for (Map<String, Object> map : dataToBesync) {
+	// 						failedVanSerialNos.add(String.valueOf(map.get(vanAutoIncColumnName)));
+	// 					}
+	// 					failCount = failedVanSerialNos.size();
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+
+	// 	logger.info("Success Van Serial No=" + successVanSerialNos.toString());
+	// 	logger.info("Failed Van Serial No=" + failedVanSerialNos.toString());
+
+	// 	// Update processed flag for success and failed vanSerialNos
+	// 	if (!successVanSerialNos.isEmpty()) {
+	// 		dataSyncRepository.updateProcessedFlagInVan(schemaName, tableName, successVanSerialNos,
+	// 				vanAutoIncColumnName, user, "P");
+	// 	}
+	// 	if (!failedVanSerialNos.isEmpty()) {
+	// 		dataSyncRepository.updateProcessedFlagInVan(schemaName, tableName, failedVanSerialNos,
+	// 				vanAutoIncColumnName, user, "F");
+	// 	}
+
+	// 	if (successCount > 0 && failCount == 0)
+	// 		return "Data successfully synced";
+	// 	else if (successCount > 0 && failCount > 0)
+	// 		return "Partial success: " + successCount + " records synced, " + failCount + " failed";
+	// 	else
+	// 		return "Sync failed";
+	// }
+
+/**
+ * Updated syncDataToServer method that captures failure reasons
+ */
+public Map<String, Object> syncDataToServer(int vanID, String schemaName, String tableName, String vanAutoIncColumnName,
+		String serverColumns, List<Map<String, Object>> dataToBesync, String user, String Authorization,
+		String token) throws Exception {
+
+	RestTemplate restTemplate = new RestTemplate();
+	Integer facilityID = masterVanRepo.getFacilityID(vanID);
+
+	// serialize null
+	GsonBuilder gsonBuilder = new GsonBuilder();
+	gsonBuilder.serializeNulls();
+	Gson gson = gsonBuilder.create();
+
+	Map<String, Object> dataMap = new HashMap<>();
+	dataMap.put("schemaName", schemaName);
+	dataMap.put("tableName", tableName);
+	dataMap.put("vanAutoIncColumnName", vanAutoIncColumnName);
+	dataMap.put("serverColumns", serverColumns);
+	dataMap.put("syncData", dataToBesync);
+	dataMap.put("syncedBy", user);
+	if (facilityID != null)
+		dataMap.put("facilityID", facilityID);
+
+	String requestOBJ = gson.toJson(dataMap);
+	logger.info("Request obj=" + requestOBJ);
+	HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestOBJ, Authorization, "datasync");
+	ResponseEntity<String> response = restTemplate.exchange(dataSyncUploadUrl, HttpMethod.POST, request,
+			String.class);
+	logger.info("Response for the server=" + response);
+	logger.info("Response body=" + response.getBody());
+
+	int successCount = 0;
+	int failCount = 0;
+	List<String> successVanSerialNos = new ArrayList<>();
+	List<String> failedVanSerialNos = new ArrayList<>();
+	List<String> failureReasons = new ArrayList<>(); // New: collect failure reasons
+
+	if (response != null && response.hasBody()) {
+		JSONObject obj = new JSONObject(response.getBody());
+		if (obj.has("data")) {
+			JSONObject dataObj = obj.getJSONObject("data");
+			if (dataObj.has("records")) {
+				JSONArray recordsArr = dataObj.getJSONArray("records");
+				for (int i = 0; i < recordsArr.length(); i++) {
+					JSONObject record = recordsArr.getJSONObject(i);
+					String vanSerialNo = record.getString("vanSerialNo");
+					boolean success = record.getBoolean("success");
+					if (success) {
+						successVanSerialNos.add(vanSerialNo);
+						successCount++;
 					} else {
-						// All records failed
-						for (Map<String, Object> map : dataToBesync) {
-							failedVanSerialNos.add(String.valueOf(map.get(vanAutoIncColumnName)));
-						}
-						failCount = failedVanSerialNos.size();
+						failedVanSerialNos.add(vanSerialNo);
+						failCount++;
+						// Capture the failure reason
+						String reason = record.optString("reason", "Unknown error");
+						failureReasons.add(reason);
+					}
+				}
+			} else if (tableName.equalsIgnoreCase("m_beneficiaryregidmapping")) {
+				// Handle summary response for m_beneficiaryregidmapping
+				String respMsg = dataObj.optString("response", "");
+				int statusCode = obj.optInt("statusCode", 0);
+				if (respMsg.toLowerCase().contains("success") && statusCode == 200) {
+					// All records are successful
+					for (Map<String, Object> map : dataToBesync) {
+						successVanSerialNos.add(String.valueOf(map.get(vanAutoIncColumnName)));
+					}
+					successCount = successVanSerialNos.size();
+				} else {
+					// All records failed
+					for (Map<String, Object> map : dataToBesync) {
+						failedVanSerialNos.add(String.valueOf(map.get(vanAutoIncColumnName)));
+					}
+					failCount = failedVanSerialNos.size();
+					// Add a generic reason for all failed records
+					for (int i = 0; i < failCount; i++) {
+						failureReasons.add(respMsg.isEmpty() ? "Sync failed" : respMsg);
 					}
 				}
 			}
 		}
-
-		logger.info("Success Van Serial No=" + successVanSerialNos.toString());
-		logger.info("Failed Van Serial No=" + failedVanSerialNos.toString());
-
-		// Update processed flag for success and failed vanSerialNos
-		if (!successVanSerialNos.isEmpty()) {
-			dataSyncRepository.updateProcessedFlagInVan(schemaName, tableName, successVanSerialNos,
-					vanAutoIncColumnName, user, "P");
-		}
-		if (!failedVanSerialNos.isEmpty()) {
-			dataSyncRepository.updateProcessedFlagInVan(schemaName, tableName, failedVanSerialNos,
-					vanAutoIncColumnName, user, "F");
-		}
-
-		if (successCount > 0 && failCount == 0)
-			return "Data successfully synced";
-		else if (successCount > 0 && failCount > 0)
-			return "Partial success: " + successCount + " records synced, " + failCount + " failed";
-		else
-			return "Sync failed";
 	}
+
+	logger.info("Success Van Serial No=" + successVanSerialNos.toString());
+	logger.info("Failed Van Serial No=" + failedVanSerialNos.toString());
+	logger.info("Failure Reasons=" + failureReasons.toString());
+
+	// Update processed flag for success and failed vanSerialNos
+	if (!successVanSerialNos.isEmpty()) {
+		dataSyncRepository.updateProcessedFlagInVan(schemaName, tableName, successVanSerialNos,
+				vanAutoIncColumnName, user, "P","Null");
+	}
+	if (!failedVanSerialNos.isEmpty()) {
+		dataSyncRepository.updateProcessedFlagInVan(schemaName, tableName, failedVanSerialNos,
+				vanAutoIncColumnName, user, "F",failureReasons.get(0));
+	}
+
+	// Return detailed result object instead of just a string
+	Map<String, Object> result = new HashMap<>();
+	if (successCount > 0 && failCount == 0) {
+		result.put("status", "Data successfully synced");
+	} else if (successCount > 0 && failCount > 0) {
+		result.put("status", "Partial success: " + successCount + " records synced, " + failCount + " failed");
+	} else {
+		result.put("status", "Sync failed");
+	}
+	
+	result.put("successCount", successCount);
+	result.put("failCount", failCount);
+	result.put("failureReasons", failureReasons);
+	
+	return result;
+}
 
 	public StringBuilder getVanSerialNoListForSyncedData(String vanAutoIncColumnName,
 			List<Map<String, Object>> dataToBesync) throws Exception {

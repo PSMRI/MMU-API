@@ -785,7 +785,7 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
                 String vanSerialNo = String.valueOf(syncDataListInsert.get(insertListIndex)[vanSerialIndex]);
                 
                 syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, vanSerialNo,
-                        syncUploadDataDigester.getSyncedBy(), false, shortReason));
+                        syncUploadDataDigester.getSyncedBy(), false, e.getMessage()));
             }
         }
     }
@@ -829,7 +829,7 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
                 String vanSerialNo = String.valueOf(syncDataListUpdate.get(updateListIndex)[vanSerialIndex]);
                 
                 syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, vanSerialNo,
-                        syncUploadDataDigester.getSyncedBy(), false, shortReason));
+                        syncUploadDataDigester.getSyncedBy(), false, e.getMessage()));
             }
         }
     }
