@@ -166,19 +166,12 @@
                     }
                 }
 
-                // if (syncSuccess) {
-                //     return "Overall data sync passed.";
-                // } else {
-                //     return "Overall data sync failed. Details: " + errorMessage;
-                // }
                 Map<String, Object> responseMap = new HashMap<>();
-    responseMap.put("statusCode", 200);
-    responseMap.put("message", "Data sync completed");
-    responseMap.put("records", syncResults);
-    logger.info("Response = "+responseMap);
-    logger.info("Sync Results = "+syncResults);
-    return new ObjectMapper().writeValueAsString(responseMap);
-
+                responseMap.put("statusCode", 200);
+                responseMap.put("message", "Data sync completed");
+                responseMap.put("records", syncResults);
+    
+                return new ObjectMapper().writeValueAsString(responseMap);
             }
         }
 
