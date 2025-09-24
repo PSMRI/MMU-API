@@ -732,12 +732,11 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                 logger.error("Error checking record existence for table {}: VanSerialNo={}, VanID={}. Error: {}",
                         syncTableName, vanSerialNo, vanID, e.getMessage(), e);
 
-                // Store the complete error message from record check failure
-                String fullErrorMessage = "Record existence check failed: " +
-                        (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName() + " occurred");
+                // Store the main error reason from record check failure
+                String mainErrorReason = "Record check failed: " + extractMainErrorReason(e);
 
                 syncResults.add(new SyncResult(schemaName, syncTableName, vanSerialNo,
-                        syncUploadDataDigester.getSyncedBy(), false, fullErrorMessage));
+                        syncUploadDataDigester.getSyncedBy(), false, mainErrorReason));
                 continue; // Skip to next record
             }
 
@@ -805,18 +804,14 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                         // Success - keep the existing success entry
                         logger.info("Successfully inserted record at index {}", insertListIndex);
                     } else {
-                        // Failed - update the syncResults entry with detailed reason
+                        // Failed - update the syncResults entry with concise reason
                         String vanSerialNo = String.valueOf(syncDataListInsert.get(insertListIndex)[vanSerialIndex]);
-                        String detailedReason = "Insert operation failed. Database returned result code: " +
-                                (insertListIndex < insertResults.length ? insertResults[insertListIndex] : "unknown") +
-                                ". Result codes: 0=no rows affected (possibly due to constraint violation or duplicate key), "
-                                +
-                                "-2=operation failed, -3=operation succeeded but row count unknown, " +
-                                "1=success with 1 row affected. VanSerialNo: " + vanSerialNo +
-                                ", Table: " + syncTableName + ", Schema: " + schemaName;
+                        String conciseReason = "Insert failed (code: " +
+                                (insertListIndex < insertResults.length ? insertResults[insertListIndex] : "unknown")
+                                + ")";
 
                         syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, vanSerialNo,
-                                syncUploadDataDigester.getSyncedBy(), false, detailedReason));
+                                syncUploadDataDigester.getSyncedBy(), false, conciseReason));
                         insertSuccess = false;
                     }
                 }
@@ -825,21 +820,17 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                 insertSuccess = false;
                 logger.error("Exception during insert for table {}: {}", syncTableName, e.getMessage(), e);
 
-                // Store the complete exception message and details
-                String completeErrorMessage = buildCompleteErrorMessage(e, "INSERT", syncTableName, schemaName);
+                // Store the main error reason instead of complete exception message
+                String mainErrorReason = extractMainErrorReason(e);
 
-                // Update all insert-related syncResults to failed with complete error message
+                // Update all insert-related syncResults to failed with concise error message
                 for (Map.Entry<Integer, Integer> entry : insertIndexMap.entrySet()) {
                     int syncResultIndex = entry.getKey();
                     int insertListIndex = entry.getValue();
                     String vanSerialNo = String.valueOf(syncDataListInsert.get(insertListIndex)[vanSerialIndex]);
 
-                    String recordSpecificError = completeErrorMessage + " | VanSerialNo: " + vanSerialNo +
-                            " | Record Index: " + insertListIndex + " | Total Records in Batch: "
-                            + syncDataListInsert.size();
-
                     syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, vanSerialNo,
-                            syncUploadDataDigester.getSyncedBy(), false, recordSpecificError));
+                            syncUploadDataDigester.getSyncedBy(), false, "INSERT: " + mainErrorReason));
                 }
             }
         }
@@ -862,23 +853,14 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                         // Success - keep the existing success entry
                         logger.info("Successfully updated record at index {}", updateListIndex);
                     } else {
-                        // Failed - update the syncResults entry with detailed reason
+                        // Failed - update the syncResults entry with concise reason
                         String vanSerialNo = String.valueOf(syncDataListUpdate.get(updateListIndex)[vanSerialIndex]);
-                        String detailedReason = "Update operation failed. Database returned result code: " +
-                                (updateListIndex < updateResults.length ? updateResults[updateListIndex] : "unknown") +
-                                ". Result codes: 0=no rows affected (possibly record not found or no changes), " +
-                                "-2=operation failed, -3=operation succeeded but row count unknown, " +
-                                "1=success with 1 row affected. VanSerialNo: " + vanSerialNo +
-                                ", Table: " + syncTableName + ", Schema: " + schemaName +
-                                ", WHERE clause used VanSerialNo and " +
-                                (Arrays.asList("t_patientissue", "t_physicalstockentry", "t_stockadjustment",
-                                        "t_saitemmapping",
-                                        "t_stocktransfer", "t_patientreturn", "t_facilityconsumption", "t_indent",
-                                        "t_indentorder", "t_indentissue", "t_itemstockentry", "t_itemstockexit")
-                                        .contains(syncTableName.toLowerCase()) ? "SyncFacilityID" : "VanID");
+                        String conciseReason = "Update failed (code: " +
+                                (updateListIndex < updateResults.length ? updateResults[updateListIndex] : "unknown")
+                                + ")";
 
                         syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, vanSerialNo,
-                                syncUploadDataDigester.getSyncedBy(), false, detailedReason));
+                                syncUploadDataDigester.getSyncedBy(), false, conciseReason));
                         updateSuccess = false;
                     }
                 }
@@ -887,21 +869,17 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                 updateSuccess = false;
                 logger.error("Exception during update for table {}: {}", syncTableName, e.getMessage(), e);
 
-                // Store the complete exception message and details
-                String completeErrorMessage = buildCompleteErrorMessage(e, "UPDATE", syncTableName, schemaName);
+                // Store the main error reason instead of complete exception message
+                String mainErrorReason = extractMainErrorReason(e);
 
-                // Update all update-related syncResults to failed with complete error message
+                // Update all update-related syncResults to failed with concise error message
                 for (Map.Entry<Integer, Integer> entry : updateIndexMap.entrySet()) {
                     int syncResultIndex = entry.getKey();
                     int updateListIndex = entry.getValue();
                     String vanSerialNo = String.valueOf(syncDataListUpdate.get(updateListIndex)[vanSerialIndex]);
 
-                    String recordSpecificError = completeErrorMessage + " | VanSerialNo: " + vanSerialNo +
-                            " | Record Index: " + updateListIndex + " | Total Records in Batch: "
-                            + syncDataListUpdate.size();
-
                     syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, vanSerialNo,
-                            syncUploadDataDigester.getSyncedBy(), false, recordSpecificError));
+                            syncUploadDataDigester.getSyncedBy(), false, "UPDATE: " + mainErrorReason));
                 }
             }
         }
@@ -910,46 +888,94 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         return insertSuccess && updateSuccess;
     }
 
-    // Helper method to build complete error message with all available details
-    private String buildCompleteErrorMessage(Exception e, String operation, String tableName, String schemaName) {
-        StringBuilder errorMessage = new StringBuilder();
-
-        // Basic operation info
-        errorMessage.append(operation).append(" operation failed for table: ").append(schemaName).append(".")
-                .append(tableName);
-
-        // Exception type
-        errorMessage.append(" | Exception Type: ").append(e.getClass().getSimpleName());
-
-        // Main error message
-        if (e.getMessage() != null && !e.getMessage().trim().isEmpty()) {
-            errorMessage.append(" | Error Message: ").append(e.getMessage());
+    // Helper method to extract concise but meaningful error message
+    private String extractMainErrorReason(Exception e) {
+        if (e == null) {
+            return "Unknown error";
         }
 
-        // SQL specific details if it's a SQLException
-        if (e instanceof SQLException) {
-            SQLException sqlEx = (SQLException) e;
-            errorMessage.append(" | SQL Error Code: ").append(sqlEx.getErrorCode());
-            errorMessage.append(" | SQL State: ").append(sqlEx.getSQLState());
+        String message = e.getMessage();
+        if (message == null || message.trim().isEmpty()) {
+            return e.getClass().getSimpleName();
         }
 
-        // Add timestamp
-        errorMessage.append(" | Error Timestamp: ").append(LocalDateTime.now());
+        // Extract key information based on common error patterns
+        message = message.trim();
 
-        // Cause chain if available
-        Throwable cause = e.getCause();
-        int causeLevel = 1;
-        while (cause != null && causeLevel <= 3) { // Limit to 3 levels to prevent excessive length
-            errorMessage.append(" | Cause Level ").append(causeLevel).append(": ")
-                    .append(cause.getClass().getSimpleName());
-            if (cause.getMessage() != null && !cause.getMessage().trim().isEmpty()) {
-                errorMessage.append(" - ").append(cause.getMessage());
+        // Handle SQL constraint violations - extract the key constraint info
+        if (message.contains("Duplicate entry") && message.contains("for key")) {
+            // Extract: "Duplicate entry 'value' for key 'constraint_name'"
+            int keyStart = message.indexOf("for key '") + 9;
+            int keyEnd = message.indexOf("'", keyStart);
+            if (keyStart > 8 && keyEnd > keyStart) {
+                return "Duplicate key: " + message.substring(keyStart, keyEnd);
             }
-            cause = cause.getCause();
-            causeLevel++;
+            return "Duplicate entry error";
         }
 
-        return errorMessage.toString();
+        // Handle column cannot be null
+        if (message.contains("cannot be null")) {
+            int colStart = message.indexOf("Column '") + 8;
+            int colEnd = message.indexOf("'", colStart);
+            if (colStart > 7 && colEnd > colStart) {
+                return "Required field: " + message.substring(colStart, colEnd);
+            }
+            return "Required field missing";
+        }
+
+        // Handle data too long errors
+        if (message.contains("Data too long for column")) {
+            int colStart = message.indexOf("column '") + 8;
+            int colEnd = message.indexOf("'", colStart);
+            if (colStart > 7 && colEnd > colStart) {
+                return "Data too long: " + message.substring(colStart, colEnd);
+            }
+            return "Data length exceeded";
+        }
+
+        // Handle foreign key constraint violations
+        if (message.contains("foreign key constraint")) {
+            if (message.contains("CONSTRAINT `")) {
+                int constStart = message.indexOf("CONSTRAINT `") + 12;
+                int constEnd = message.indexOf("`", constStart);
+                if (constStart > 11 && constEnd > constStart) {
+                    return "FK violation: " + message.substring(constStart, constEnd);
+                }
+            }
+            return "Foreign key constraint failed";
+        }
+
+        // Handle connection/timeout issues
+        if (message.toLowerCase().contains("timeout")) {
+            return "Database connection timeout";
+        }
+
+        if (message.toLowerCase().contains("connection")) {
+            return "Database connection failed";
+        }
+
+        // Handle table/schema issues
+        if (message.contains("doesn't exist")) {
+            return "Table/schema not found";
+        }
+
+        // For other cases, try to get the first meaningful part of the message
+        // Split by common delimiters and take the first substantial part
+        String[] parts = message.split("[;:|]");
+        for (String part : parts) {
+            part = part.trim();
+            if (part.length() > 10 && part.length() <= 100) { // Reasonable length
+                return part;
+            }
+        }
+
+        // If message is short enough, return it as is
+        if (message.length() <= 150) {
+            return message;
+        }
+
+        // Otherwise, truncate to first 150 characters
+        return message.substring(0, 150) + "...";
     }
 
     private String getQueryToInsertDataToServerDB(String schemaName, String tableName, String serverColumns) {
