@@ -31,7 +31,6 @@
     import org.slf4j.Logger;
     import org.slf4j.LoggerFactory;
     import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataAccessException;
     import org.springframework.stereotype.Service;
 
     import com.fasterxml.jackson.databind.ObjectMapper;
@@ -773,7 +772,7 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
                 }
             }
             
-        } catch (DataAccessException e) {
+        } catch (Exception e) {
             insertSuccess = false;
             logger.error("Exception during insert for table {}: {}", syncTableName, e.getMessage(), e);
             
@@ -786,7 +785,7 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
                 String vanSerialNo = String.valueOf(syncDataListInsert.get(insertListIndex)[vanSerialIndex]);
                 
                 syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, vanSerialNo,
-                        syncUploadDataDigester.getSyncedBy(), false, e.getCause().getMessage()));
+                        syncUploadDataDigester.getSyncedBy(), false, shortReason));
             }
         }
     }
@@ -817,7 +816,7 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
                 }
             }
             
-        } catch (DataAccessException e) {
+        } catch (Exception e) {
             updateSuccess = false;
             logger.error("Exception during update for table {}: {}", syncTableName, e.getMessage(), e);
             
@@ -830,7 +829,7 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
                 String vanSerialNo = String.valueOf(syncDataListUpdate.get(updateListIndex)[vanSerialIndex]);
                 
                 syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, vanSerialNo,
-                        syncUploadDataDigester.getSyncedBy(), false, e.getCause().getMessage()));
+                        syncUploadDataDigester.getSyncedBy(), false, shortReason));
             }
         }
     }
