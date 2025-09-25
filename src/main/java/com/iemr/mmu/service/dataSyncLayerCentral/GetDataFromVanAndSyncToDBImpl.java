@@ -367,17 +367,27 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
             for (String key : map.keySet()) {
                 String cleanKey = key;
                 // Handle keys with SQL functions like date_format
-                if (key.startsWith("date_format(") && key.endsWith(")")) {
-                    int start = key.indexOf("(") + 1;
-                    int end = key.indexOf(",");
-                    if (end > start) {
-                        cleanKey = key.substring(start, end).trim();
-                    } else {
-                        cleanKey = key.substring(start, key.indexOf(")")).trim();
-                    }
-                }
+                // if (key.startsWith("date_format(") && key.endsWith(")")) {
+                //     int start = key.indexOf("(") + 1;
+                //     int end = key.indexOf(",");
+                //     if (end > start) {
+                //         cleanKey = key.substring(start, end).trim();
+                //     } else {
+                //         cleanKey = key.substring(start, key.indexOf(")")).trim();
+                //     }
+                // }
+
+                if (key.toLowerCase().startsWith("date_format(")) {
+    int start = key.indexOf("(");
+    int end = key.lastIndexOf(")");
+    if (start >= 0 && end > start) {
+        // safely extract the real column inside
+        key = key.substring(start + 1, end).split(",")[0].trim();
+    }
+}
                 cleanRecord.put(cleanKey.trim(), map.get(key));
             }
+
 
             String vanSerialNo = String.valueOf(cleanRecord.get(vanAutoIncColumnName));
             String vanID = String.valueOf(cleanRecord.get("VanID"));
