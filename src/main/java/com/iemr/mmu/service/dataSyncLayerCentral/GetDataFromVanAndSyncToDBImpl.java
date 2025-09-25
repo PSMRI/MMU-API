@@ -175,18 +175,52 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         }
     }
 
-    private boolean syncTablesInGroup(String schemaName, String currentTableName,
-            SyncUploadDataDigester originalDigester, List<SyncResult> syncResults) {
-        SyncUploadDataDigester tableSpecificDigester = new SyncUploadDataDigester();
-        tableSpecificDigester.setSchemaName(schemaName);
-        tableSpecificDigester.setTableName(currentTableName);
-        tableSpecificDigester.setSyncedBy(originalDigester.getSyncedBy());
-        tableSpecificDigester.setFacilityID(originalDigester.getFacilityID());
-        tableSpecificDigester.setVanAutoIncColumnName(originalDigester.getVanAutoIncColumnName());
-        tableSpecificDigester.setServerColumns(originalDigester.getServerColumns());
-        tableSpecificDigester.setSyncData(originalDigester.getSyncData());
-        return performGenericTableSync(tableSpecificDigester, syncResults);
+    
+    private boolean syncTablesInGroup(String schemaName,
+                                  String currentTableName,
+                                  SyncUploadDataDigester originalDigester,
+                                  List<SyncResult> syncResults) {
+    // Filter syncData for this specific table
+    List<Map<String, Object>> filteredData = new ArrayList<>();
+    for (Map<String, Object> map : originalDigester.getSyncData()) {
+        if (map.get("tableName") != null &&
+            map.get("tableName").toString().equalsIgnoreCase(currentTableName)) {
+            filteredData.add(map);
+        }
     }
+
+    logger.info("Filtered {} records for table {}", filteredData.size(), currentTableName);
+
+    if (filteredData.isEmpty()) {
+        logger.info("No data found for table: {}", currentTableName);
+        return true; // No data to sync is considered success
+    }
+
+    SyncUploadDataDigester tableSpecificDigester = new SyncUploadDataDigester();
+    tableSpecificDigester.setSchemaName(schemaName);
+    tableSpecificDigester.setTableName(currentTableName);
+    tableSpecificDigester.setSyncedBy(originalDigester.getSyncedBy());
+    tableSpecificDigester.setFacilityID(originalDigester.getFacilityID());
+    tableSpecificDigester.setVanAutoIncColumnName(originalDigester.getVanAutoIncColumnName());
+    tableSpecificDigester.setServerColumns(originalDigester.getServerColumns());
+    tableSpecificDigester.setSyncData(filteredData); // Use filtered data
+
+    return performGenericTableSync(tableSpecificDigester, syncResults);
+}
+
+
+    // private boolean syncTablesInGroup(String schemaName, String currentTableName,
+    //         SyncUploadDataDigester originalDigester, List<SyncResult> syncResults) {
+    //     SyncUploadDataDigester tableSpecificDigester = new SyncUploadDataDigester();
+    //     tableSpecificDigester.setSchemaName(schemaName);
+    //     tableSpecificDigester.setTableName(currentTableName);
+    //     tableSpecificDigester.setSyncedBy(originalDigester.getSyncedBy());
+    //     tableSpecificDigester.setFacilityID(originalDigester.getFacilityID());
+    //     tableSpecificDigester.setVanAutoIncColumnName(originalDigester.getVanAutoIncColumnName());
+    //     tableSpecificDigester.setServerColumns(originalDigester.getServerColumns());
+    //     tableSpecificDigester.setSyncData(originalDigester.getSyncData());
+    //     return performGenericTableSync(tableSpecificDigester, syncResults);
+    // }
 
     private String update_M_BeneficiaryRegIdMapping_for_provisioned_benID(
             SyncUploadDataDigester syncUploadDataDigester, List<SyncResult> syncResults) {
