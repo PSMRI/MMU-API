@@ -88,6 +88,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 	private SyncUtilityClassRepo syncutilityClassRepo;
 	@Autowired
 	private CookieUtil cookieUtil;
+boolean criticalTableFailure = false; // Add this flag
 
 	/**
 	 * 
@@ -242,19 +243,22 @@ public class UploadDataToServerImpl implements UploadDataToServer {
             }
         }
 
-        // Determine table status based on success/failure counts
-        String tableStatus;
-        if (successfulRecords == totalRecords && failedRecords == 0) {
-            tableStatus = "success";
-        } else if (failedRecords == totalRecords && successfulRecords == 0) {
-            tableStatus = "failed";
-            groupHasFailures = true;
-        } else if (successfulRecords > 0 && failedRecords > 0) {
-            tableStatus = "partial";
-        } else {
-            tableStatus = "failed"; // Default to failed if unclear
-            groupHasFailures = true;
-        }
+      String tableStatus;
+
+if (successfulRecords == totalRecords && failedRecords == 0) {
+    tableStatus = "success";
+} else if (failedRecords == totalRecords && successfulRecords == 0) {
+    tableStatus = "failed";
+    criticalTableFailure = true; // Only critical failures stop sync
+    groupHasFailures = true;
+} else if (successfulRecords > 0 && failedRecords > 0) {
+    tableStatus = "partial";
+    groupHasFailures = true; // Group has issues but don't stop sync
+} else {
+    tableStatus = "failed";
+    criticalTableFailure = true; // Complete failure is critical
+    groupHasFailures = true;
+}
 
         // Create detailed table info with failure reasons
         Map<String, Object> tableDetails = new HashMap<>();
@@ -289,11 +293,10 @@ public class UploadDataToServerImpl implements UploadDataToServer {
         tableDetailsList.add(tableDetails);
     }
 
-    // If this table had critical failures, stop processing this group
-    if (tableHasError) {
-        hasSyncFailed = true;
-        break;
-    }
+   if (criticalTableFailure) {
+    hasSyncFailed = true;
+    break;
+}
 }
 			// Determine overall group status
 			String groupStatus;
@@ -438,6 +441,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 
 	String requestOBJ = gson.toJson(dataMap);
 	HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestOBJ, Authorization, "datasync");
+	logger.info("Request to sync data: " + requestOBJ);
 	ResponseEntity<String> response = restTemplate.exchange(dataSyncUploadUrl, HttpMethod.POST, request,
 			String.class);
 

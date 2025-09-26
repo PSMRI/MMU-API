@@ -21,7 +21,6 @@
 */
 package com.iemr.mmu.service.dataSyncLayerCentral;
 
-import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -177,6 +176,23 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
 
     private boolean syncTablesInGroup(String schemaName, String currentTableName,
             SyncUploadDataDigester originalDigester, List<SyncResult> syncResults) {
+
+        // Filter syncData for this specific table
+        List<Map<String, Object>> filteredData = new ArrayList<>();
+        for (Map<String, Object> map : originalDigester.getSyncData()) {
+            if (map.get("tableName") != null &&
+                    map.get("tableName").toString().equalsIgnoreCase(currentTableName)) {
+                filteredData.add(map);
+            }
+        }
+
+        logger.info("Filtered {} records for table {}", filteredData.size(), currentTableName);
+
+        if (filteredData.isEmpty()) {
+            logger.info("No data found for table: {}", currentTableName);
+            return true; // No data to sync is considered success
+        }
+
         SyncUploadDataDigester tableSpecificDigester = new SyncUploadDataDigester();
         tableSpecificDigester.setSchemaName(schemaName);
         tableSpecificDigester.setTableName(currentTableName);
@@ -184,7 +200,8 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         tableSpecificDigester.setFacilityID(originalDigester.getFacilityID());
         tableSpecificDigester.setVanAutoIncColumnName(originalDigester.getVanAutoIncColumnName());
         tableSpecificDigester.setServerColumns(originalDigester.getServerColumns());
-        tableSpecificDigester.setSyncData(originalDigester.getSyncData());
+        tableSpecificDigester.setSyncData(filteredData); // Use filtered data
+
         return performGenericTableSync(tableSpecificDigester, syncResults);
     }
 
@@ -441,7 +458,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
             // Add to syncResults first, then track the index
             int currentSyncResultIndex = syncResults.size();
             syncResults.add(new SyncResult(schemaName, syncTableName, vanSerialNo,
-                    syncUploadDataDigester.getSyncedBy(), true, null)); // Initially set as success
+                    syncUploadDataDigester.getSyncedBy(), false, "Pending")); // Initially set as success
 
             if (recordCheck == 0) {
                 // Record doesn't exist - INSERT
@@ -466,8 +483,8 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
             }
         }
 
-        boolean insertSuccess = true;
-        boolean updateSuccess = true;
+        boolean insertSuccess = false;
+        boolean updateSuccess = false;
 
         // Process INSERT operations
         if (!syncDataListInsert.isEmpty()) {
@@ -477,47 +494,77 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                 int[] insertResults = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
                         serverColumns, queryInsert, syncDataListInsert);
 
-                // Update syncResults based on insert results
                 for (Map.Entry<Integer, Integer> entry : insertIndexMap.entrySet()) {
                     int syncResultIndex = entry.getKey();
                     int insertListIndex = entry.getValue();
 
-                    if (insertListIndex < insertResults.length && insertResults[insertListIndex] > 0) {
-                        // Success - keep the existing success entry
-                        logger.info("Successfully inserted record at index {}", insertListIndex);
-                    } else {
-                        // Failed - update the syncResults entry with concise reason
-                        String vanSerialNo = String.valueOf(syncDataListInsert.get(insertListIndex)[vanSerialIndex]);
-                        String conciseReason = "Insert failed (code: " +
-                                (insertListIndex < insertResults.length ? insertResults[insertListIndex] : "unknown")
-                                + ")";
+                    boolean success = insertListIndex < insertResults.length && insertResults[insertListIndex] > 0;
 
-                        syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, vanSerialNo,
+                    if (!success) {
+                        String failedVanSerialNo = getVanSerialNo(syncDataListInsert.get(insertListIndex),
+                                vanSerialIndex,
+                                syncResults.get(syncResultIndex));
+                        String conciseReason = "Insert failed (code: " +
+                                (insertListIndex < insertResults.length ? insertResults[insertListIndex] : "unknown") +
+                                ")";
+                        syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, failedVanSerialNo,
                                 syncUploadDataDigester.getSyncedBy(), false, conciseReason));
                         insertSuccess = false;
                     }
+                    else {
+    // ADD THIS ELSE BLOCK
+    syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName,
+            syncResults.get(syncResultIndex).getVanSerialNo(),
+            syncUploadDataDigester.getSyncedBy(), true, null));
+}
                 }
 
             } catch (Exception e) {
-                insertSuccess = false;
-                logger.error("Exception during insert for table {}: {}", syncTableName, e.getMessage(), e);
-
-                // Store the main error reason instead of complete exception message
-                String mainErrorReason = extractMainErrorReason(e);
-
-                // Update all insert-related syncResults to failed with concise error message
-                for (Map.Entry<Integer, Integer> entry : insertIndexMap.entrySet()) {
-                    int syncResultIndex = entry.getKey();
-                    int insertListIndex = entry.getValue();
-                    String vanSerialNo = String.valueOf(syncDataListInsert.get(insertListIndex)[vanSerialIndex]);
-
-                    syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, vanSerialNo,
-                            syncUploadDataDigester.getSyncedBy(), false, "INSERT: " + mainErrorReason));
-                }
+    String mainErrorReason = extractMainErrorReason(e);
+    
+    // Check if we can get partial results even with an exception
+    try {
+        // Try to check which records actually made it to the database
+        for (Map.Entry<Integer, Integer> entry : insertIndexMap.entrySet()) {
+            int syncResultIndex = entry.getKey();
+            int insertListIndex = entry.getValue();
+            
+            String vanSerialNo = getVanSerialNo(syncDataListInsert.get(insertListIndex), vanSerialIndex,
+                    syncResults.get(syncResultIndex));
+            int vanIDIndex = serverColumnsList.indexOf("VanID");
+            String vanID = vanIDIndex >= 0 && vanIDIndex < syncDataListInsert.get(insertListIndex).length
+                ? String.valueOf(syncDataListInsert.get(insertListIndex)[vanIDIndex])
+                : null;
+            
+            // Check if this specific record exists in DB now (it might have succeeded before the exception)
+            int recordExists = dataSyncRepositoryCentral.checkRecordIsAlreadyPresentOrNot(
+                    schemaName, syncTableName, vanSerialNo, vanID, vanAutoIncColumnName, 0);
+            
+            if (recordExists > 0) {
+                // Record exists - it was actually inserted successfully
+                syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, vanSerialNo,
+                        syncUploadDataDigester.getSyncedBy(), true, null));
+            } else {
+                // Record doesn't exist - it failed
+                syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, vanSerialNo,
+                        syncUploadDataDigester.getSyncedBy(), false, "INSERT: " + mainErrorReason));
             }
         }
+    } catch (Exception checkException) {
+        // If we can't check, mark all as failed
+        for (Map.Entry<Integer, Integer> entry : insertIndexMap.entrySet()) {
+            int syncResultIndex = entry.getKey();
+            int insertListIndex = entry.getValue();
+            String vanSerialNo = getVanSerialNo(syncDataListInsert.get(insertListIndex), vanSerialIndex,
+                    syncResults.get(syncResultIndex));
+            syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, vanSerialNo,
+                    syncUploadDataDigester.getSyncedBy(), false, "INSERT: " + mainErrorReason));
+        }
+    }
+    insertSuccess = false;
+}
+        }
 
-        // Process UPDATE operations
         if (!syncDataListUpdate.isEmpty()) {
             String queryUpdate = getQueryToUpdateDataToServerDB(schemaName, serverColumns, syncTableName);
 
@@ -525,48 +572,86 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                 int[] updateResults = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
                         serverColumns, queryUpdate, syncDataListUpdate);
 
-                // Update syncResults based on update results
                 for (Map.Entry<Integer, Integer> entry : updateIndexMap.entrySet()) {
                     int syncResultIndex = entry.getKey();
                     int updateListIndex = entry.getValue();
 
-                    if (updateListIndex < updateResults.length && updateResults[updateListIndex] > 0) {
-                        // Success - keep the existing success entry
-                        logger.info("Successfully updated record at index {}", updateListIndex);
-                    } else {
-                        // Failed - update the syncResults entry with concise reason
-                        String vanSerialNo = String.valueOf(syncDataListUpdate.get(updateListIndex)[vanSerialIndex]);
-                        String conciseReason = "Update failed (code: " +
-                                (updateListIndex < updateResults.length ? updateResults[updateListIndex] : "unknown")
-                                + ")";
+                    boolean success = updateListIndex < updateResults.length && updateResults[updateListIndex] > 0;
 
-                        syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, vanSerialNo,
+                    if (!success) {
+                        String failedVanSerialNo = getVanSerialNo(syncDataListUpdate.get(updateListIndex),
+                                vanSerialIndex,
+                                syncResults.get(syncResultIndex));
+                        String conciseReason = "Update failed (code: " +
+                                (updateListIndex < updateResults.length ? updateResults[updateListIndex] : "unknown") +
+                                ")";
+                        syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, failedVanSerialNo,
                                 syncUploadDataDigester.getSyncedBy(), false, conciseReason));
                         updateSuccess = false;
                     }
+                    else {
+    // ADD THIS ELSE BLOCK  
+    syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName,
+            syncResults.get(syncResultIndex).getVanSerialNo(),
+            syncUploadDataDigester.getSyncedBy(), true, null));
+}
                 }
 
             } catch (Exception e) {
-                updateSuccess = false;
-                logger.error("Exception during update for table {}: {}", syncTableName, e.getMessage(), e);
-
-                // Store the main error reason instead of complete exception message
-                String mainErrorReason = extractMainErrorReason(e);
-
-                // Update all update-related syncResults to failed with concise error message
-                for (Map.Entry<Integer, Integer> entry : updateIndexMap.entrySet()) {
-                    int syncResultIndex = entry.getKey();
-                    int updateListIndex = entry.getValue();
-                    String vanSerialNo = String.valueOf(syncDataListUpdate.get(updateListIndex)[vanSerialIndex]);
-
-                    syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, vanSerialNo,
-                            syncUploadDataDigester.getSyncedBy(), false, "UPDATE: " + mainErrorReason));
-                }
+    String mainErrorReason = extractMainErrorReason(e);
+    
+    // Check if we can get partial results even with an exception
+    try {
+        // Try to check which records actually made it to the database
+        for (Map.Entry<Integer, Integer> entry : updateIndexMap.entrySet()) {
+            int syncResultIndex = entry.getKey();
+            int updateListIndex = entry.getValue();
+            
+            String vanSerialNo = getVanSerialNo(syncDataListUpdate.get(updateListIndex), vanSerialIndex,
+                    syncResults.get(syncResultIndex));
+            int vanIDIndex = serverColumnsList.indexOf("VanID");
+            String vanID = vanIDIndex >= 0 && vanIDIndex < syncDataListUpdate.get(updateListIndex).length
+                ? String.valueOf(syncDataListUpdate.get(updateListIndex)[vanIDIndex])
+                : null;
+            
+            // Check if this specific record was actually updated in DB
+            int recordExists = dataSyncRepositoryCentral.checkRecordIsAlreadyPresentOrNot(
+                    schemaName, syncTableName, vanSerialNo, vanID, vanAutoIncColumnName, 0);
+            
+            if (recordExists > 0) {
+                // Record exists and was likely updated successfully
+                syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, vanSerialNo,
+                        syncUploadDataDigester.getSyncedBy(), true, null));
+            } else {
+                // Record doesn't exist or update failed
+                syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, vanSerialNo,
+                        syncUploadDataDigester.getSyncedBy(), false, "UPDATE: " + mainErrorReason));
             }
+        }
+    } catch (Exception checkException) {
+        // If we can't check, mark all as failed
+        for (Map.Entry<Integer, Integer> entry : updateIndexMap.entrySet()) {
+            int syncResultIndex = entry.getKey();
+            int updateListIndex = entry.getValue();
+            String vanSerialNo = getVanSerialNo(syncDataListUpdate.get(updateListIndex), vanSerialIndex,
+                    syncResults.get(syncResultIndex));
+            syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, vanSerialNo,
+                    syncUploadDataDigester.getSyncedBy(), false, "UPDATE: " + mainErrorReason));
+        }
+    }
+    updateSuccess = false;
+}
         }
 
         logger.info("Sync results for table {}: {}", syncTableName, syncResults);
         return insertSuccess && updateSuccess;
+    }
+
+    private String getVanSerialNo(Object[] record, int vanSerialIndex, SyncResult originalResult) {
+        if (vanSerialIndex >= 0 && vanSerialIndex < record.length) {
+            return String.valueOf(record[vanSerialIndex]);
+        }
+        return originalResult.getVanSerialNo() != null ? originalResult.getVanSerialNo() : "UNKNOWN";
     }
 
     // Helper method to extract concise but meaningful error message
@@ -682,7 +767,6 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         queryBuilder.append(") VALUES (");
         queryBuilder.append(preparedStatementSetter);
         queryBuilder.append(")");
-        logger.info("Test Query Builder: {}", queryBuilder.toString());
         return queryBuilder.toString();
     }
 

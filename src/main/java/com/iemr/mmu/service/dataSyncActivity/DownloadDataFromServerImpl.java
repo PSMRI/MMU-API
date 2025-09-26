@@ -23,12 +23,12 @@ package com.iemr.mmu.service.dataSyncActivity;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.HashMap;
 
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -40,11 +40,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.google.gson.Gson;
 import com.iemr.mmu.data.syncActivity_syncLayer.MasterDownloadDataDigester;
@@ -55,8 +51,6 @@ import com.iemr.mmu.repo.syncActivity_syncLayer.TempVanRepo;
 import com.iemr.mmu.utils.CookieUtil;
 import com.iemr.mmu.utils.RestTemplateUtil;
 import com.iemr.mmu.utils.mapper.InputMapper;
-
-import jakarta.servlet.http.HttpServletRequest;
 
 	@Service
 	@PropertySource("classpath:application.properties")
@@ -335,11 +329,13 @@ import jakarta.servlet.http.HttpServletRequest;
 		// Rest template
 		RestTemplate restTemplate = new RestTemplate();
 		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestOBJ, ServerAuthorization,"datasync");
+		logger.info("request obj check="+requestOBJ);
 		// Call rest-template to call central API to generate UNIQUE ID at central
 		ResponseEntity<String> response = restTemplate.exchange(benGenUrlCentral, HttpMethod.POST, request,
 				String.class);
 		logger.info("Authorization before calling local api="+Authorization);
 		logger.info("Import url="+benImportUrlLocal);
+		logger.info("Response from benGenUrlCentral: " + response.getBody());
 		if (response != null && response.hasBody()) {
 			JSONObject obj = new JSONObject(response.getBody());
 			if (obj != null && obj.has("data") && obj.has("statusCode") && obj.getInt("statusCode") == 200) {
