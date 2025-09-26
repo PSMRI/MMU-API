@@ -623,52 +623,18 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
     Integer facilityIDFromDigester = syncUploadDataDigester.getFacilityID();
     String serverColumns = syncUploadDataDigester.getServerColumns();
 
-    // Clean and normalize server columns
+    // ORIGINAL LOGIC - Keep this as it was working
+    int vanSerialIndex = Arrays.asList(serverColumns.split(",")).indexOf(vanAutoIncColumnName);
     List<String> serverColumnsList = Arrays.asList(serverColumns.split(","));
-    List<String> cleanServerColumnsList = new ArrayList<>();
-    for (String col : serverColumnsList) {
-        cleanServerColumnsList.add(col.trim());
+
+    // ONLY ADD: Log warning for debugging but continue processing
+    if (vanSerialIndex == -1) {
+        logger.warn("VanAutoIncColumnName '{}' not found in serverColumns for table '{}'. This is normal for auto-increment primary keys.", 
+                   vanAutoIncColumnName, syncTableName);
     }
 
-    // Find vanSerialIndex with better error handling
-    int vanSerialIndex = -1;
-    String normalizedVanAutoIncColumnName = vanAutoIncColumnName.trim();
-    
-    // Try exact match first
-    vanSerialIndex = cleanServerColumnsList.indexOf(normalizedVanAutoIncColumnName);
-    
-    // If not found, try case-insensitive match
-    if (vanSerialIndex == -1) {
-        for (int i = 0; i < cleanServerColumnsList.size(); i++) {
-            if (cleanServerColumnsList.get(i).equalsIgnoreCase(normalizedVanAutoIncColumnName)) {
-                vanSerialIndex = i;
-                break;
-            }
-        }
-    }
-    
-    // If still not found, log error and return false
-    if (vanSerialIndex == -1) {
-        logger.error("VanAutoIncColumnName '{}' not found in serverColumns: {}. Available columns: {}", 
-                     vanAutoIncColumnName, serverColumns, cleanServerColumnsList);
-        
-        // Add failed sync results for all records
-        for (Map<String, Object> map : dataToBesync) {
-            String vanSerialNo = "UNKNOWN";
-            if (map.containsKey(vanAutoIncColumnName)) {
-                vanSerialNo = String.valueOf(map.get(vanAutoIncColumnName));
-            }
-            syncResults.add(new SyncResult(schemaName, syncTableName, vanSerialNo,
-                    syncUploadDataDigester.getSyncedBy(), false, 
-                    "Column mapping error: " + vanAutoIncColumnName + " not found"));
-        }
-        return false;
-    }
-
-    logger.info("Found vanAutoIncColumnName '{}' at index {} in serverColumns", vanAutoIncColumnName, vanSerialIndex);
-logger.info("Check failure reason");
     for (Map<String, Object> map : dataToBesync) {
-        // Create a new map with clean column names as keys
+        // ORIGINAL LOGIC - Create a new map with clean column names as keys
         Map<String, Object> cleanRecord = new HashMap<>();
         for (String key : map.keySet()) {
             String cleanKey = key;
@@ -685,16 +651,8 @@ logger.info("Check failure reason");
             cleanRecord.put(cleanKey.trim(), map.get(key));
         }
 
-        // Get vanSerialNo with better error handling
-        String vanSerialNo = "UNKNOWN";
-        if (cleanRecord.containsKey(normalizedVanAutoIncColumnName)) {
-            Object vanSerialValue = cleanRecord.get(normalizedVanAutoIncColumnName);
-            vanSerialNo = vanSerialValue != null ? String.valueOf(vanSerialValue) : "NULL";
-        } else {
-            logger.warn("VanAutoIncColumnName '{}' not found in record data. Available keys: {}", 
-                       normalizedVanAutoIncColumnName, cleanRecord.keySet());
-        }
-
+        // ORIGINAL LOGIC - Extract vanSerialNo
+        String vanSerialNo = String.valueOf(cleanRecord.get(vanAutoIncColumnName));
         String vanID = String.valueOf(cleanRecord.get("VanID"));
         int syncFacilityID = 0;
 
@@ -759,21 +717,23 @@ logger.info("Check failure reason");
         try {
             recordCheck = dataSyncRepositoryCentral.checkRecordIsAlreadyPresentOrNot(
                     schemaName, syncTableName, vanSerialNo, vanID, vanAutoIncColumnName, syncFacilityID);
-            logger.info("Record check result for vanSerialNo {}: {}", vanSerialNo, recordCheck);
+            logger.info("Record check result: {}", recordCheck);
         } catch (Exception e) {
             logger.error("Error checking record existence for table {}: VanSerialNo={}, VanID={}. Error: {}",
                     syncTableName, vanSerialNo, vanID, e.getMessage(), e);
 
+            // Store the main error reason from record check failure
             String mainErrorReason = "Record check failed: " + extractMainErrorReason(e);
+
             syncResults.add(new SyncResult(schemaName, syncTableName, vanSerialNo,
                     syncUploadDataDigester.getSyncedBy(), false, mainErrorReason));
-            continue;
+            continue; // Skip to next record
         }
 
-        // Prepare Object array for insert/update
+        // ORIGINAL LOGIC - Prepare Object array for insert/update
         List<Object> currentRecordValues = new ArrayList<>();
-        for (String column : cleanServerColumnsList) {
-            Object value = cleanRecord.get(column);
+        for (String column : serverColumnsList) {
+            Object value = cleanRecord.get(column.trim());
             if (value instanceof Boolean) {
                 currentRecordValues.add(value);
             } else if (value != null) {
@@ -788,7 +748,7 @@ logger.info("Check failure reason");
         // Add to syncResults first, then track the index
         int currentSyncResultIndex = syncResults.size();
         syncResults.add(new SyncResult(schemaName, syncTableName, vanSerialNo,
-                syncUploadDataDigester.getSyncedBy(), true, null));
+                syncUploadDataDigester.getSyncedBy(), true, null)); // Initially set as success
 
         if (recordCheck == 0) {
             // Record doesn't exist - INSERT
@@ -797,7 +757,7 @@ logger.info("Check failure reason");
         } else {
             // Record exists - UPDATE
             List<Object> updateParams = new ArrayList<>(Arrays.asList(objArr));
-            updateParams.add(vanSerialNo); // Use the actual vanSerialNo value
+            updateParams.add(String.valueOf(vanSerialNo));
 
             if (Arrays.asList("t_patientissue", "t_physicalstockentry", "t_stockadjustment", "t_saitemmapping",
                     "t_stocktransfer", "t_patientreturn", "t_facilityconsumption", "t_indent",
@@ -805,7 +765,7 @@ logger.info("Check failure reason");
                     .contains(syncTableName.toLowerCase()) && cleanRecord.containsKey("SyncFacilityID")) {
                 updateParams.add(String.valueOf(cleanRecord.get("SyncFacilityID")));
             } else {
-                updateParams.add(vanID);
+                updateParams.add(String.valueOf(vanID));
             }
 
             updateIndexMap.put(currentSyncResultIndex, syncDataListUpdate.size());
@@ -830,12 +790,19 @@ logger.info("Check failure reason");
                 int insertListIndex = entry.getValue();
 
                 if (insertListIndex < insertResults.length && insertResults[insertListIndex] > 0) {
+                    // Success - keep the existing success entry
                     logger.info("Successfully inserted record at index {}", insertListIndex);
                 } else {
-                    // Failed - update the syncResults entry with concise reason
-                    Object[] failedRecord = syncDataListInsert.get(insertListIndex);
-                    String failedVanSerialNo = vanSerialIndex < failedRecord.length ? 
-                                               String.valueOf(failedRecord[vanSerialIndex]) : "UNKNOWN";
+                    // SAFETY CHECK - Prevent ArrayIndexOutOfBoundsException
+                    String failedVanSerialNo = "UNKNOWN";
+                    if (vanSerialIndex >= 0 && vanSerialIndex < syncDataListInsert.get(insertListIndex).length) {
+                        failedVanSerialNo = String.valueOf(syncDataListInsert.get(insertListIndex)[vanSerialIndex]);
+                    } else {
+                        // Fallback: get from original syncResult
+                        SyncResult originalResult = syncResults.get(syncResultIndex);
+                        failedVanSerialNo = originalResult.getVanSerialNo();
+                    }
+                    
                     String conciseReason = "Insert failed (code: " +
                             (insertListIndex < insertResults.length ? insertResults[insertListIndex] : "unknown")
                             + ")";
@@ -856,9 +823,16 @@ logger.info("Check failure reason");
             for (Map.Entry<Integer, Integer> entry : insertIndexMap.entrySet()) {
                 int syncResultIndex = entry.getKey();
                 int insertListIndex = entry.getValue();
-                Object[] failedRecord = syncDataListInsert.get(insertListIndex);
-                String failedVanSerialNo = vanSerialIndex < failedRecord.length ? 
-                                           String.valueOf(failedRecord[vanSerialIndex]) : "UNKNOWN";
+                
+                // SAFETY CHECK - Prevent ArrayIndexOutOfBoundsException
+                String failedVanSerialNo = "UNKNOWN";
+                if (vanSerialIndex >= 0 && vanSerialIndex < syncDataListInsert.get(insertListIndex).length) {
+                    failedVanSerialNo = String.valueOf(syncDataListInsert.get(insertListIndex)[vanSerialIndex]);
+                } else {
+                    // Fallback: get from original syncResult
+                    SyncResult originalResult = syncResults.get(syncResultIndex);
+                    failedVanSerialNo = originalResult.getVanSerialNo();
+                }
 
                 syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, failedVanSerialNo,
                         syncUploadDataDigester.getSyncedBy(), false, "INSERT: " + mainErrorReason));
@@ -866,7 +840,7 @@ logger.info("Check failure reason");
         }
     }
 
-    // Process UPDATE operations  
+    // Process UPDATE operations
     if (!syncDataListUpdate.isEmpty()) {
         String queryUpdate = getQueryToUpdateDataToServerDB(schemaName, serverColumns, syncTableName);
 
@@ -880,12 +854,19 @@ logger.info("Check failure reason");
                 int updateListIndex = entry.getValue();
 
                 if (updateListIndex < updateResults.length && updateResults[updateListIndex] > 0) {
+                    // Success - keep the existing success entry
                     logger.info("Successfully updated record at index {}", updateListIndex);
                 } else {
-                    // Failed - update the syncResults entry with concise reason
-                    Object[] failedRecord = syncDataListUpdate.get(updateListIndex);
-                    String failedVanSerialNo = vanSerialIndex < failedRecord.length ? 
-                                               String.valueOf(failedRecord[vanSerialIndex]) : "UNKNOWN";
+                    // SAFETY CHECK - Prevent ArrayIndexOutOfBoundsException
+                    String failedVanSerialNo = "UNKNOWN";
+                    if (vanSerialIndex >= 0 && vanSerialIndex < syncDataListUpdate.get(updateListIndex).length) {
+                        failedVanSerialNo = String.valueOf(syncDataListUpdate.get(updateListIndex)[vanSerialIndex]);
+                    } else {
+                        // Fallback: get from original syncResult
+                        SyncResult originalResult = syncResults.get(syncResultIndex);
+                        failedVanSerialNo = originalResult.getVanSerialNo();
+                    }
+                    
                     String conciseReason = "Update failed (code: " +
                             (updateListIndex < updateResults.length ? updateResults[updateListIndex] : "unknown")
                             + ")";
@@ -906,9 +887,16 @@ logger.info("Check failure reason");
             for (Map.Entry<Integer, Integer> entry : updateIndexMap.entrySet()) {
                 int syncResultIndex = entry.getKey();
                 int updateListIndex = entry.getValue();
-                Object[] failedRecord = syncDataListUpdate.get(updateListIndex);
-                String failedVanSerialNo = vanSerialIndex < failedRecord.length ? 
-                                           String.valueOf(failedRecord[vanSerialIndex]) : "UNKNOWN";
+                
+                // SAFETY CHECK - Prevent ArrayIndexOutOfBoundsException
+                String failedVanSerialNo = "UNKNOWN";
+                if (vanSerialIndex >= 0 && vanSerialIndex < syncDataListUpdate.get(updateListIndex).length) {
+                    failedVanSerialNo = String.valueOf(syncDataListUpdate.get(updateListIndex)[vanSerialIndex]);
+                } else {
+                    // Fallback: get from original syncResult
+                    SyncResult originalResult = syncResults.get(syncResultIndex);
+                    failedVanSerialNo = originalResult.getVanSerialNo();
+                }
 
                 syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, failedVanSerialNo,
                         syncUploadDataDigester.getSyncedBy(), false, "UPDATE: " + mainErrorReason));
@@ -916,8 +904,7 @@ logger.info("Check failure reason");
         }
     }
 
-    logger.info("Sync results for table {}: Total records processed: {}, Inserts: {}, Updates: {}", 
-                syncTableName, syncResults.size(), syncDataListInsert.size(), syncDataListUpdate.size());
+    logger.info("Sync results for table {}: {}", syncTableName, syncResults);
     return insertSuccess && updateSuccess;
 }
 
