@@ -62,7 +62,7 @@ public class DataSyncRepositoryCentral {
             "t_ncdscreening", "t_ncdcare", "i_ben_flow_outreach", "t_covid19", "t_idrsdetails", "t_physicalactivity",
             "t_phy_generalexam", "t_phy_headtotoe", "t_sys_obstetric", "t_sys_gastrointestinal", "t_sys_cardiovascular",
             "t_sys_respiratory", "t_sys_centralnervous", "t_sys_musculoskeletalsystem", "t_sys_genitourinarysystem",
-            "t_ancdiagnosis", "t_ncddiagnosis", "t_pncdiagnosis", "t_benchefcomplaint", "t_benclinicalobservation",
+            "t_ancdiagnosis", "t_ncddiagnosis", "t_pncdiagnosis", "t_benchiefcomplaint", "t_benclinicalobservation",
             "t_prescription", "t_prescribeddrug", "t_lab_testorder", "t_benreferdetails",
             "t_lab_testresult", "t_physicalstockentry", "t_patientissue", "t_facilityconsumption", "t_itemstockentry",
             "t_itemstockexit", "t_benmedhistory", "t_femaleobstetrichistory", "t_benmenstrualdetails",

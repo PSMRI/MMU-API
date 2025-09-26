@@ -109,7 +109,7 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 					}
 					indentRepo.saveAll(indentList);
 
-					int updateFlag = updateProcessedFlagToCentral("db_iemr_sync", "t_indent", ids, ServerAuthorization, token);
+					int updateFlag = updateProcessedFlagToCentral("db_iemr", "t_indent", ids, ServerAuthorization, token);
 				}
 
 				break;
@@ -136,7 +136,7 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 						indentOrder.setProcessed("P");
 					}
 					indentOrderRepo.saveAll(indentOrderList);
-					int updateFlag = updateProcessedFlagToCentral("db_iemr_sync", "t_indentorder", ids, ServerAuthorization, token);
+					int updateFlag = updateProcessedFlagToCentral("db_iemr", "t_indentorder", ids, ServerAuthorization, token);
 				}
 				break;
 			}
@@ -164,7 +164,7 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 					}
 					indentIssueRepo.saveAll(indentIssueList);
 
-					int updateFlag = updateProcessedFlagToCentral("db_iemr_sync", "t_indentissue", ids, ServerAuthorization, token);
+					int updateFlag = updateProcessedFlagToCentral("db_iemr", "t_indentissue", ids, ServerAuthorization, token);
 				}
 				break;
 			}
@@ -191,7 +191,7 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 					}
 					stockTransferRepo.saveAll(stockTransferList);
 
-					int updateFlag = updateProcessedFlagToCentral("db_iemr_sync", "t_stocktransfer", ids,
+					int updateFlag = updateProcessedFlagToCentral("db_iemr", "t_stocktransfer", ids,
 							ServerAuthorization, token);
 				}
 				break;
@@ -219,7 +219,7 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 					}
 					itemStockEntryRepo.saveAll(itemStockEntryList);
 
-					int updateFlag = updateProcessedFlagToCentral("db_iemr_sync", "t_itemstockentry", ids,
+					int updateFlag = updateProcessedFlagToCentral("db_iemr", "t_itemstockentry", ids,
 							ServerAuthorization, token);
 				}
 				break;
