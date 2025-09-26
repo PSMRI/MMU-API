@@ -243,21 +243,7 @@ boolean criticalTableFailure = false; // Add this flag
             }
         }
 
-        // Determine table status based on success/failure counts
-        // String tableStatus;
-        // if (successfulRecords == totalRecords && failedRecords == 0) {
-        //     tableStatus = "success";
-        // } else if (failedRecords == totalRecords && successfulRecords == 0) {
-        //     tableStatus = "failed";
-        //     groupHasFailures = true;
-        // } else if (successfulRecords > 0 && failedRecords > 0) {
-        //     tableStatus = "partial";
-        // } else {
-        //     tableStatus = "failed"; // Default to failed if unclear
-        //     groupHasFailures = true;
-        // }
-
-		String tableStatus;
+      String tableStatus;
 
 if (successfulRecords == totalRecords && failedRecords == 0) {
     tableStatus = "success";
@@ -307,12 +293,7 @@ if (successfulRecords == totalRecords && failedRecords == 0) {
         tableDetailsList.add(tableDetails);
     }
 
-    // If this table had critical failures, stop processing this group
-    // if (tableHasError) {
-    //     hasSyncFailed = true;
-    //     break;
-    // }
-	if (criticalTableFailure) {
+   if (criticalTableFailure) {
     hasSyncFailed = true;
     break;
 }
