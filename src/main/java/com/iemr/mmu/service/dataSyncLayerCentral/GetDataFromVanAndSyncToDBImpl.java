@@ -458,7 +458,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
             // Add to syncResults first, then track the index
             int currentSyncResultIndex = syncResults.size();
             syncResults.add(new SyncResult(schemaName, syncTableName, vanSerialNo,
-                    syncUploadDataDigester.getSyncedBy(), true, null)); // Initially set as success
+                    syncUploadDataDigester.getSyncedBy(), false, "Pending")); // Initially set as success
 
             if (recordCheck == 0) {
                 // Record doesn't exist - INSERT
@@ -483,8 +483,8 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
             }
         }
 
-        boolean insertSuccess = true;
-        boolean updateSuccess = true;
+        boolean insertSuccess = false;
+        boolean updateSuccess = false;
 
         // Process INSERT operations
         if (!syncDataListInsert.isEmpty()) {
@@ -511,6 +511,12 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                                 syncUploadDataDigester.getSyncedBy(), false, conciseReason));
                         insertSuccess = false;
                     }
+                    else {
+    // ADD THIS ELSE BLOCK
+    syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName,
+            syncResults.get(syncResultIndex).getVanSerialNo(),
+            syncUploadDataDigester.getSyncedBy(), true, null));
+}
                 }
 
             } catch (Exception e) {
@@ -552,6 +558,12 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                                 syncUploadDataDigester.getSyncedBy(), false, conciseReason));
                         updateSuccess = false;
                     }
+                    else {
+    // ADD THIS ELSE BLOCK  
+    syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName,
+            syncResults.get(syncResultIndex).getVanSerialNo(),
+            syncUploadDataDigester.getSyncedBy(), true, null));
+}
                 }
 
             } catch (Exception e) {
