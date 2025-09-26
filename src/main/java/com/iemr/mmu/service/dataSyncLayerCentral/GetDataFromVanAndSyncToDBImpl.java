@@ -520,18 +520,49 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                 }
 
             } catch (Exception e) {
-                // Row-level error handling for all insert rows
-                String mainErrorReason = extractMainErrorReason(e);
-                for (Map.Entry<Integer, Integer> entry : insertIndexMap.entrySet()) {
-                    int syncResultIndex = entry.getKey();
-                    int insertListIndex = entry.getValue();
-                    String failedVanSerialNo = getVanSerialNo(syncDataListInsert.get(insertListIndex), vanSerialIndex,
-                            syncResults.get(syncResultIndex));
-                    syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, failedVanSerialNo,
-                            syncUploadDataDigester.getSyncedBy(), false, "INSERT: " + mainErrorReason));
-                }
-                insertSuccess = false;
+    String mainErrorReason = extractMainErrorReason(e);
+    
+    // Check if we can get partial results even with an exception
+    try {
+        // Try to check which records actually made it to the database
+        for (Map.Entry<Integer, Integer> entry : insertIndexMap.entrySet()) {
+            int syncResultIndex = entry.getKey();
+            int insertListIndex = entry.getValue();
+            
+            String vanSerialNo = getVanSerialNo(syncDataListInsert.get(insertListIndex), vanSerialIndex,
+                    syncResults.get(syncResultIndex));
+            int vanIDIndex = serverColumnsList.indexOf("VanID");
+            String vanID = vanIDIndex >= 0 && vanIDIndex < syncDataListInsert.get(insertListIndex).length
+                ? String.valueOf(syncDataListInsert.get(insertListIndex)[vanIDIndex])
+                : null;
+            
+            // Check if this specific record exists in DB now (it might have succeeded before the exception)
+            int recordExists = dataSyncRepositoryCentral.checkRecordIsAlreadyPresentOrNot(
+                    schemaName, syncTableName, vanSerialNo, vanID, vanAutoIncColumnName, 0);
+            
+            if (recordExists > 0) {
+                // Record exists - it was actually inserted successfully
+                syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, vanSerialNo,
+                        syncUploadDataDigester.getSyncedBy(), true, null));
+            } else {
+                // Record doesn't exist - it failed
+                syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, vanSerialNo,
+                        syncUploadDataDigester.getSyncedBy(), false, "INSERT: " + mainErrorReason));
             }
+        }
+    } catch (Exception checkException) {
+        // If we can't check, mark all as failed
+        for (Map.Entry<Integer, Integer> entry : insertIndexMap.entrySet()) {
+            int syncResultIndex = entry.getKey();
+            int insertListIndex = entry.getValue();
+            String vanSerialNo = getVanSerialNo(syncDataListInsert.get(insertListIndex), vanSerialIndex,
+                    syncResults.get(syncResultIndex));
+            syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, vanSerialNo,
+                    syncUploadDataDigester.getSyncedBy(), false, "INSERT: " + mainErrorReason));
+        }
+    }
+    insertSuccess = false;
+}
         }
 
         if (!syncDataListUpdate.isEmpty()) {
@@ -567,17 +598,49 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                 }
 
             } catch (Exception e) {
-                String mainErrorReason = extractMainErrorReason(e);
-                for (Map.Entry<Integer, Integer> entry : updateIndexMap.entrySet()) {
-                    int syncResultIndex = entry.getKey();
-                    int updateListIndex = entry.getValue();
-                    String failedVanSerialNo = getVanSerialNo(syncDataListUpdate.get(updateListIndex), vanSerialIndex,
-                            syncResults.get(syncResultIndex));
-                    syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, failedVanSerialNo,
-                            syncUploadDataDigester.getSyncedBy(), false, "UPDATE: " + mainErrorReason));
-                }
-                updateSuccess = false;
+    String mainErrorReason = extractMainErrorReason(e);
+    
+    // Check if we can get partial results even with an exception
+    try {
+        // Try to check which records actually made it to the database
+        for (Map.Entry<Integer, Integer> entry : updateIndexMap.entrySet()) {
+            int syncResultIndex = entry.getKey();
+            int updateListIndex = entry.getValue();
+            
+            String vanSerialNo = getVanSerialNo(syncDataListUpdate.get(updateListIndex), vanSerialIndex,
+                    syncResults.get(syncResultIndex));
+            int vanIDIndex = serverColumnsList.indexOf("VanID");
+            String vanID = vanIDIndex >= 0 && vanIDIndex < syncDataListUpdate.get(updateListIndex).length
+                ? String.valueOf(syncDataListUpdate.get(updateListIndex)[vanIDIndex])
+                : null;
+            
+            // Check if this specific record was actually updated in DB
+            int recordExists = dataSyncRepositoryCentral.checkRecordIsAlreadyPresentOrNot(
+                    schemaName, syncTableName, vanSerialNo, vanID, vanAutoIncColumnName, 0);
+            
+            if (recordExists > 0) {
+                // Record exists and was likely updated successfully
+                syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, vanSerialNo,
+                        syncUploadDataDigester.getSyncedBy(), true, null));
+            } else {
+                // Record doesn't exist or update failed
+                syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, vanSerialNo,
+                        syncUploadDataDigester.getSyncedBy(), false, "UPDATE: " + mainErrorReason));
             }
+        }
+    } catch (Exception checkException) {
+        // If we can't check, mark all as failed
+        for (Map.Entry<Integer, Integer> entry : updateIndexMap.entrySet()) {
+            int syncResultIndex = entry.getKey();
+            int updateListIndex = entry.getValue();
+            String vanSerialNo = getVanSerialNo(syncDataListUpdate.get(updateListIndex), vanSerialIndex,
+                    syncResults.get(syncResultIndex));
+            syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, vanSerialNo,
+                    syncUploadDataDigester.getSyncedBy(), false, "UPDATE: " + mainErrorReason));
+        }
+    }
+    updateSuccess = false;
+}
         }
 
         logger.info("Sync results for table {}: {}", syncTableName, syncResults);
