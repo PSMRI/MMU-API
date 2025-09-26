@@ -666,7 +666,7 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
     }
 
     logger.info("Found vanAutoIncColumnName '{}' at index {} in serverColumns", vanAutoIncColumnName, vanSerialIndex);
-
+logger.info("Check failure reason");
     for (Map<String, Object> map : dataToBesync) {
         // Create a new map with clean column names as keys
         Map<String, Object> cleanRecord = new HashMap<>();
