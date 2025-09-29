@@ -91,88 +91,211 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
 
     }
 
-    public String syncDataToServer(String requestOBJ, String Authorization) throws Exception {
+    // public String syncDataToServer(String requestOBJ, String Authorization) throws Exception {
 
-        ObjectMapper mapper = new ObjectMapper();
-        SyncUploadDataDigester syncUploadDataDigester = mapper.readValue(requestOBJ, SyncUploadDataDigester.class);
-        List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
-        List<SyncResult> syncResults = new ArrayList<>(); // <-- define here
+    //     ObjectMapper mapper = new ObjectMapper();
+    //     SyncUploadDataDigester syncUploadDataDigester = mapper.readValue(requestOBJ, SyncUploadDataDigester.class);
+    //     List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
+    //     List<SyncResult> syncResults = new ArrayList<>(); // <-- define here
 
-        if (syncUploadDataDigester == null || syncUploadDataDigester.getTableName() == null) {
-            logger.error("Invalid SyncUploadDataDigester object or tableName is null.");
-            return "Error: Invalid sync request.";
+    //     if (syncUploadDataDigester == null || syncUploadDataDigester.getTableName() == null) {
+    //         logger.error("Invalid SyncUploadDataDigester object or tableName is null.");
+    //         return "Error: Invalid sync request.";
+    //     }
+
+    //     String syncTableName = syncUploadDataDigester.getTableName();
+    //     // Handle specific tables first, if their logic is distinct
+    //     if ("m_beneficiaryregidmapping".equalsIgnoreCase(syncTableName)) {
+    //         String result = update_M_BeneficiaryRegIdMapping_for_provisioned_benID(syncUploadDataDigester, syncResults);
+    //         if ("data sync passed".equals(result)) {
+    //             return "Sync successful for m_beneficiaryregidmapping.";
+    //         } else {
+    //             logger.error("Sync failed for m_beneficiaryregidmapping: {}", result);
+    //             return "Sync failed for m_beneficiaryregidmapping.";
+    //         }
+    //     } else {
+    //         boolean syncSuccess = true;
+    //         String errorMessage = "";
+    //         if (syncTableName != null && !syncTableName.isEmpty()) {
+    //             boolean foundInGroup = false;
+
+    //             for (Map<String, Object> map : dataToBesync) {
+    //                 if (map.get("tableName") != null
+    //                         && map.get("tableName").toString().equalsIgnoreCase(syncTableName)) {
+    //                     syncSuccess = syncTablesInGroup(syncUploadDataDigester.getSchemaName(), syncTableName,
+    //                             syncUploadDataDigester, syncResults);
+    //                     foundInGroup = true;
+    //                     break;
+    //                 }
+    //             }
+    //             if (!foundInGroup) {
+    //                 logger.warn("Table '{}' not found in any predefined groups. Proceeding with generic sync logic.",
+    //                         syncTableName);
+    //                 syncSuccess = performGenericTableSync(syncUploadDataDigester, syncResults);
+    //             }
+    //         } else {
+
+    //             for (Map.Entry<Integer, List<String>> entry : TABLE_GROUPS.entrySet()) {
+    //                 Integer groupId = entry.getKey();
+    //                 List<String> tablesInGroup = entry.getValue();
+    //                 for (String table : tablesInGroup) {
+    //                     try {
+
+    //                         boolean currentTableSyncResult = syncTablesInGroup(syncUploadDataDigester.getSchemaName(),
+    //                                 table, syncUploadDataDigester, syncResults);
+    //                         if (!currentTableSyncResult) {
+    //                             syncSuccess = false;
+    //                             errorMessage += "Failed to sync table: " + table + " in Group " + groupId + ". ";
+    //                             logger.error("Sync failed for table '{}' in Group {}. Error: {}", table, groupId,
+    //                                     errorMessage);
+
+    //                         } else {
+    //                             logger.info("Successfully synced table: {} in Group {}", table, groupId);
+    //                         }
+    //                     } catch (Exception e) {
+    //                         syncSuccess = false;
+    //                         errorMessage += "Exception during sync for table: " + table + " in Group " + groupId + ": "
+    //                                 + e.getMessage() + ". ";
+    //                         logger.error("Exception during sync for table '{}' in Group {}: {}", table, groupId,
+    //                                 e.getMessage(), e);
+    //                     }
+    //                 }
+    //             }
+    //         }
+
+    //         Map<String, Object> responseMap = new HashMap<>();
+    //         responseMap.put("statusCode", 200);
+    //         responseMap.put("message", "Data sync completed");
+    //         responseMap.put("records", syncResults);
+    //         logger.info("Response = " + responseMap);
+    //         logger.info("Sync Results = " + syncResults);
+    //         return new ObjectMapper().writeValueAsString(responseMap);
+
+    //     }
+    // }
+
+public String syncDataToServer(String requestOBJ, String Authorization) throws Exception {
+
+    ObjectMapper mapper = new ObjectMapper();
+    SyncUploadDataDigester syncUploadDataDigester = mapper.readValue(requestOBJ, SyncUploadDataDigester.class);
+    List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
+    List<SyncResult> syncResults = new ArrayList<>();
+
+    if (syncUploadDataDigester == null || syncUploadDataDigester.getTableName() == null) {
+        logger.error("Invalid SyncUploadDataDigester object or tableName is null.");
+        return "Error: Invalid sync request.";
+    }
+
+    String syncTableName = syncUploadDataDigester.getTableName();
+    
+    // Handle specific tables first
+    if ("m_beneficiaryregidmapping".equalsIgnoreCase(syncTableName)) {
+        String result = update_M_BeneficiaryRegIdMapping_for_provisioned_benID(syncUploadDataDigester, syncResults);
+        if ("data sync passed".equals(result)) {
+            return "Sync successful for m_beneficiaryregidmapping.";
+        } else {
+            logger.error("Sync failed for m_beneficiaryregidmapping: {}", result);
+            return "Sync failed for m_beneficiaryregidmapping.";
         }
+    } else {
+        // CRITICAL FIX: Track totals but continue processing all tables
+        int totalTablesProcessed = 0;
+        int totalTablesFailed = 0;
+        StringBuilder errorMessage = new StringBuilder();
+        
+        if (syncTableName != null && !syncTableName.isEmpty()) {
+            // Single table sync
+            boolean foundInGroup = false;
 
-        String syncTableName = syncUploadDataDigester.getTableName();
-        // Handle specific tables first, if their logic is distinct
-        if ("m_beneficiaryregidmapping".equalsIgnoreCase(syncTableName)) {
-            String result = update_M_BeneficiaryRegIdMapping_for_provisioned_benID(syncUploadDataDigester, syncResults);
-            if ("data sync passed".equals(result)) {
-                return "Sync successful for m_beneficiaryregidmapping.";
-            } else {
-                logger.error("Sync failed for m_beneficiaryregidmapping: {}", result);
-                return "Sync failed for m_beneficiaryregidmapping.";
+            for (Map<String, Object> map : dataToBesync) {
+                if (map.get("tableName") != null
+                        && map.get("tableName").toString().equalsIgnoreCase(syncTableName)) {
+                    boolean syncSuccess = syncTablesInGroup(syncUploadDataDigester.getSchemaName(), syncTableName,
+                            syncUploadDataDigester, syncResults);
+                    foundInGroup = true;
+                    if (!syncSuccess) {
+                        logger.warn("Table '{}' sync had failures, but continuing.", syncTableName);
+                    }
+                    break;
+                }
+            }
+            
+            if (!foundInGroup) {
+                logger.warn("Table '{}' not found in any predefined groups. Proceeding with generic sync logic.",
+                        syncTableName);
+                performGenericTableSync(syncUploadDataDigester, syncResults);
             }
         } else {
-            boolean syncSuccess = true;
-            String errorMessage = "";
-            if (syncTableName != null && !syncTableName.isEmpty()) {
-                boolean foundInGroup = false;
-
-                for (Map<String, Object> map : dataToBesync) {
-                    if (map.get("tableName") != null
-                            && map.get("tableName").toString().equalsIgnoreCase(syncTableName)) {
-                        syncSuccess = syncTablesInGroup(syncUploadDataDigester.getSchemaName(), syncTableName,
-                                syncUploadDataDigester, syncResults);
-                        foundInGroup = true;
-                        break;
-                    }
-                }
-                if (!foundInGroup) {
-                    logger.warn("Table '{}' not found in any predefined groups. Proceeding with generic sync logic.",
-                            syncTableName);
-                    syncSuccess = performGenericTableSync(syncUploadDataDigester, syncResults);
-                }
-            } else {
-
-                for (Map.Entry<Integer, List<String>> entry : TABLE_GROUPS.entrySet()) {
-                    Integer groupId = entry.getKey();
-                    List<String> tablesInGroup = entry.getValue();
-                    for (String table : tablesInGroup) {
-                        try {
-
-                            boolean currentTableSyncResult = syncTablesInGroup(syncUploadDataDigester.getSchemaName(),
-                                    table, syncUploadDataDigester, syncResults);
-                            if (!currentTableSyncResult) {
-                                syncSuccess = false;
-                                errorMessage += "Failed to sync table: " + table + " in Group " + groupId + ". ";
-                                logger.error("Sync failed for table '{}' in Group {}. Error: {}", table, groupId,
-                                        errorMessage);
-
-                            } else {
-                                logger.info("Successfully synced table: {} in Group {}", table, groupId);
-                            }
-                        } catch (Exception e) {
-                            syncSuccess = false;
-                            errorMessage += "Exception during sync for table: " + table + " in Group " + groupId + ": "
-                                    + e.getMessage() + ". ";
-                            logger.error("Exception during sync for table '{}' in Group {}: {}", table, groupId,
-                                    e.getMessage(), e);
+            // ALL TABLES SYNC - Process EVERY group and EVERY table regardless of failures
+            logger.info("Starting sync for all table groups. Total groups: {}", TABLE_GROUPS.size());
+            
+            for (Map.Entry<Integer, List<String>> entry : TABLE_GROUPS.entrySet()) {
+                Integer groupId = entry.getKey();
+                List<String> tablesInGroup = entry.getValue();
+                
+                logger.info("=== Processing Group {}: {} tables ===", groupId, tablesInGroup.size());
+                
+                for (String table : tablesInGroup) {
+                    totalTablesProcessed++;
+                    try {
+                        logger.info("Syncing table: {} (Group {})", table, groupId);
+                        
+                        boolean currentTableSyncResult = syncTablesInGroup(
+                                syncUploadDataDigester.getSchemaName(),
+                                table, 
+                                syncUploadDataDigester, 
+                                syncResults);
+                        
+                        if (!currentTableSyncResult) {
+                            totalTablesFailed++;
+                            String error = "Failed to sync table: " + table + " in Group " + groupId + ". ";
+                            errorMessage.append(error);
+                            logger.error("Sync failed for table '{}' in Group {}. CONTINUING to next table.", 
+                                    table, groupId);
+                        } else {
+                            logger.info("Successfully synced table: {} in Group {}", table, groupId);
                         }
+                        
+                    } catch (Exception e) {
+                        // CRITICAL: Catch exception but CONTINUE processing
+                        totalTablesFailed++;
+                        String error = "Exception during sync for table: " + table + " in Group " + groupId 
+                                + ": " + e.getMessage() + ". ";
+                        errorMessage.append(error);
+                        logger.error("Exception during sync for table '{}' in Group {}: {}. CONTINUING to next table.", 
+                                table, groupId, e.getMessage(), e);
                     }
                 }
+                
+                logger.info("=== Completed Group {}. Moving to next group ===", groupId);
             }
-
-            Map<String, Object> responseMap = new HashMap<>();
-            responseMap.put("statusCode", 200);
-            responseMap.put("message", "Data sync completed");
-            responseMap.put("records", syncResults);
-            logger.info("Response = " + responseMap);
-            logger.info("Sync Results = " + syncResults);
-            return new ObjectMapper().writeValueAsString(responseMap);
-
+            
+            logger.info("=== Completed ALL groups. Total: {}, Failed: {}, Success: {} ===", 
+                    totalTablesProcessed, totalTablesFailed, totalTablesProcessed - totalTablesFailed);
         }
+
+        // Build final response with comprehensive results
+        Map<String, Object> responseMap = new HashMap<>();
+        responseMap.put("statusCode", 200);
+        
+        if (totalTablesFailed > 0) {
+            responseMap.put("message", "Data sync completed with failures");
+            responseMap.put("summary", String.format(
+                    "Processed: %d tables, Failed: %d tables, Success: %d tables", 
+                    totalTablesProcessed, totalTablesFailed, totalTablesProcessed - totalTablesFailed));
+            responseMap.put("errors", errorMessage.toString());
+        } else {
+            responseMap.put("message", "Data sync completed successfully");
+        }
+        
+        responseMap.put("records", syncResults);
+        
+        logger.info("Final Response = {}", responseMap);
+        logger.info("Total Sync Results = {}", syncResults.size());
+        
+        return new ObjectMapper().writeValueAsString(responseMap);
     }
+}
 
     private boolean syncTablesInGroup(String schemaName, String currentTableName,
             SyncUploadDataDigester originalDigester, List<SyncResult> syncResults) {
