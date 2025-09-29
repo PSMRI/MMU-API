@@ -53,7 +53,8 @@ public class DataSyncRepositoryCentral {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 
-    private static final Set<String> VALID_SCHEMAS = Set.of("public", "db_iemr", "db_identity","apl_db_iemr","apl_db_identity","db_iemr_sync","db_identity_sync");
+    private static final Set<String> VALID_SCHEMAS = Set.of("public", "db_iemr", "db_identity", "apl_db_iemr",
+            "apl_db_identity", "db_iemr_sync", "db_identity_sync");
 
     private static final Set<String> VALID_TABLES = Set.of(
             "m_beneficiaryregidmapping", "i_beneficiaryaccount", "i_beneficiaryaddress", "i_beneficiarycontacts",
@@ -80,7 +81,10 @@ public class DataSyncRepositoryCentral {
     }
 
     private boolean isValidSchemaName(String schemaName) {
-        return VALID_SCHEMAS.contains(schemaName.toLowerCase());
+        String trimmedSchemaName = schemaName.trim();
+
+        // 2. Convert to lowercase and check against the set of valid schemas
+        return VALID_SCHEMAS.contains(trimmedSchemaName.toLowerCase());
     }
 
     private boolean isValidTableName(String tableName) {
@@ -88,239 +92,244 @@ public class DataSyncRepositoryCentral {
     }
 
     private boolean isValidColumnNamesList(String columnNames) {
-    if (columnNames == null || columnNames.trim().isEmpty()) {
-        return false;
-    }
-    logger.info("Validating column names: {}", columnNames);
-    for (String col : columnNames.split(",")) {
-        String trimmed = col.trim();
-
-        // Handle date_format(...) style
-        if (trimmed.toLowerCase().startsWith("date_format(")) {
-            int openParenIndex = trimmed.indexOf("(");
-            int commaIndex = trimmed.indexOf(",", openParenIndex);
-            if (commaIndex > 0) {
-                trimmed = trimmed.substring(openParenIndex + 1, commaIndex).trim();
-            }
-        }
-
-        if (!isValidDatabaseIdentifierCharacter(trimmed)) {
+        if (columnNames == null || columnNames.trim().isEmpty()) {
             return false;
         }
+        logger.info("Validating column names: {}", columnNames);
+        for (String col : columnNames.split(",")) {
+            String trimmed = col.trim();
+
+            // Handle date_format(...) style
+            if (trimmed.toLowerCase().startsWith("date_format(")) {
+                int openParenIndex = trimmed.indexOf("(");
+                int commaIndex = trimmed.indexOf(",", openParenIndex);
+                if (commaIndex > 0) {
+                    trimmed = trimmed.substring(openParenIndex + 1, commaIndex).trim();
+                }
+            }
+
+            if (!isValidDatabaseIdentifierCharacter(trimmed)) {
+                return false;
+            }
+        }
+        return true;
     }
-    return true;
-}
 
+    // public int checkRecordIsAlreadyPresentOrNot(String schemaName, String
+    // tableName, String vanSerialNo, String vanID,
+    // String vanAutoIncColumnName, int syncFacilityID) {
 
-    // public int checkRecordIsAlreadyPresentOrNot(String schemaName, String tableName, String vanSerialNo, String vanID,
-    //         String vanAutoIncColumnName, int syncFacilityID) {
-              
-    //     jdbcTemplate = getJdbcTemplate();
-    //     List<Object> params = new ArrayList<>();
+    // jdbcTemplate = getJdbcTemplate();
+    // List<Object> params = new ArrayList<>();
 
-    //     if (!isValidSchemaName(schemaName) || !isValidTableName(tableName) ||
-    //             !isValidDatabaseIdentifierCharacter(vanAutoIncColumnName)) {
-    //         logger.error("Invalid identifiers: schema={}, table={}, column={}", schemaName, tableName,
-    //                 vanAutoIncColumnName);
-    //         throw new IllegalArgumentException("Invalid identifiers provided.");
-    //     }
-
-    //     StringBuilder queryBuilder = new StringBuilder("SELECT ")
-    //             .append(vanAutoIncColumnName).append(" FROM ")
-    //             .append(schemaName).append(".").append(tableName).append(" WHERE VanSerialNo = ?");
-
-    //     params.add(vanSerialNo);
-
-    //     if (List.of("t_patientissue", "t_physicalstockentry", "t_stockadjustment", "t_saitemmapping",
-    //             "t_stocktransfer", "t_patientreturn", "t_facilityconsumption", "t_indent",
-    //             "t_indentorder", "t_indentissue", "t_itemstockentry", "t_itemstockexit")
-    //             .contains(tableName.toLowerCase()) && syncFacilityID > 0) {
-    //         queryBuilder.append(" AND SyncFacilityID = ?");
-    //         params.add(syncFacilityID);
-    //     } else {
-    //         queryBuilder.append(" AND VanID = ?");
-    //         params.add(vanID);
-    //     }
-
-    //     try {
-    //         List<Map<String, Object>> resultSet = jdbcTemplate.queryForList(queryBuilder.toString(), params.toArray());
-    //         return (resultSet != null && !resultSet.isEmpty()) ? 1 : 0;
-    //     } catch (Exception e) {
-    //         logger.error("Error checking record presence: {}", e.getMessage(), e);
-    //         throw new RuntimeException("Failed to check record existence: " + e.getMessage(), e);
-    //     }
+    // if (!isValidSchemaName(schemaName) || !isValidTableName(tableName) ||
+    // !isValidDatabaseIdentifierCharacter(vanAutoIncColumnName)) {
+    // logger.error("Invalid identifiers: schema={}, table={}, column={}",
+    // schemaName, tableName,
+    // vanAutoIncColumnName);
+    // throw new IllegalArgumentException("Invalid identifiers provided.");
     // }
 
+    // StringBuilder queryBuilder = new StringBuilder("SELECT ")
+    // .append(vanAutoIncColumnName).append(" FROM ")
+    // .append(schemaName).append(".").append(tableName).append(" WHERE VanSerialNo
+    // = ?");
+
+    // params.add(vanSerialNo);
+
+    // if (List.of("t_patientissue", "t_physicalstockentry", "t_stockadjustment",
+    // "t_saitemmapping",
+    // "t_stocktransfer", "t_patientreturn", "t_facilityconsumption", "t_indent",
+    // "t_indentorder", "t_indentissue", "t_itemstockentry", "t_itemstockexit")
+    // .contains(tableName.toLowerCase()) && syncFacilityID > 0) {
+    // queryBuilder.append(" AND SyncFacilityID = ?");
+    // params.add(syncFacilityID);
+    // } else {
+    // queryBuilder.append(" AND VanID = ?");
+    // params.add(vanID);
+    // }
+
+    // try {
+    // List<Map<String, Object>> resultSet =
+    // jdbcTemplate.queryForList(queryBuilder.toString(), params.toArray());
+    // return (resultSet != null && !resultSet.isEmpty()) ? 1 : 0;
+    // } catch (Exception e) {
+    // logger.error("Error checking record presence: {}", e.getMessage(), e);
+    // throw new RuntimeException("Failed to check record existence: " +
+    // e.getMessage(), e);
+    // }
+    // }
 
     public int checkRecordIsAlreadyPresentOrNot(String schemaName, String tableName, String vanSerialNo, String vanID,
 
-        String vanAutoIncColumnName, int syncFacilityID) {
- 
-    jdbcTemplate = getJdbcTemplate();
+            String vanAutoIncColumnName, int syncFacilityID) {
 
-    List<Object> params = new ArrayList<>();
- 
-    // REPLACE your existing validation block with this enhanced version:
+        jdbcTemplate = getJdbcTemplate();
 
-    boolean schemaValid = isValidSchemaName(schemaName);
+        List<Object> params = new ArrayList<>();
 
-    boolean tableValid = isValidTableName(tableName);
+        // REPLACE your existing validation block with this enhanced version:
 
-    boolean columnValid = isValidDatabaseIdentifierCharacter(vanAutoIncColumnName);
- 
-    if (!schemaValid || !tableValid || !columnValid) {
+        boolean schemaValid = isValidSchemaName(schemaName);
 
-        logger.error("=== VALIDATION FAILURE for VanSerialNo: {} ===", vanSerialNo);
+        boolean tableValid = isValidTableName(tableName);
 
-        // Schema validation details
+        boolean columnValid = isValidDatabaseIdentifierCharacter(vanAutoIncColumnName);
 
-        if (!schemaValid) {
+        if (!schemaValid || !tableValid || !columnValid) {
 
-            logger.error("SCHEMA VALIDATION FAILED:");
+            logger.error("=== VALIDATION FAILURE for VanSerialNo: {} ===", vanSerialNo);
 
-            logger.error("  Input: '{}'", schemaName);
+            // Schema validation details
 
-            logger.error("  Lowercase: '{}'", schemaName != null ? schemaName.toLowerCase() : "null");
+            if (!schemaValid) {
 
-            logger.error("  Valid schemas: {}", VALID_SCHEMAS);
+                logger.error("SCHEMA VALIDATION FAILED:");
 
-        } else {
+                logger.error("  Input: '{}'", schemaName);
 
-            logger.error("Schema validation: PASSED");
+                logger.error("  Lowercase: '{}'", schemaName != null ? schemaName.toLowerCase() : "null");
 
-        }
-
-        // Table validation details
-
-        if (!tableValid) {
-
-            logger.error("TABLE VALIDATION FAILED:");
-
-            logger.error("  Input: '{}'", tableName);
-
-            logger.error("  Lowercase: '{}'", tableName != null ? tableName.toLowerCase() : "null");
-
-            logger.error("  In whitelist: {}", VALID_TABLES.contains(tableName != null ? tableName.toLowerCase() : ""));
-
-        } else {
-
-            logger.error("Table validation: PASSED");
-
-        }
-
-        // Column validation details
-
-        if (!columnValid) {
-
-            logger.error("COLUMN VALIDATION FAILED:");
-
-            logger.error("  Input: '{}'", vanAutoIncColumnName);
-
-            if (vanAutoIncColumnName != null) {
-
-                logger.error("  Length: {}", vanAutoIncColumnName.length());
-
-                logger.error("  Matches regex ^[a-zA-Z_][a-zA-Z0-9_]*$: {}", 
-
-                    vanAutoIncColumnName.matches("^[a-zA-Z_][a-zA-Z0-9_]*$"));
-
-                // Show first character issue if any
-
-                if (vanAutoIncColumnName.length() > 0) {
-
-                    char firstChar = vanAutoIncColumnName.charAt(0);
-
-                    boolean firstCharValid = Character.isLetter(firstChar) || firstChar == '_';
-
-                    logger.error("  First char '{}' (ASCII: {}) is valid: {}", 
-
-                        firstChar, (int)firstChar, firstCharValid);
-
-                }
-
-                // Show each character for debugging
-
-                StringBuilder charBreakdown = new StringBuilder();
-
-                for (int i = 0; i < vanAutoIncColumnName.length(); i++) {
-
-                    char c = vanAutoIncColumnName.charAt(i);
-
-                    charBreakdown.append(String.format("[%d:'%c'(%d)] ", i, c, (int)c));
-
-                }
-
-                logger.error("  Character breakdown: {}", charBreakdown.toString());
+                logger.error("  Valid schemas: {}", VALID_SCHEMAS);
 
             } else {
 
-                logger.error("  Column name is NULL");
+                logger.error("Schema validation: PASSED");
 
             }
 
-        } else {
+            // Table validation details
 
-            logger.error("Column validation: PASSED");
+            if (!tableValid) {
+
+                logger.error("TABLE VALIDATION FAILED:");
+
+                logger.error("  Input: '{}'", tableName);
+
+                logger.error("  Lowercase: '{}'", tableName != null ? tableName.toLowerCase() : "null");
+
+                logger.error("  In whitelist: {}",
+                        VALID_TABLES.contains(tableName != null ? tableName.toLowerCase() : ""));
+
+            } else {
+
+                logger.error("Table validation: PASSED");
+
+            }
+
+            // Column validation details
+
+            if (!columnValid) {
+
+                logger.error("COLUMN VALIDATION FAILED:");
+
+                logger.error("  Input: '{}'", vanAutoIncColumnName);
+
+                if (vanAutoIncColumnName != null) {
+
+                    logger.error("  Length: {}", vanAutoIncColumnName.length());
+
+                    logger.error("  Matches regex ^[a-zA-Z_][a-zA-Z0-9_]*$: {}",
+
+                            vanAutoIncColumnName.matches("^[a-zA-Z_][a-zA-Z0-9_]*$"));
+
+                    // Show first character issue if any
+
+                    if (vanAutoIncColumnName.length() > 0) {
+
+                        char firstChar = vanAutoIncColumnName.charAt(0);
+
+                        boolean firstCharValid = Character.isLetter(firstChar) || firstChar == '_';
+
+                        logger.error("  First char '{}' (ASCII: {}) is valid: {}",
+
+                                firstChar, (int) firstChar, firstCharValid);
+
+                    }
+
+                    // Show each character for debugging
+
+                    StringBuilder charBreakdown = new StringBuilder();
+
+                    for (int i = 0; i < vanAutoIncColumnName.length(); i++) {
+
+                        char c = vanAutoIncColumnName.charAt(i);
+
+                        charBreakdown.append(String.format("[%d:'%c'(%d)] ", i, c, (int) c));
+
+                    }
+
+                    logger.error("  Character breakdown: {}", charBreakdown.toString());
+
+                } else {
+
+                    logger.error("  Column name is NULL");
+
+                }
+
+            } else {
+
+                logger.error("Column validation: PASSED");
+
+            }
+
+            logger.error("=== END VALIDATION FAILURE ===");
+
+            throw new IllegalArgumentException("Invalid identifiers provided.");
 
         }
 
-        logger.error("=== END VALIDATION FAILURE ===");
+        // Rest of your method stays the same...
 
-        throw new IllegalArgumentException("Invalid identifiers provided.");
+        StringBuilder queryBuilder = new StringBuilder("SELECT ")
 
-    }
- 
-    // Rest of your method stays the same...
+                .append(vanAutoIncColumnName).append(" FROM ")
 
-    StringBuilder queryBuilder = new StringBuilder("SELECT ")
+                .append(schemaName).append(".").append(tableName).append(" WHERE VanSerialNo = ?");
 
-            .append(vanAutoIncColumnName).append(" FROM ")
+        params.add(vanSerialNo);
 
-            .append(schemaName).append(".").append(tableName).append(" WHERE VanSerialNo = ?");
- 
-    params.add(vanSerialNo);
- 
-    if (List.of("t_patientissue", "t_physicalstockentry", "t_stockadjustment", "t_saitemmapping",
+        if (List.of("t_patientissue", "t_physicalstockentry", "t_stockadjustment", "t_saitemmapping",
 
-            "t_stocktransfer", "t_patientreturn", "t_facilityconsumption", "t_indent",
+                "t_stocktransfer", "t_patientreturn", "t_facilityconsumption", "t_indent",
 
-            "t_indentorder", "t_indentissue", "t_itemstockentry", "t_itemstockexit")
+                "t_indentorder", "t_indentissue", "t_itemstockentry", "t_itemstockexit")
 
-            .contains(tableName.toLowerCase()) && syncFacilityID > 0) {
+                .contains(tableName.toLowerCase()) && syncFacilityID > 0) {
 
-        queryBuilder.append(" AND SyncFacilityID = ?");
+            queryBuilder.append(" AND SyncFacilityID = ?");
 
-        params.add(syncFacilityID);
+            params.add(syncFacilityID);
 
-    } else {
+        } else {
 
-        queryBuilder.append(" AND VanID = ?");
+            queryBuilder.append(" AND VanID = ?");
 
-        params.add(vanID);
+            params.add(vanID);
 
-    }
- 
-    try {
+        }
 
-        List<Map<String, Object>> resultSet = jdbcTemplate.queryForList(queryBuilder.toString(), params.toArray());
+        try {
 
-        return (resultSet != null && !resultSet.isEmpty()) ? 1 : 0;
+            List<Map<String, Object>> resultSet = jdbcTemplate.queryForList(queryBuilder.toString(), params.toArray());
 
-    } catch (Exception e) {
+            return (resultSet != null && !resultSet.isEmpty()) ? 1 : 0;
 
-        logger.error("Error checking record presence: {}", e.getMessage(), e);
+        } catch (Exception e) {
 
-        throw new RuntimeException("Failed to check record existence: " + e.getMessage(), e);
+            logger.error("Error checking record presence: {}", e.getMessage(), e);
+
+            throw new RuntimeException("Failed to check record existence: " + e.getMessage(), e);
+
+        }
 
     }
-
-} 
 
     public int[] syncDataToCentralDB(String schema, String tableName, String serverColumns, String query,
             List<Object[]> syncDataList) {
         jdbcTemplate = getJdbcTemplate();
         try {
-            
+
             return jdbcTemplate.batchUpdate(query, syncDataList);
         } catch (Exception e) {
             logger.error("Batch sync failed for table {}: {}", tableName, e.getMessage(), e);
@@ -368,7 +377,7 @@ public class DataSyncRepositoryCentral {
             // Safe dynamic SQL: All dynamic parts (table names, columns, etc.) are
             // validated or hardcoded.
             // Parameter values are bound safely using prepared statement placeholders (?).
-            
+
             return jdbcTemplate.queryForList(queryBuilder.toString(), params.toArray());
         } catch (Exception e) {
             logger.error("Error fetching master data: {}", e.getMessage(), e);
@@ -394,12 +403,12 @@ public class DataSyncRepositoryCentral {
         String query = String.format("SELECT %s FROM %s.%s %s LIMIT ? OFFSET ?", columnNames, schema, table,
                 whereClause); // NOSONAR
 
-            try {
-                
-                return jdbcTemplate.queryForList(query, limit, offset);
-            } catch (Exception e) {
-                logger.error("Error fetching batch details: {}", e.getMessage(), e);
-                throw new RuntimeException("Failed to fetch batch data: " + e.getMessage(), e);
-            }
+        try {
+
+            return jdbcTemplate.queryForList(query, limit, offset);
+        } catch (Exception e) {
+            logger.error("Error fetching batch details: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to fetch batch data: " + e.getMessage(), e);
         }
+    }
 }
