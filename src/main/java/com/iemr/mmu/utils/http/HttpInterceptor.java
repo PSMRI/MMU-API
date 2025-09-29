@@ -106,20 +106,34 @@ public class HttpInterceptor implements HandlerInterceptor {
 					break;
 				}
 			} catch (Exception e) {
-				OutputResponse output = new OutputResponse();
-				output.setError(e);
-				response.setContentType(MediaType.APPLICATION_JSON);
-
-				response.setContentLength(output.toString().length());
-				response.setHeader("Access-Control-Allow-Origin", "*");
-				response.getOutputStream().print(output.toString());
-
-				status = false;
+				status = handledUnauthorized(response, e.getMessage());
 			}
 		}
 		return status;
 	}
+	private boolean handledUnauthorized(HttpServletResponse response, String errorMessage) {
+		try {
+			if (errorMessage == null || errorMessage.trim().isEmpty()) {
+		        errorMessage = "Unauthorized access or session expired.";
+		    }
 
+		    String jsonErrorResponse = "{"
+		            + "\"status\": \"Unauthorized\","
+		            + "\"statusCode\": 401,"
+		            + "\"errorMessage\": \"" + errorMessage.replace("\"", "\\\"") + "\""
+		            + "}";
+
+		    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401
+		    response.setContentType(MediaType.APPLICATION_JSON);
+		    response.setHeader("Access-Control-Allow-Origin", "*");
+		    response.setCharacterEncoding("UTF-8");
+		    response.getWriter().write(jsonErrorResponse);
+		    return false;
+		}catch (Exception e) {
+			return false;
+		}
+	}
+	
 	@Override
 	public void postHandle(HttpServletRequest request, HttpServletResponse response, Object object, ModelAndView model)
 			throws Exception {
