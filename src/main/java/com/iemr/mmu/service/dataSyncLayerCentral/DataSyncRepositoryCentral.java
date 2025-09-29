@@ -202,6 +202,7 @@ public class DataSyncRepositoryCentral {
 
             if (!tableValid) {
 
+logger.info("failed Validating table name: {}", tableName);
                 logger.error("TABLE VALIDATION FAILED:");
 
                 logger.error("  Input: '{}'", tableName);
@@ -212,7 +213,7 @@ public class DataSyncRepositoryCentral {
                         VALID_TABLES.contains(tableName != null ? tableName.toLowerCase() : ""));
 
             } else {
-
+logger.info("Table name validation passed: {}", tableName);
                 logger.error("Table validation: PASSED");
 
             }
