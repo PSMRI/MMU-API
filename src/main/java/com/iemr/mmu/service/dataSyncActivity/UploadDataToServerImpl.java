@@ -640,8 +640,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 		logger.info("Request to sync data: " + requestOBJ);
 		ResponseEntity<String> response = restTemplate.exchange(dataSyncUploadUrl, HttpMethod.POST, request,
 				String.class);
-
-		logger.info("Response from the server=" + response);
+		logger.info("Response from the server body: {}", response.getBody());
 
 		int successCount = 0;
 		int failCount = 0;
