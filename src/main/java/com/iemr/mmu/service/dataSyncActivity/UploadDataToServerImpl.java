@@ -251,7 +251,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 						tableStatus = "success";
 					} else if (totalRecords > 0 && failedRecords == totalRecords && successfulRecords == 0) {
 						tableStatus = "failed";
-						criticalTableFailure = true;
+						// criticalTableFailure = true;
 						groupHasFailures = true;
 					} else if (successfulRecords > 0 && failedRecords > 0) {
 						tableStatus = "partial";
@@ -295,10 +295,10 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 					tableDetailsList.add(tableDetails);
 				}
 
-				if (criticalTableFailure) {
-					hasSyncFailed = true;
-					break;
-				}
+				// if (criticalTableFailure) {
+				// hasSyncFailed = true;
+				// break;
+				// }
 			}
 			// Determine overall group status
 			String groupStatus;
