@@ -202,6 +202,8 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 
 							// Don't break even if sync failed - continue processing
 						}
+						logger.info("Completed batch {} for schema: {}, table: {}", i, obj.getSchemaName(),
+								obj.getTableName());
 
 						startIndex += BATCH_SIZE;
 					}
