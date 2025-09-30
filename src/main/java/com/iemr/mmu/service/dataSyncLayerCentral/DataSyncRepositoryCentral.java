@@ -23,6 +23,7 @@ package com.iemr.mmu.service.dataSyncLayerCentral;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -288,8 +289,10 @@ public class DataSyncRepositoryCentral {
             return jdbcTemplate.batchUpdate(query, syncDataList);
         } catch (Exception e) {
             logger.error("Batch sync failed for table {}: {}. Skipping this batch.", tableName, e.getMessage(), e);
-            // return dummy result to allow continuation
-            return new int[0];
+            // Return failure codes instead of empty array to allow continuation
+            int[] results = new int[syncDataList.size()];
+            Arrays.fill(results, -3); // -3 = Statement.EXECUTE_FAILED
+            return results;
         }
     }
 
