@@ -115,50 +115,6 @@ public class DataSyncRepositoryCentral {
         return true;
     }
 
-    // public int checkRecordIsAlreadyPresentOrNot(String schemaName, String
-    // tableName, String vanSerialNo, String vanID,
-    // String vanAutoIncColumnName, int syncFacilityID) {
-
-    // jdbcTemplate = getJdbcTemplate();
-    // List<Object> params = new ArrayList<>();
-
-    // if (!isValidSchemaName(schemaName) || !isValidTableName(tableName) ||
-    // !isValidDatabaseIdentifierCharacter(vanAutoIncColumnName)) {
-    // logger.error("Invalid identifiers: schema={}, table={}, column={}",
-    // schemaName, tableName,
-    // vanAutoIncColumnName);
-    // throw new IllegalArgumentException("Invalid identifiers provided.");
-    // }
-
-    // StringBuilder queryBuilder = new StringBuilder("SELECT ")
-    // .append(vanAutoIncColumnName).append(" FROM ")
-    // .append(schemaName).append(".").append(tableName).append(" WHERE VanSerialNo
-    // = ?");
-
-    // params.add(vanSerialNo);
-
-    // if (List.of("t_patientissue", "t_physicalstockentry", "t_stockadjustment",
-    // "t_saitemmapping",
-    // "t_stocktransfer", "t_patientreturn", "t_facilityconsumption", "t_indent",
-    // "t_indentorder", "t_indentissue", "t_itemstockentry", "t_itemstockexit")
-    // .contains(tableName.toLowerCase()) && syncFacilityID > 0) {
-    // queryBuilder.append(" AND SyncFacilityID = ?");
-    // params.add(syncFacilityID);
-    // } else {
-    // queryBuilder.append(" AND VanID = ?");
-    // params.add(vanID);
-    // }
-
-    // try {
-    // List<Map<String, Object>> resultSet =
-    // jdbcTemplate.queryForList(queryBuilder.toString(), params.toArray());
-    // return (resultSet != null && !resultSet.isEmpty()) ? 1 : 0;
-    // } catch (Exception e) {
-    // logger.error("Error checking record presence: {}", e.getMessage(), e);
-    // throw new RuntimeException("Failed to check record existence: " +
-    // e.getMessage(), e);
-    // }
-    // }
 
     public int checkRecordIsAlreadyPresentOrNot(String schemaName, String tableName, String vanSerialNo, String vanID,
 
