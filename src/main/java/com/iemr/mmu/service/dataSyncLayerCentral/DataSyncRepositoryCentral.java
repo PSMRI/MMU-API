@@ -282,17 +282,31 @@ public class DataSyncRepositoryCentral {
 
     }
 
+    // public int[] syncDataToCentralDB(String schema, String tableName, String
+    // serverColumns, String query,
+    // List<Object[]> syncDataList) {
+    // jdbcTemplate = getJdbcTemplate();
+    // try {
+    // return jdbcTemplate.batchUpdate(query, syncDataList);
+    // } catch (Exception e) {
+    // logger.error("Batch sync failed for table {}: {}. Skipping this batch.",
+    // tableName, e.getMessage(), e);
+    // // Return failure codes instead of empty array to allow continuation
+    // int[] results = new int[syncDataList.size()];
+    // Arrays.fill(results, -3); // -3 = Statement.EXECUTE_FAILED
+    // return results;
+    // }
+    // }
+
     public int[] syncDataToCentralDB(String schema, String tableName, String serverColumns, String query,
             List<Object[]> syncDataList) {
         jdbcTemplate = getJdbcTemplate();
         try {
+
             return jdbcTemplate.batchUpdate(query, syncDataList);
         } catch (Exception e) {
-            logger.error("Batch sync failed for table {}: {}. Skipping this batch.", tableName, e.getMessage(), e);
-            // Return failure codes instead of empty array to allow continuation
-            int[] results = new int[syncDataList.size()];
-            Arrays.fill(results, -3); // -3 = Statement.EXECUTE_FAILED
-            return results;
+            logger.error("Batch sync failed for table {}: {}", tableName, e.getMessage(), e);
+            throw new RuntimeException("Batch sync failed: " + e.getMessage(), e);
         }
     }
 
