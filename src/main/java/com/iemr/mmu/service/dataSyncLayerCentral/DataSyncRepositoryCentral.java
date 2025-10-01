@@ -129,9 +129,9 @@ public class DataSyncRepositoryCentral {
         StringBuilder queryBuilder = new StringBuilder("SELECT ")
                 .append(vanAutoIncColumnName).append(" FROM ")
                 .append(schemaName).append(".").append(tableName).append(" WHERE VanSerialNo = ?");
-logger.info("Constructed query: {}", queryBuilder.toString());
+        logger.info("Constructed query: {}", queryBuilder.toString());
         params.add(vanSerialNo);
-logger.info("Table name="+tableName.toLowerCase());
+        logger.info("Table name="+tableName.toLowerCase());
         if (List.of("t_patientissue", "t_physicalstockentry", "t_stockadjustment", "t_saitemmapping",
                 "t_stocktransfer", "t_patientreturn", "t_facilityconsumption", "t_indent",
                 "t_indentorder", "t_indentissue", "t_itemstockentry", "t_itemstockexit")
