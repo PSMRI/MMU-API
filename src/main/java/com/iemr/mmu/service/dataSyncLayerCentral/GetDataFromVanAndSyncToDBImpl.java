@@ -364,6 +364,7 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
             // CRITICAL FIX: Keep null as null, don't convert to string
             cleanRecord.put(cleanKey.trim(), value);
         }
+logger.info("Clean REcord="+cleanRecord);
 
         String vanSerialNo = String.valueOf(cleanRecord.get(vanAutoIncColumnName));
         String vanID = String.valueOf(cleanRecord.get("VanID"));
@@ -406,8 +407,11 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
                     break;
                 }
                 case "t_itemstockentry": {
+                    logger.info("case:t_itemStockEntry"+cleanRecord);
                     if (cleanRecord.containsKey("FacilityID") && cleanRecord.get("FacilityID") instanceof Number) {
                         Number mapFacilityID = (Number) cleanRecord.get("FacilityID");
+                        logger.info("Map Facility ID="+mapFacilityID);
+                         logger.info("Facility ID From Digester="+facilityIDFromDigester);
                         if (mapFacilityID.intValue() == facilityIDFromDigester) {
                             cleanRecord.put("Processed", "P");
                         }
@@ -420,6 +424,7 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
         }
 
         if (cleanRecord.containsKey("SyncFacilityID") && cleanRecord.get("SyncFacilityID") instanceof Number) {
+            logger.info("Clean Record - syncFacilityID="+cleanRecord.get("SyncFacilityID"));
             syncFacilityID = ((Number) cleanRecord.get("SyncFacilityID")).intValue();
         }
 
@@ -441,6 +446,7 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
 
         List<Object> currentRecordValues = new ArrayList<>();
         for (String column : serverColumnsList) {
+            logger.info("Column="+column);
             Object value = cleanRecord.get(column.trim());
             // CRITICAL FIX: Don't convert null to string
             if (value == null) {
