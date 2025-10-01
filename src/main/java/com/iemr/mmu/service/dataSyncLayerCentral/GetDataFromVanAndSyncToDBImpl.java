@@ -347,20 +347,47 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
         for (Map<String, Object> map : dataToBesync) {
             // Create a new map with clean column names as keys
             Map<String, Object> cleanRecord = new HashMap<>();
+            // for (String key : map.keySet()) {
+            //     String cleanKey = key;
+            //     // Handle keys with SQL functions like date_format
+            //     if (key.startsWith("date_format(") && key.endsWith(")")) {
+            //         int start = key.indexOf("(") + 1;
+            //         int end = key.indexOf(",");
+            //         if (end > start) {
+            //             cleanKey = key.substring(start, end).trim();
+            //         } else {
+            //             cleanKey = key.substring(start, key.indexOf(")")).trim();
+            //         }
+            //     }
+            //     cleanRecord.put(cleanKey.trim(), map.get(key));
+            // }
+
             for (String key : map.keySet()) {
-                String cleanKey = key;
-                // Handle keys with SQL functions like date_format
-                if (key.startsWith("date_format(") && key.endsWith(")")) {
-                    int start = key.indexOf("(") + 1;
-                    int end = key.indexOf(",");
-                    if (end > start) {
-                        cleanKey = key.substring(start, end).trim();
-                    } else {
-                        cleanKey = key.substring(start, key.indexOf(")")).trim();
-                    }
-                }
-                cleanRecord.put(cleanKey.trim(), map.get(key));
-            }
+    String cleanKey = key;
+    Object value = map.get(key);
+
+    // Handle date_format fields specially
+    if (key.startsWith("date_format(") && key.endsWith(")")) {
+        int start = key.indexOf("(") + 1;
+        int end = key.indexOf(",");
+        if (end > start) {
+            cleanKey = key.substring(start, end).trim();
+        } else {
+            cleanKey = key.substring(start, key.indexOf(")")).trim();
+        }
+
+        // If value is null, set as empty string so MySQL treats it as NULL
+        if (value == null) {
+            cleanRecord.put(cleanKey, "NULL"); // <-- key fix
+        } else {
+            cleanRecord.put(cleanKey, value.toString());
+        }
+        continue;
+    }
+
+    cleanRecord.put(cleanKey.trim(), value);
+}
+
 
             String vanSerialNo = String.valueOf(cleanRecord.get(vanAutoIncColumnName));
             String vanID = String.valueOf(cleanRecord.get("VanID"));
