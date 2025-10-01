@@ -477,7 +477,7 @@ logger.info("Facility ID="+cleanRecord.containsKey("FacilityID"));
                     "t_indentorder", "t_indentissue", "t_itemstockentry", "t_itemstockexit")
                     .contains(syncTableName.toLowerCase()) && cleanRecord.containsKey("FacilityID")) {
                         logger.info("Adding SyncFacilityID to update params for table {}", syncTableName);
-                updateParams.add(String.valueOf(cleanRecord.get("SyncFacilityID")));
+                updateParams.add(String.valueOf(cleanRecord.get("FacilityID")));
             } else {
                 logger.info("Adding VanID to update params for table {}", syncTableName);
                 updateParams.add(String.valueOf(vanID));
