@@ -470,14 +470,12 @@ logger.info("Clean REcord="+cleanRecord);
         } else {
             List<Object> updateParams = new ArrayList<>(Arrays.asList(objArr));
             updateParams.add(String.valueOf(vanSerialNo));
-logger.info("Sync table name="+syncTableName);
-logger.info("Facility ID="+cleanRecord.containsKey("FacilityID"));
             if (Arrays.asList("t_patientissue", "t_physicalstockentry", "t_stockadjustment", "t_saitemmapping",
                     "t_stocktransfer", "t_patientreturn", "t_facilityconsumption", "t_indent",
                     "t_indentorder", "t_indentissue", "t_itemstockentry", "t_itemstockexit")
-                    .contains(syncTableName.toLowerCase()) && cleanRecord.containsKey("FacilityID")) {
+                    .contains(syncTableName.toLowerCase()) && cleanRecord.containsKey("SyncFacilityID")) {
                         logger.info("Adding SyncFacilityID to update params for table {}", syncTableName);
-                updateParams.add(String.valueOf(cleanRecord.get("FacilityID")));
+                updateParams.add(String.valueOf(cleanRecord.get("SyncFacilityID")));
             } else {
                 logger.info("Adding VanID to update params for table {}", syncTableName);
                 updateParams.add(String.valueOf(vanID));
