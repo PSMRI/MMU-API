@@ -339,7 +339,7 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
     String schemaName = syncUploadDataDigester.getSchemaName();
     Integer facilityIDFromDigester = syncUploadDataDigester.getFacilityID();
     String serverColumns = syncUploadDataDigester.getServerColumns();
-
+logger.info("Facility ID from digester="+facilityIDFromDigester);
     int vanSerialIndex = Arrays.asList(serverColumns.split(",")).indexOf(vanAutoIncColumnName);
     List<String> serverColumnsList = Arrays.asList(serverColumns.split(","));
 
@@ -470,11 +470,12 @@ logger.info("Clean REcord="+cleanRecord);
         } else {
             List<Object> updateParams = new ArrayList<>(Arrays.asList(objArr));
             updateParams.add(String.valueOf(vanSerialNo));
-
+logger.info("Sync table name="+syncTableName);
+logger.info("Facility ID="+cleanRecord.containsKey("FacilityID"));
             if (Arrays.asList("t_patientissue", "t_physicalstockentry", "t_stockadjustment", "t_saitemmapping",
                     "t_stocktransfer", "t_patientreturn", "t_facilityconsumption", "t_indent",
                     "t_indentorder", "t_indentissue", "t_itemstockentry", "t_itemstockexit")
-                    .contains(syncTableName.toLowerCase()) && cleanRecord.containsKey("SyncFacilityID")) {
+                    .contains(syncTableName.toLowerCase()) && cleanRecord.containsKey("FacilityID")) {
                         logger.info("Adding SyncFacilityID to update params for table {}", syncTableName);
                 updateParams.add(String.valueOf(cleanRecord.get("SyncFacilityID")));
             } else {
