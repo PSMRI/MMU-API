@@ -469,12 +469,15 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
                     "t_stocktransfer", "t_patientreturn", "t_facilityconsumption", "t_indent",
                     "t_indentorder", "t_indentissue", "t_itemstockentry", "t_itemstockexit")
                     .contains(syncTableName.toLowerCase()) && cleanRecord.containsKey("SyncFacilityID")) {
+                        logger.info("Adding SyncFacilityID to update params for table {}", syncTableName);
                 updateParams.add(String.valueOf(cleanRecord.get("SyncFacilityID")));
             } else {
+                logger.info("Adding VanID to update params for table {}", syncTableName);
                 updateParams.add(String.valueOf(vanID));
             }
 
             updateIndexMap.put(currentSyncResultIndex, syncDataListUpdate.size());
+            logger.info("Update Params=",updateParams.toArray());
             syncDataListUpdate.add(updateParams.toArray());
         }
     }
@@ -515,7 +518,7 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
 
         } catch (Exception e) {
             String mainErrorReason = extractMainErrorReason(e);
-            logger.error("Batch insert failed for table {}: {}", syncTableName, mainErrorReason, e);
+            logger.info("Batch insert failed for table {}: {}", syncTableName, mainErrorReason, e);
             
             // Mark ALL inserts as failed
             for (Map.Entry<Integer, Integer> entry : insertIndexMap.entrySet()) {
@@ -546,10 +549,19 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
                 boolean success = updateListIndex < updateResults.length && updateResults[updateListIndex] > 0;
 
                 if (!success) {
-                    String failedVanSerialNo = getVanSerialNo(syncDataListUpdate.get(updateListIndex),
-                            vanSerialIndex, syncResults.get(syncResultIndex));
-                    String conciseReason = "Update failed (code: " +
-                            (updateListIndex < updateResults.length ? updateResults[updateListIndex] : "unknown") + ")";
+                        Object[] failedParams = syncDataListUpdate.get(updateListIndex);
+ 
+    logger.warn("No rows updated for {}. Query: {} | Params: {}",
+            syncTableName, queryUpdate, Arrays.toString(failedParams));
+ 
+    String failedVanSerialNo = getVanSerialNo(failedParams, vanSerialIndex,
+            syncResults.get(syncResultIndex));
+    String conciseReason = "No matching row (0 rows updated)";
+
+    //                 String failedVanSerialNo = getVanSerialNo(syncDataListUpdate.get(updateListIndex),
+    //                         vanSerialIndex, syncResults.get(syncResultIndex));
+                    // String conciseReason = "Update failed (code: " +
+                            // (updateListIndex < updateResults.length ? updateResults[updateListIndex] : "unknown") + ")";
                     syncResults.set(syncResultIndex, new SyncResult(schemaName, syncTableName, failedVanSerialNo,
                             syncUploadDataDigester.getSyncedBy(), false, conciseReason));
                     updateSuccess = false;
@@ -563,7 +575,7 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
 
         } catch (Exception e) {
             String mainErrorReason = extractMainErrorReason(e);
-            logger.error("Batch update failed for table {}: {}", syncTableName, mainErrorReason, e);
+            logger.info("Batch update failed for table {}: {}", syncTableName, mainErrorReason, e);
             
             // Mark ALL updates as failed
             for (Map.Entry<Integer, Integer> entry : updateIndexMap.entrySet()) {

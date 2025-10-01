@@ -826,72 +826,137 @@ public Map<String, Object> syncDataToServer(int vanID, String schemaName, String
         ResponseEntity<String> response = restTemplate.exchange(dataSyncUploadUrl, HttpMethod.POST, 
                 request, String.class);
 
-        logger.info("Response from server: status={}, hasBody={}", 
-                response.getStatusCode(), response.hasBody());
+        logger.info("Response from server: status={}, hasBody={}, getBody={}", 
+                response.getStatusCode(), response.hasBody(), response.getBody());
 
-        if (response != null && response.hasBody()) {
-            try {
-                JSONObject obj = new JSONObject(response.getBody());
+        // if (response != null && response.hasBody()) {
+        //     try {
+        //         JSONObject obj = new JSONObject(response.getBody());
                 
-                // Check for error in response
-                if (obj.has("errorMessage") || obj.optInt("statusCode", 200) >= 400) {
-                    String errorMsg = obj.optString("errorMessage", "Unknown server error");
-                    logger.error("Server returned error: {}", errorMsg);
+        //         // Check for error in response
+        //         if (obj.has("errorMessage") || obj.optInt("statusCode", 200) >= 400) {
+        //             String errorMsg = obj.optString("errorMessage", "Unknown server error");
+        //             logger.error("Server returned error: {}", errorMsg);
                     
-                    // Mark all as failed
+        //             // Mark all as failed
+        //             for (Map<String, Object> map : dataToBesync) {
+        //                 failedVanSerialNos.add(String.valueOf(map.get(vanAutoIncColumnName)));
+        //                 failureReasons.add(errorMsg);
+        //             }
+        //             failCount = failedVanSerialNos.size();
+                    
+        //         } else if (obj.has("data")) {
+        //             JSONObject dataObj = obj.getJSONObject("data");
+                    
+        //             if (dataObj.has("records")) {
+        //                 JSONArray recordsArr = dataObj.getJSONArray("records");
+        //                 for (int i = 0; i < recordsArr.length(); i++) {
+        //                     JSONObject record = recordsArr.getJSONObject(i);
+        //                     String vanSerialNo = record.getString("vanSerialNo");
+        //                     boolean success = record.getBoolean("success");
+                            
+        //                     if (success) {
+        //                         successVanSerialNos.add(vanSerialNo);
+        //                         successCount++;
+        //                     } else {
+        //                         failedVanSerialNos.add(vanSerialNo);
+        //                         failCount++;
+        //                         String reason = record.optString("reason", "Unknown error");
+        //                         failureReasons.add(reason);
+        //                     }
+        //                 }
+        //             } else if (tableName.equalsIgnoreCase("m_beneficiaryregidmapping")) {
+        //                 String respMsg = dataObj.optString("response", "");
+        //                 int statusCode = obj.optInt("statusCode", 0);
+                        
+        //                 if (respMsg.toLowerCase().contains("success") && statusCode == 200) {
+        //                     for (Map<String, Object> map : dataToBesync) {
+        //                         successVanSerialNos.add(String.valueOf(map.get(vanAutoIncColumnName)));
+        //                     }
+        //                     successCount = successVanSerialNos.size();
+        //                 } else {
+        //                     for (Map<String, Object> map : dataToBesync) {
+        //                         failedVanSerialNos.add(String.valueOf(map.get(vanAutoIncColumnName)));
+        //                         failureReasons.add(respMsg.isEmpty() ? "Sync failed" : respMsg);
+        //                     }
+        //                     failCount = failedVanSerialNos.size();
+        //                 }
+        //             }
+        //         }
+        //     } catch (JSONException e) {
+        //         logger.error("Failed to parse server response: {}", e.getMessage(), e);
+        //         for (Map<String, Object> map : dataToBesync) {
+        //             failedVanSerialNos.add(String.valueOf(map.get(vanAutoIncColumnName)));
+        //             failureReasons.add("Invalid server response");
+        //         }
+        //         failCount = failedVanSerialNos.size();
+        //     }
+        // }
+		if (response != null && response.hasBody()) {
+    try {
+        JSONObject obj = new JSONObject(response.getBody());
+        
+        int statusCode = obj.optInt("statusCode", 200);
+        String errorMessage = obj.optString("errorMessage", "");
+        
+        // Check for ACTUAL errors - status >= 400 OR errorMessage is not "Success"
+        if (statusCode >= 400 || (!errorMessage.isEmpty() && !errorMessage.equalsIgnoreCase("Success"))) {
+            logger.error("Server returned error: {}", errorMessage);
+            
+            // Mark all as failed
+            for (Map<String, Object> map : dataToBesync) {
+                failedVanSerialNos.add(String.valueOf(map.get(vanAutoIncColumnName)));
+                failureReasons.add(errorMessage);
+            }
+            failCount = failedVanSerialNos.size();
+            
+        } else if (obj.has("data")) {
+            JSONObject dataObj = obj.getJSONObject("data");
+            
+            if (dataObj.has("records")) {
+                JSONArray recordsArr = dataObj.getJSONArray("records");
+                for (int i = 0; i < recordsArr.length(); i++) {
+                    JSONObject record = recordsArr.getJSONObject(i);
+                    String vanSerialNo = record.getString("vanSerialNo");
+                    boolean success = record.getBoolean("success");
+                    
+                    if (success) {
+                        successVanSerialNos.add(vanSerialNo);
+                        successCount++;
+                    } else {
+                        failedVanSerialNos.add(vanSerialNo);
+                        failCount++;
+                        String reason = record.optString("reason", "Unknown error");
+                        failureReasons.add(reason);
+                    }
+                }
+            } else if (tableName.equalsIgnoreCase("m_beneficiaryregidmapping")) {
+                String respMsg = dataObj.optString("response", "");
+                
+                if (respMsg.toLowerCase().contains("success") && statusCode == 200) {
+                    for (Map<String, Object> map : dataToBesync) {
+                        successVanSerialNos.add(String.valueOf(map.get(vanAutoIncColumnName)));
+                    }
+                    successCount = successVanSerialNos.size();
+                } else {
                     for (Map<String, Object> map : dataToBesync) {
                         failedVanSerialNos.add(String.valueOf(map.get(vanAutoIncColumnName)));
-                        failureReasons.add(errorMsg);
+                        failureReasons.add(respMsg.isEmpty() ? "Sync failed" : respMsg);
                     }
                     failCount = failedVanSerialNos.size();
-                    
-                } else if (obj.has("data")) {
-                    JSONObject dataObj = obj.getJSONObject("data");
-                    
-                    if (dataObj.has("records")) {
-                        JSONArray recordsArr = dataObj.getJSONArray("records");
-                        for (int i = 0; i < recordsArr.length(); i++) {
-                            JSONObject record = recordsArr.getJSONObject(i);
-                            String vanSerialNo = record.getString("vanSerialNo");
-                            boolean success = record.getBoolean("success");
-                            
-                            if (success) {
-                                successVanSerialNos.add(vanSerialNo);
-                                successCount++;
-                            } else {
-                                failedVanSerialNos.add(vanSerialNo);
-                                failCount++;
-                                String reason = record.optString("reason", "Unknown error");
-                                failureReasons.add(reason);
-                            }
-                        }
-                    } else if (tableName.equalsIgnoreCase("m_beneficiaryregidmapping")) {
-                        String respMsg = dataObj.optString("response", "");
-                        int statusCode = obj.optInt("statusCode", 0);
-                        
-                        if (respMsg.toLowerCase().contains("success") && statusCode == 200) {
-                            for (Map<String, Object> map : dataToBesync) {
-                                successVanSerialNos.add(String.valueOf(map.get(vanAutoIncColumnName)));
-                            }
-                            successCount = successVanSerialNos.size();
-                        } else {
-                            for (Map<String, Object> map : dataToBesync) {
-                                failedVanSerialNos.add(String.valueOf(map.get(vanAutoIncColumnName)));
-                                failureReasons.add(respMsg.isEmpty() ? "Sync failed" : respMsg);
-                            }
-                            failCount = failedVanSerialNos.size();
-                        }
-                    }
                 }
-            } catch (JSONException e) {
-                logger.error("Failed to parse server response: {}", e.getMessage(), e);
-                for (Map<String, Object> map : dataToBesync) {
-                    failedVanSerialNos.add(String.valueOf(map.get(vanAutoIncColumnName)));
-                    failureReasons.add("Invalid server response");
-                }
-                failCount = failedVanSerialNos.size();
             }
-        } else {
+        }
+    } catch (JSONException e) {
+        logger.error("Failed to parse server response: {}", e.getMessage(), e);
+        for (Map<String, Object> map : dataToBesync) {
+            failedVanSerialNos.add(String.valueOf(map.get(vanAutoIncColumnName)));
+            failureReasons.add("Invalid server response");
+        }
+        failCount = failedVanSerialNos.size();
+    }
+}
+		 else {
             logger.error("Empty response from server");
             for (Map<String, Object> map : dataToBesync) {
                 failedVanSerialNos.add(String.valueOf(map.get(vanAutoIncColumnName)));
@@ -944,7 +1009,6 @@ public Map<String, Object> syncDataToServer(int vanID, String schemaName, String
     
     result.put("successCount", successCount);
     result.put("failCount", failCount);
-    result.put("failureReasons", failureReasons);
     
     return result;
 }
