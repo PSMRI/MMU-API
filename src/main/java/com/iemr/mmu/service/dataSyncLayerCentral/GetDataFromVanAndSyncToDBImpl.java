@@ -541,17 +541,18 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
         try {
             int[] updateResults = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, syncTableName,
                     serverColumns, queryUpdate, syncDataListUpdate);
-
+logger.info("Update Results="+updateResults);
             for (Map.Entry<Integer, Integer> entry : updateIndexMap.entrySet()) {
                 int syncResultIndex = entry.getKey();
                 int updateListIndex = entry.getValue();
 
+logger.info("Update Results Array: {}", Arrays.toString(updateResults));
                 boolean success = updateListIndex < updateResults.length && updateResults[updateListIndex] > 0;
-
+logger.info("Success="+success);
                 if (!success) {
                         Object[] failedParams = syncDataListUpdate.get(updateListIndex);
  
-    logger.warn("No rows updated for {}. Query: {} | Params: {}",
+    logger.info("No rows updated for {}. Query: {} | Params: {}",
             syncTableName, queryUpdate, Arrays.toString(failedParams));
  
     String failedVanSerialNo = getVanSerialNo(failedParams, vanSerialIndex,
