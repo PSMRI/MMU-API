@@ -114,7 +114,8 @@ public class DataSyncRepositoryCentral {
 
     public int checkRecordIsAlreadyPresentOrNot(String schemaName, String tableName, String vanSerialNo, String vanID,
             String vanAutoIncColumnName, int syncFacilityID) {
-              
+              logger.info("Checking record presence: schema={}, table={}, vanSerialNo={}, vanID={}, column={}, syncFacilityID={}",
+                schemaName, tableName, vanSerialNo, vanID, vanAutoIncColumnName, syncFacilityID);
         jdbcTemplate = getJdbcTemplate();
         List<Object> params = new ArrayList<>();
 
@@ -128,16 +129,18 @@ public class DataSyncRepositoryCentral {
         StringBuilder queryBuilder = new StringBuilder("SELECT ")
                 .append(vanAutoIncColumnName).append(" FROM ")
                 .append(schemaName).append(".").append(tableName).append(" WHERE VanSerialNo = ?");
-
+        logger.info("Constructed query: {}", queryBuilder.toString());
         params.add(vanSerialNo);
-
+        logger.info("Table name="+tableName.toLowerCase());
         if (List.of("t_patientissue", "t_physicalstockentry", "t_stockadjustment", "t_saitemmapping",
                 "t_stocktransfer", "t_patientreturn", "t_facilityconsumption", "t_indent",
                 "t_indentorder", "t_indentissue", "t_itemstockentry", "t_itemstockexit")
                 .contains(tableName.toLowerCase()) && syncFacilityID > 0) {
+                    logger.info("If block");
             queryBuilder.append(" AND SyncFacilityID = ?");
             params.add(syncFacilityID);
         } else {
+            logger.info("Else part");
             queryBuilder.append(" AND VanID = ?");
             params.add(vanID);
         }
