@@ -2685,6 +2685,8 @@ public class CommonNurseServiceImpl implements CommonNurseService {
 		}
 
 		PrescriptionDetail prescriptionRS = prescriptionDetailRepo.save(prescription);
+		prescriptionDetailRepo.updateVanSerialNo(prescriptionRS.getPrescriptionID());
+		
 		if (prescriptionRS != null && prescriptionRS.getPrescriptionID() > 0) {
 			r = prescriptionRS.getPrescriptionID();
 		}
