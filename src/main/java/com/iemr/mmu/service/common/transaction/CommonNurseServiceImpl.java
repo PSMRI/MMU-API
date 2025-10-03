@@ -2649,6 +2649,7 @@ public class CommonNurseServiceImpl implements CommonNurseService {
 	}
 
 	public Long saveBenPrescription(PrescriptionDetail prescription) {
+		
 		Long r = null;
 		prescription.setPrescriptionID(null);
 
@@ -2685,6 +2686,8 @@ public class CommonNurseServiceImpl implements CommonNurseService {
 		}
 
 		PrescriptionDetail prescriptionRS = prescriptionDetailRepo.save(prescription);
+		prescriptionDetailRepo.updateVanSerialNo(prescriptionRS.getPrescriptionID());
+		
 		if (prescriptionRS != null && prescriptionRS.getPrescriptionID() > 0) {
 			r = prescriptionRS.getPrescriptionID();
 		}
