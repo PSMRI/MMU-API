@@ -64,7 +64,7 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
                         "t_sys_musculoskeletalsystem", "t_sys_genitourinarysystem"));
 
         TABLE_GROUPS.put(4,
-                Arrays.asList("t_ancdiagnosis", "t_ncddiagnosis", "t_pncdiagnosis", "t_benchefcomplaint",
+                Arrays.asList("t_ancdiagnosis", "t_ncddiagnosis", "t_pncdiagnosis", "t_benchiefcomplaint",
                         "t_benclinicalobservation", "t_prescription", "t_prescribeddrug", "t_lab_testorder",
                         "t_benreferdetails"));
 
