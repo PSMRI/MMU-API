@@ -154,7 +154,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
                 // get data from DB to sync to server
                 List<Map<String, Object>> syncData = getDataToSync(obj.getSchemaName(), obj.getTableName(),
                         obj.getVanColumnName());
-                logger.debug("Fetched syncData for schema {} and table {}: {}", obj.getSchemaName(), obj.getTableName(),
+                logger.info("Fetched syncData for schema {} and table {}: {}", obj.getSchemaName(), obj.getTableName(),
                         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(syncData));
 
                 if (syncData != null && syncData.size() > 0) {
