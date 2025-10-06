@@ -259,6 +259,7 @@ public class CommonNurseServiceImpl implements CommonNurseService {
 		beneficiaryVisitDetail.setReportFilePath(sb.toString());
 
 		response = benVisitDetailRepo.save(beneficiaryVisitDetail);
+		benVisitDetailRepo.updateVanSerialNo(response.getBenVisitID());
 
 		if (response != null) {
 			// Long visitCode = updateVisitCode(response, 10);
