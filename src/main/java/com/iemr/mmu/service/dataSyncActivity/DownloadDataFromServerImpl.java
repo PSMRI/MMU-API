@@ -21,6 +21,7 @@
 */
 package com.iemr.mmu.service.dataSyncActivity;
 
+import java.math.BigInteger;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -326,6 +327,13 @@ import com.iemr.mmu.utils.mapper.InputMapper;
 			String ServerAuthorization, String token) throws Exception {
 		int i = 0, i1 = 0;
 		try{
+			JSONObject originalRequest = new JSONObject(requestOBJ);
+        BigInteger vanID = null;
+        if (originalRequest.has("vanID")) {
+            vanID = originalRequest.getBigInteger("vanID");
+        }
+        logger.info("Extracted vanID from original request: " + vanID);
+
 		// Rest template
 		RestTemplate restTemplate = new RestTemplate();
 		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(requestOBJ, ServerAuthorization,"datasync");
@@ -340,10 +348,17 @@ import com.iemr.mmu.utils.mapper.InputMapper;
 			JSONObject obj = new JSONObject(response.getBody());
 			if (obj != null && obj.has("data") && obj.has("statusCode") && obj.getInt("statusCode") == 200) {
 				// Consume the response from API and call local identity api to save data
+  				JSONObject localImportPayload = new JSONObject();
+                localImportPayload.put("vanID", vanID);
+                localImportPayload.put("benIDList", obj.get("data"));
+                
 
 		logger.info("Authorization: " + Authorization);
 		logger.info("ServerAuthorization: " + ServerAuthorization);
-				HttpEntity<Object> request1 = RestTemplateUtil.createRequestEntity(obj.get("data").toString(), Authorization, token);
+		 logger.info("Payload to local import: " + localImportPayload.toString());
+                
+
+				HttpEntity<Object> request1 = RestTemplateUtil.createRequestEntity(  localImportPayload.toString(), Authorization, token);
 				i = 1;
 				logger.info("Request to benImporturllocal: " + request1);
 				ResponseEntity<String> response1 = restTemplate.exchange(benImportUrlLocal, HttpMethod.POST, request1,

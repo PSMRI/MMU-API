@@ -259,6 +259,7 @@ public class CommonNurseServiceImpl implements CommonNurseService {
 		beneficiaryVisitDetail.setReportFilePath(sb.toString());
 
 		response = benVisitDetailRepo.save(beneficiaryVisitDetail);
+		benVisitDetailRepo.updateVanSerialNo(response.getBenVisitID());
 
 		if (response != null) {
 			// Long visitCode = updateVisitCode(response, 10);
@@ -435,7 +436,14 @@ public class CommonNurseServiceImpl implements CommonNurseService {
 			List<BenChiefComplaint> benChiefComplaintResultList = (List<BenChiefComplaint>) benChiefComplaintRepo
 					.saveAll(benChiefComplaintListNew);
 			if (benChiefComplaintListNew.size() == benChiefComplaintResultList.size())
+			{
+				 for (BenChiefComplaint complaint : benChiefComplaintResultList) {
+            if (complaint.getBenChiefComplaintID() != null) {
+                benChiefComplaintRepo.updateVanSerialNo(complaint.getBenChiefComplaintID());
+            }
+        }
 				r = 1;
+			}
 		} else {
 			r = 1;
 		}
@@ -2076,7 +2084,13 @@ public class CommonNurseServiceImpl implements CommonNurseService {
 			List<BenChiefComplaint> benChiefComplaintResultList = (List<BenChiefComplaint>) benChiefComplaintRepo
 					.saveAll(benChiefComplaintList);
 
+
 			if (!benChiefComplaintResultList.isEmpty()) {
+				  for (BenChiefComplaint complaint : benChiefComplaintResultList) {
+                if (complaint.getBenChiefComplaintID() != null) {
+                    benChiefComplaintRepo.updateVanSerialNo(complaint.getBenChiefComplaintID());
+                }
+            }
 				r = benChiefComplaintResultList.size();
 			}
 		}

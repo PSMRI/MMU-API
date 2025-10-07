@@ -49,7 +49,10 @@ public class CSDoctorServiceImpl implements CSDoctorService {
 
 		CancerDiagnosis response = cancerDiagnosisRepo.save(cancerDiagnosis);
 		if (response != null)
-			return response.getID();
+		{
+		response.setVanSerialNo(response.getID());
+		return response.getID();
+		}
 		else
 			return null;
 	}
