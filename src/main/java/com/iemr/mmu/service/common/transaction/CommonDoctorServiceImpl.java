@@ -214,6 +214,11 @@ public class CommonDoctorServiceImpl {
 			ArrayList<BenChiefComplaint> benChiefComplaintListRS = (ArrayList<BenChiefComplaint>) benChiefComplaintRepo
 					.saveAll(tmpBenCHiefComplaintsTMP);
 			if (tmpBenCHiefComplaintsTMP.size() == benChiefComplaintListRS.size()) {
+				  for (BenChiefComplaint complaint : benChiefComplaintListRS) {
+            if (complaint.getBenChiefComplaintID() != null) {
+                benChiefComplaintRepo.updateVanSerialNo(complaint.getBenChiefComplaintID());
+            }
+        }
 				chiefComFlag = 1;
 			}
 		} else {

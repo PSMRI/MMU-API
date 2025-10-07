@@ -72,6 +72,7 @@ public class CommonBenStatusFlowServiceImpl implements CommonBenStatusFlowServic
 
 			if (beneficiaryRegID != null && beneficiaryID != null && beneficiaryRegID > 0 && beneficiaryID > 0) {
 				objRS = beneficiaryFlowStatusRepo.save(obj);
+				obj.setVanSerialNo((objRS.getBenFlowID()));
 				if (objRS != null)
 					returnOBJ = 1;
 				else
@@ -91,6 +92,7 @@ public class CommonBenStatusFlowServiceImpl implements CommonBenStatusFlowServic
 					returnOBJ = 3;
 				} else {
 					objRS = beneficiaryFlowStatusRepo.save(obj);
+obj.setVanSerialNo((objRS.getBenFlowID()));
 					if (objRS != null)
 						returnOBJ = 1;
 					else
