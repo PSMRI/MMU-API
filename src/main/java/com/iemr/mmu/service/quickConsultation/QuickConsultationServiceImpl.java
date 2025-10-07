@@ -31,6 +31,8 @@ import java.util.Objects;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -83,6 +85,8 @@ public class QuickConsultationServiceImpl implements QuickConsultationService {
 
 	@Autowired
 	private TeleConsultationServiceImpl teleConsultationServiceImpl;
+
+	private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
 	@Autowired
 	public void setGeneralOPDDoctorServiceImpl(GeneralOPDDoctorServiceImpl generalOPDDoctorServiceImpl) {
@@ -170,10 +174,22 @@ public class QuickConsultationServiceImpl implements QuickConsultationService {
 		if (benChiefComplaints != null && benChiefComplaints.size() > 0) {
 			List<BenChiefComplaint> chiefComplaints = (List<BenChiefComplaint>) benChiefComplaintRepo
 					.saveAll(benChiefComplaints);
-
-			if (benChiefComplaints.size() == chiefComplaints.size()) {
-				returnOBJ = new Long(1);
-			}
+logger.info("in save beneficiary chief complaint"+ benChiefComplaints.size()+"---"+chiefComplaints.size());
+        if (benChiefComplaints.size() == chiefComplaints.size()) {
+            // Update vanSerialNo for each saved record
+			logger.info("inside if");
+            for (BenChiefComplaint complaint : chiefComplaints) {
+				logger.info("inside for"+complaint.getBenChiefComplaintID());
+                if (complaint.getBenChiefComplaintID() != null) {
+					logger.info("inside for if"+complaint.getBenChiefComplaintID());
+                    benChiefComplaintRepo.updateVanSerialNo(complaint.getBenChiefComplaintID());
+                }
+            }
+            returnOBJ = new Long(1);
+        }
+			// if (benChiefComplaints.size() == chiefComplaints.size()) {
+			// 	returnOBJ = new Long(1);
+			// }
 		} else {
 			returnOBJ = new Long(1);
 		}
