@@ -174,14 +174,10 @@ public class QuickConsultationServiceImpl implements QuickConsultationService {
 		if (benChiefComplaints != null && benChiefComplaints.size() > 0) {
 			List<BenChiefComplaint> chiefComplaints = (List<BenChiefComplaint>) benChiefComplaintRepo
 					.saveAll(benChiefComplaints);
-logger.info("in save beneficiary chief complaint"+ benChiefComplaints.size()+"---"+chiefComplaints.size());
         if (benChiefComplaints.size() == chiefComplaints.size()) {
             // Update vanSerialNo for each saved record
-			logger.info("inside if");
             for (BenChiefComplaint complaint : chiefComplaints) {
-				logger.info("inside for"+complaint.getBenChiefComplaintID());
                 if (complaint.getBenChiefComplaintID() != null) {
-					logger.info("inside for if"+complaint.getBenChiefComplaintID());
                     benChiefComplaintRepo.updateVanSerialNo(complaint.getBenChiefComplaintID());
                 }
             }
