@@ -24,12 +24,15 @@ package com.iemr.mmu.repo.labModule;
 import java.math.BigInteger;
 import java.util.ArrayList;
 
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.iemr.mmu.data.labModule.LabResultEntry;
+
+import jakarta.transaction.Transactional;
 
 @Repository
 public interface LabResultEntryRepo extends CrudRepository<LabResultEntry, BigInteger> {
@@ -45,5 +48,10 @@ public interface LabResultEntryRepo extends CrudRepository<LabResultEntry, BigIn
 			+ " GROUP BY visitCode " + " ORDER BY createdDate DESC LIMIT 3 ")
 	ArrayList<Object[]> getLast_3_visitForLabTestDone(@Param("benRegID") Long benRegID,
 			@Param("visitCode") Long visitCode);
+
+	@Transactional
+	@Modifying
+	@Query(" UPDATE LabResultEntry set vanSerialNo = :ID WHERE ID = :ID")
+	int updateVanSerialNo(@Param("ID") BigInteger ID);
 
 }
