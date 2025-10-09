@@ -135,8 +135,11 @@ public class LabTechnicianController {
 		return response.toString();
 	}
 
-	private JsonObject parseJsonRequest(String requestObj) {
-		JsonElement jsonElement = JsonParser.parseString(requestObj);
-		return jsonElement.getAsJsonObject();
-	}
+       private JsonObject parseJsonRequest(String requestObj) {
+	       if (requestObj == null || requestObj.trim().isEmpty() || "null".equals(requestObj.trim())) {
+		       return null;
+	       }
+	       JsonElement jsonElement = JsonParser.parseString(requestObj);
+	       return jsonElement.getAsJsonObject();
+       }
 }

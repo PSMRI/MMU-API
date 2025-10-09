@@ -169,7 +169,7 @@ public class Utility {
 		return tcScheduleDateTime;
 	}
 
-	public static long timeDiff(String fromTime, String toTime) {
+public static Long timeDiff(String fromTime, String toTime) {
 		Long duration = null;
 		if (fromTime != null && toTime != null) {
 			LocalTime fromT = LocalTime.parse(fromTime);
