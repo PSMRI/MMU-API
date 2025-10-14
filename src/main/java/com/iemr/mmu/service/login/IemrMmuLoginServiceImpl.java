@@ -30,6 +30,8 @@ import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
 import com.iemr.mmu.data.login.MasterVan;
@@ -49,6 +51,8 @@ public class IemrMmuLoginServiceImpl implements IemrMmuLoginService {
 	private VanServicepointMappingRepo vanServicepointMappingRepo;
 	private ServicePointVillageMappingRepo servicePointVillageMappingRepo;
 	private UserVanSpDetails_View_Repo userVanSpDetails_View_Repo;
+	private Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
+
 
 	@Autowired
 	public void setUserVanSpDetails_View_Repo(UserVanSpDetails_View_Repo userVanSpDetails_View_Repo) {
@@ -164,7 +168,7 @@ public class IemrMmuLoginServiceImpl implements IemrMmuLoginService {
 				UserVanSpDetails_View userVanSpDetails_ViewOBJ = new UserVanSpDetails_View((Integer) objArray[0],
 						(Integer) objArray[1], (String) objArray[2], (Short) objArray[3], (Integer) objArray[4],
 						(String) objArray[5], (Integer) objArray[6], (Integer) objArray[7], 0);
-
+logger.info("userVanSpDetails_ViewOBJ"+userVanSpDetails_ViewOBJ);
 				userVanSpDetails_ViewList.add(userVanSpDetails_ViewOBJ);
 
 			}

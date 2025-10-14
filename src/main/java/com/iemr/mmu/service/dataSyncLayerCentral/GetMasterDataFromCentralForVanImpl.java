@@ -54,6 +54,7 @@ public class GetMasterDataFromCentralForVanImpl implements GetMasterDataFromCent
 
 		if (obj != null && obj.getSchemaName() != null && obj.getTableName() != null) {
 			// return applicable master data
+			logger.info("download from="+ obj.getTableName());
 			resultSetList = getMasterDataFromGivenTable(obj);
 			return gson.toJson(resultSetList);
 		} else {
@@ -64,7 +65,7 @@ public class GetMasterDataFromCentralForVanImpl implements GetMasterDataFromCent
 	}
 
 	private List<Map<String, Object>> getMasterDataFromGivenTable(SyncDownloadMaster tableDetails) throws Exception {
-		logger.info("ger master data="+ tableDetails.getSchemaName());
+		logger.info("get master data="+ tableDetails.getSchemaName());
 		List<Map<String, Object>> resultSetList = new ArrayList<>();
 		resultSetList = dataSyncRepositoryCentralDownload.getMasterDataFromTable(tableDetails.getSchemaName(),
 				tableDetails.getTableName(), tableDetails.getServerColumnName(), tableDetails.getMasterType(),
