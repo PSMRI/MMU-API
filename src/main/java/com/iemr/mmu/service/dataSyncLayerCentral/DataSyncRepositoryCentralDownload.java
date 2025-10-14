@@ -163,6 +163,7 @@ public class DataSyncRepositoryCentralDownload {
 			String masterType, Timestamp lastDownloadDate, Integer vanID, Integer psmID) throws Exception {
 		jdbcTemplate = getJdbcTemplate();
 		List<Map<String, Object>> resultSetList =new ArrayList<>();
+		logger.info("Table="+table);
         String baseQuery = "";
 		if (masterType != null) {
 			if (lastDownloadDate != null) {
