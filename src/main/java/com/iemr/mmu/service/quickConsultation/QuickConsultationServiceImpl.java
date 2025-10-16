@@ -160,6 +160,7 @@ public class QuickConsultationServiceImpl implements QuickConsultationService {
 	public void setExternalTestOrderRepo(ExternalTestOrderRepo externalTestOrderRepo) {
 		this.externalTestOrderRepo = externalTestOrderRepo;
 	}
+
 	@Autowired
 	private BeneficiaryFlowStatusRepo beneficiaryFlowStatusRepo;
 
@@ -426,7 +427,19 @@ public class QuickConsultationServiceImpl implements QuickConsultationService {
 				tmpObj.setVisitCode(commonUtilityClass.getVisitCode());
 				tmpObj.setProviderServiceMapID(commonUtilityClass.getProviderServiceMapID());
 			}
-			Integer r = commonNurseServiceImpl.saveBenPrescribedDrugsList(prescribedDrugDetailList);
+
+			// Use the modified method to get both count and IDs
+			Map<String, Object> drugSaveResult = commonNurseServiceImpl
+					.saveBenPrescribedDrugsList(prescribedDrugDetailList);
+			Integer r = (Integer) drugSaveResult.get("count");
+			List<Long> prescribedDrugIDs = (List<Long>) drugSaveResult.get("prescribedDrugIDs");
+
+			// Store the drug IDs in the JsonObject for later retrieval in controller
+			if (prescribedDrugIDs != null && !prescribedDrugIDs.isEmpty()) {
+				Gson gson = new Gson();
+				quickConsultDoctorOBJ.add("savedDrugIDs", gson.toJsonTree(prescribedDrugIDs));
+			}
+
 			if (r > 0 && r != null) {
 				prescriptionSuccessFlag = r;
 			}
@@ -645,7 +658,19 @@ public class QuickConsultationServiceImpl implements QuickConsultationService {
 				tmpObj.setVisitCode(commonUtilityClass.getVisitCode());
 				tmpObj.setProviderServiceMapID(commonUtilityClass.getProviderServiceMapID());
 			}
-			Integer r = commonNurseServiceImpl.saveBenPrescribedDrugsList(prescribedDrugDetailList);
+
+			// Use the modified method to get both count and IDs
+			Map<String, Object> drugSaveResult = commonNurseServiceImpl
+					.saveBenPrescribedDrugsList(prescribedDrugDetailList);
+			Integer r = (Integer) drugSaveResult.get("count");
+			List<Long> prescribedDrugIDs = (List<Long>) drugSaveResult.get("prescribedDrugIDs");
+
+			// Store the drug IDs in the JsonObject for later retrieval in controller
+			if (prescribedDrugIDs != null && !prescribedDrugIDs.isEmpty()) {
+				Gson gson = new Gson();
+				quickConsultDoctorOBJ.add("savedDrugIDs", gson.toJsonTree(prescribedDrugIDs));
+			}
+
 			if (r > 0 && r != null) {
 				prescribedDrugSuccessFlag = new Long(1);
 			}
