@@ -170,7 +170,7 @@ public interface BeneficiaryFlowStatusRepo extends CrudRepository<BeneficiaryFlo
 	@Transactional
 	@Modifying
 	@Query("UPDATE BeneficiaryFlowStatus t set t.doctorFlag = :docFlag, "
-			+ "t.pharmacist_flag = :pharmaFlag, t.doctor_signature_flag = :signatureFlag, "
+			+ "t.pharmacist_flag = :pharmaFlag, t.doctorSignatureFlag = :signatureFlag, "
 			+ "t.oncologist_flag = :oncologistFlag, t.consultationDate = now(), t.processed = 'U', "
 			+ "t.specialist_flag = :tcSpecialistFlag, t.tCSpecialistUserID = :tcSpecialistUserID, "
 			+ "t.tCRequestDate = :tcDate WHERE t.benFlowID = :benFlowID AND "
