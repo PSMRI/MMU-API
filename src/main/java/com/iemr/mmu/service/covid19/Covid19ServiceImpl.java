@@ -1149,6 +1149,10 @@ public class Covid19ServiceImpl implements Covid19Service {
 	/// --------------- start of saving doctor data ------------------------
 	@Transactional(rollbackFor = Exception.class)
 	public Long saveDoctorData(JsonObject requestOBJ, String Authorization) throws Exception {
+		Boolean doctorSignatureFlag = false;
+		if (requestOBJ.has("doctorSignatureFlag") && !requestOBJ.get("doctorSignatureFlag").isJsonNull()) {
+			doctorSignatureFlag = requestOBJ.get("doctorSignatureFlag").getAsBoolean();
+		}
 		Long saveSuccessFlag = null;
 		Long prescriptionID = null;
 		Long investigationSuccessFlag = null;
@@ -1258,7 +1262,7 @@ public class Covid19ServiceImpl implements Covid19Service {
 
 				// call method to update beneficiary flow table
 				int i = commonDoctorServiceImpl.updateBenFlowtableAfterDocDataSave(commonUtilityClass, isTestPrescribed,
-						isMedicinePrescribed, tcRequestOBJ);
+						isMedicinePrescribed, tcRequestOBJ, doctorSignatureFlag);
 
 				if (i > 0) {
 					saveSuccessFlag = referSaveSuccessFlag;

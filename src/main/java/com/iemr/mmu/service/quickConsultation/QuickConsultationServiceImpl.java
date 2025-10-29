@@ -357,6 +357,11 @@ public class QuickConsultationServiceImpl implements QuickConsultationService {
 	@Override
 	public Integer quickConsultDoctorDataInsert(JsonObject quickConsultDoctorOBJ, String Authorization)
 			throws Exception {
+		Boolean doctorSignatureFlag = false;
+		if (quickConsultDoctorOBJ.has("doctorSignatureFlag")
+				&& !quickConsultDoctorOBJ.get("doctorSignatureFlag").isJsonNull()) {
+			doctorSignatureFlag = quickConsultDoctorOBJ.get("doctorSignatureFlag").getAsBoolean();
+		}
 		Integer returnOBJ = 0;
 		Integer prescriptionSuccessFlag = null;
 		Integer investigationSuccessFlag = null;
@@ -488,7 +493,7 @@ public class QuickConsultationServiceImpl implements QuickConsultationService {
 
 			// call method to update beneficiary flow table
 			int i = commonDoctorServiceImpl.updateBenFlowtableAfterDocDataSave(commonUtilityClass, isTestPrescribed,
-					isMedicinePrescribed, tcRequestOBJ);
+					isMedicinePrescribed, tcRequestOBJ, doctorSignatureFlag);
 
 			if (i > 0) {
 				returnOBJ = 1;

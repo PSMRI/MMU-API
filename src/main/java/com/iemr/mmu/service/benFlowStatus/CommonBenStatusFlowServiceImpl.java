@@ -261,14 +261,35 @@ obj.setVanSerialNo((objRS.getBenFlowID()));
 		return obj;
 	}
 
-	public int updateBenFlowAfterDocData(Long benFlowID, Long benRegID, Long benID, Long benVisitID, short docFlag,
-			short pharmaFlag, short oncologistFlag, short tcSpecialistFlag, int tcUserID, Timestamp tcDate) {
+	// public int updateBenFlowAfterDocData(Long benFlowID, Long benRegID, Long
+	// benID, Long benVisitID, short docFlag,
+	// short pharmaFlag, short oncologistFlag, short tcSpecialistFlag, int tcUserID,
+	// Timestamp tcDate) {
+	// int i = 0;
+	// try {
+	// i =
+	// beneficiaryFlowStatusRepo.updateBenFlowStatusAfterDoctorActivity(benFlowID,
+	// benRegID, benID, docFlag,
+	// pharmaFlag, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate);
+	// } catch (Exception e) {
+	// logger.error("Error in ben flow creation = " + e);
+	// }
+	// return i;
+	// }
+
+	public int updateBenFlowAfterDocData(Long benFlowID, Long benRegID, Long benID, Long benVisitID,
+			short docFlag, short pharmaFlag, short oncologistFlag, short tcSpecialistFlag,
+			int tcUserID, Timestamp tcDate, Boolean signatureFlag) throws Exception {
 		int i = 0;
 		try {
-			i = beneficiaryFlowStatusRepo.updateBenFlowStatusAfterDoctorActivity(benFlowID, benRegID, benID, docFlag,
-					pharmaFlag, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate);
+			Short pharmaF = beneficiaryFlowStatusRepo.getPharmaFlag(benFlowID);
+			Short pharmaF1 = (pharmaF != null && pharmaF == 1) ? pharmaF : pharmaFlag;
+
+			i = beneficiaryFlowStatusRepo.updateBenFlowStatusAfterDoctorActivity(benFlowID, benRegID, benID,
+					docFlag, pharmaF1, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate, signatureFlag);
 		} catch (Exception e) {
-			logger.error("Error in ben flow creation = " + e);
+			logger.error("Error in ben flow update = " + e);
+			throw new Exception(e);
 		}
 		return i;
 	}
@@ -287,7 +308,7 @@ obj.setVanSerialNo((objRS.getBenFlowID()));
 				pharmaF1 = pharmaFlag;
 
 			i = beneficiaryFlowStatusRepo.updateBenFlowStatusAfterDoctorActivity(benFlowID, benRegID, benID, docFlag,
-					pharmaF1, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate);
+					pharmaF1, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate, false);
 		} catch (Exception e) {
 			logger.error("Error in ben flow creation = " + e);
 			throw new Exception(e);
