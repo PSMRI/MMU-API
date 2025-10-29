@@ -274,7 +274,11 @@ public class BeneficiaryFlowStatus {
 	@Expose
 	@Column(name = "isCaseSheetdownloaded")
 	private Boolean isCaseSheetdownloaded;
-	
+
+	@Expose
+	@Column(name = "doctor_signature_flag")
+	private Boolean doctorSignatureFlag = false;
+
 	@Transient
 	private I_bendemographics i_bendemographics;
 	@Transient
@@ -970,6 +974,16 @@ public class BeneficiaryFlowStatus {
 
 	public void setAuth(String auth) {
 		Auth = auth;
+	}
+
+	// Add getter
+	public Boolean getDoctorSignatureFlag() {
+		return doctorSignatureFlag;
+	}
+
+	// Add setter
+	public void setDoctorSignatureFlag(Boolean doctorSignatureFlag) {
+		this.doctorSignatureFlag = doctorSignatureFlag;
 	}
 
 }
