@@ -825,8 +825,10 @@ public class CommonDoctorServiceImpl {
 	 * @param isMedicinePrescribed
 	 * @return
 	 */
-	public int updateBenFlowtableAfterDocDataUpdate(CommonUtilityClass commonUtilityClass, Boolean isTestPrescribed,
-			Boolean isMedicinePrescribed, TeleconsultationRequestOBJ tcRequestOBJ) throws Exception {
+	public int updateBenFlowtableAfterDocDataUpdate(CommonUtilityClass commonUtilityClass,
+			Boolean isTestPrescribed, Boolean isMedicinePrescribed,
+			TeleconsultationRequestOBJ tcRequestOBJ, Boolean doctorSignatureFlag) throws Exception {
+
 		int i = 0;
 		short pharmaFalg;
 		short docFlag = (short) 0;
@@ -852,7 +854,7 @@ public class CommonDoctorServiceImpl {
 
 			i = commonBenStatusFlowServiceImpl.updateBenFlowAfterDocDataUpdateTCSpecialist(tmpBenFlowID,
 					tmpbeneficiaryRegID, tmpBeneficiaryID, tmpBenVisitID, docFlag, pharmaFalg, (short) 0,
-					tcSpecialistFlag, tcUserID, tcDate);
+					tcSpecialistFlag, tcUserID, tcDate, doctorSignatureFlag);
 		} else {
 
 			if (isTestPrescribed)
@@ -880,13 +882,13 @@ public class CommonDoctorServiceImpl {
 					tcSpecialistFlag = (short) 100;
 				i = commonBenStatusFlowServiceImpl.updateBenFlowAfterDocDataUpdate(tmpBenFlowID, tmpbeneficiaryRegID,
 						tmpBeneficiaryID, tmpBenVisitID, docFlag, pharmaFalg, (short) 0, tcSpecialistFlag, tcUserID,
-						tcDate);
+						tcDate, doctorSignatureFlag);
 			}
 			
 			else
 				i = commonBenStatusFlowServiceImpl.updateBenFlowAfterDocDataUpdateWDF(tmpBenFlowID, tmpbeneficiaryRegID,
 						tmpBeneficiaryID, tmpBenVisitID, docFlag, pharmaFalg, (short) 0, tcUserID,
-						tcDate);
+						tcDate, doctorSignatureFlag);
 
 		}
 

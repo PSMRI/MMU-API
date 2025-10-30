@@ -572,6 +572,12 @@ public class QuickConsultationServiceImpl implements QuickConsultationService {
 		Long referupdateSuccessFlag = null;
 		Integer tcRequestStatusFlag = null;
 
+		Boolean doctorSignatureFlag = false;
+		if (quickConsultDoctorOBJ.has("doctorSignatureFlag")
+				&& !quickConsultDoctorOBJ.get("doctorSignatureFlag").isJsonNull()) {
+			doctorSignatureFlag = quickConsultDoctorOBJ.get("doctorSignatureFlag").getAsBoolean();
+		}
+
 		TeleconsultationRequestOBJ tcRequestOBJ = null;
 		TcSpecialistSlotBookingRequestOBJ tcSpecialistSlotBookingRequestOBJ = null;
 		CommonUtilityClass commonUtilityClass = InputMapper.gson().fromJson(quickConsultDoctorOBJ,
@@ -711,7 +717,7 @@ public class QuickConsultationServiceImpl implements QuickConsultationService {
 
 			// call method to update beneficiary flow table
 			int i = commonDoctorServiceImpl.updateBenFlowtableAfterDocDataUpdate(commonUtilityClass, isTestPrescribed,
-					isMedicinePrescribed, tcRequestOBJ);
+					isMedicinePrescribed, tcRequestOBJ, doctorSignatureFlag);
 
 			if (i > 0) {
 				updateSuccessFlag = benChiefComplaintID;

@@ -279,8 +279,8 @@ obj.setVanSerialNo((objRS.getBenFlowID()));
 	}
 
 	public int updateBenFlowAfterDocDataUpdate(Long benFlowID, Long benRegID, Long benID, Long benVisitID,
-			short docFlag, short pharmaFlag, short oncologistFlag, short tcSpecialistFlag, int tcUserID,
-			Timestamp tcDate) throws Exception {
+			short docFlag, short pharmaFlag, short oncologistFlag, short tcSpecialistFlag,
+			int tcUserID, Timestamp tcDate, Boolean signatureFlag) throws Exception {
 		int i = 0;
 		try {
 			Short pharmaF = beneficiaryFlowStatusRepo.getPharmaFlag(benFlowID);
@@ -291,8 +291,8 @@ obj.setVanSerialNo((objRS.getBenFlowID()));
 			else
 				pharmaF1 = pharmaFlag;
 
-			i = beneficiaryFlowStatusRepo.updateBenFlowStatusAfterDoctorActivity(benFlowID, benRegID, benID, docFlag,
-					pharmaF1, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate, false);
+			i = beneficiaryFlowStatusRepo.updateBenFlowStatusAfterDoctorActivity(benFlowID, benRegID, benID,
+					docFlag, pharmaF1, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate, signatureFlag);
 		} catch (Exception e) {
 			logger.error("Error in ben flow creation = " + e);
 			throw new Exception(e);
@@ -302,7 +302,7 @@ obj.setVanSerialNo((objRS.getBenFlowID()));
 	
 	public int updateBenFlowAfterDocDataUpdateWDF(Long benFlowID, Long benRegID, Long benID, Long benVisitID,
 			short docFlag, short pharmaFlag, short oncologistFlag, int tcUserID,
-			Timestamp tcDate) throws Exception {
+			Timestamp tcDate, Boolean signatureFlag) throws Exception {
 		int i = 0;
 		try {
 			Short pharmaF = beneficiaryFlowStatusRepo.getPharmaFlag(benFlowID);
@@ -313,8 +313,8 @@ obj.setVanSerialNo((objRS.getBenFlowID()));
 			else
 				pharmaF1 = pharmaFlag;
 
-			i = beneficiaryFlowStatusRepo.updateBenFlowStatusAfterDoctorActivityWDF(benFlowID, benRegID, benID, docFlag,
-					pharmaF1, oncologistFlag, tcUserID, tcDate);
+			i = beneficiaryFlowStatusRepo.updateBenFlowStatusAfterDoctorActivityWDF(benFlowID, benRegID, benID,
+					docFlag, pharmaF1, oncologistFlag, tcUserID, tcDate, signatureFlag);
 		} catch (Exception e) {
 			logger.error("Error in ben flow creation = " + e);
 			throw new Exception(e);
@@ -323,8 +323,8 @@ obj.setVanSerialNo((objRS.getBenFlowID()));
 	}
 
 	public int updateBenFlowAfterDocDataUpdateTCSpecialist(Long benFlowID, Long benRegID, Long benID, Long benVisitID,
-			short docFlag, short pharmaFlag, short oncologistFlag, short tcSpecialistFlag, int tcUserID,
-			Timestamp tcDate) throws Exception {
+			short docFlag, short pharmaFlag, short oncologistFlag, short tcSpecialistFlag,
+			int tcUserID, Timestamp tcDate, Boolean signatureFlag) throws Exception {
 		int i = 0;
 		try {
 			Short pharmaF = beneficiaryFlowStatusRepo.getPharmaFlag(benFlowID);
@@ -336,7 +336,7 @@ obj.setVanSerialNo((objRS.getBenFlowID()));
 				pharmaF1 = pharmaFlag;
 
 			i = beneficiaryFlowStatusRepo.updateBenFlowStatusAfterDoctorActivityTCSpecialist(benFlowID, benRegID, benID,
-					pharmaF1, oncologistFlag, tcSpecialistFlag);
+					pharmaF1, oncologistFlag, tcSpecialistFlag, signatureFlag);
 		} catch (Exception e) {
 			logger.error("Error in ben flow creation = " + e);
 			throw new Exception(e);
