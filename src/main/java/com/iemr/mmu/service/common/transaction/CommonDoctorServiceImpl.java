@@ -764,8 +764,10 @@ public class CommonDoctorServiceImpl {
 	 */
 	/// ------Start of beneficiary flow table after doctor data save-------------
 
-	public int updateBenFlowtableAfterDocDataSave(CommonUtilityClass commonUtilityClass, Boolean isTestPrescribed,
-			Boolean isMedicinePrescribed, TeleconsultationRequestOBJ tcRequestOBJ) {
+	public int updateBenFlowtableAfterDocDataSave(CommonUtilityClass commonUtilityClass,
+			Boolean isTestPrescribed, Boolean isMedicinePrescribed,
+			TeleconsultationRequestOBJ tcRequestOBJ, Boolean doctorSignatureFlag) throws Exception {
+
 		short pharmaFalg;
 		short docFlag;
 		short tcSpecialistFlag = (short) 0;
@@ -807,7 +809,8 @@ public class CommonDoctorServiceImpl {
 		}
 
 		int i = commonBenStatusFlowServiceImpl.updateBenFlowAfterDocData(tmpBenFlowID, tmpbeneficiaryRegID,
-				tmpBeneficiaryID, tmpBenVisitID, docFlag, pharmaFalg, (short) 0, tcSpecialistFlag, tcUserID, tcDate);
+				tmpBeneficiaryID, tmpBenVisitID, docFlag, pharmaFalg, (short) 0, tcSpecialistFlag,
+				tcUserID, tcDate, doctorSignatureFlag);
 		return i;
 	}
 

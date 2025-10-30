@@ -274,7 +274,11 @@ public class BeneficiaryFlowStatus {
 	@Expose
 	@Column(name = "isCaseSheetdownloaded")
 	private Boolean isCaseSheetdownloaded;
-	
+
+	@Expose
+	@Column(name = "doctor_signature_flag")
+	private Boolean doctorSignatureFlag = false;
+
 	@Transient
 	private I_bendemographics i_bendemographics;
 	@Transient
@@ -368,8 +372,11 @@ public class BeneficiaryFlowStatus {
 						(String) objArr[3], (String) objArr[4], (Integer) objArr[5], (Short) objArr[6],
 						(String) objArr[7], (String) objArr[8], (String) objArr[9], (Long) objArr[10],
 						(String) objArr[11], (String) objArr[12], (String) objArr[13], (Long) objArr[14],
-						(Timestamp) objArr[15], (Timestamp) objArr[16], (Long) objArr[17], (Timestamp) objArr[18], 
+						(Timestamp) objArr[15], (Timestamp) objArr[16], (Long) objArr[17], (Timestamp) objArr[18],
 						(String) objArr[19], (String) objArr[20]);
+				if (objArr.length > 21) {
+					obj.setDoctorSignatureFlag((Boolean) objArr[21]);
+				}
 			}
 		}
 		return obj;
@@ -970,6 +977,16 @@ public class BeneficiaryFlowStatus {
 
 	public void setAuth(String auth) {
 		Auth = auth;
+	}
+
+	// Add getter
+	public Boolean getDoctorSignatureFlag() {
+		return doctorSignatureFlag;
+	}
+
+	// Add setter
+	public void setDoctorSignatureFlag(Boolean doctorSignatureFlag) {
+		this.doctorSignatureFlag = doctorSignatureFlag;
 	}
 
 }
