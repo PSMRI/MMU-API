@@ -150,25 +150,6 @@ public interface BeneficiaryFlowStatusRepo extends CrudRepository<BeneficiaryFlo
 			@Param("providerServiceMapId") Integer providerServiceMapId, @Param("fromDate") Timestamp fromDate,
 			@Param("vanID") Integer vanID);
 
-	// @Transactional
-	// @Modifying
-	// @Query("UPDATE BeneficiaryFlowStatus t set t.doctorFlag = :docFlag ,
-	// t.pharmacist_flag = :pharmaFlag, "
-	// + " t.oncologist_flag = :oncologistFlag, t.consultationDate = now(),
-	// t.processed = 'U', "
-	// + " t.specialist_flag = :tcSpecialistFlag, t.tCSpecialistUserID =
-	// :tcSpecialistUserID, t.tCRequestDate = :tcDate "
-	// + " WHERE t.benFlowID = :benFlowID AND " + " t.beneficiaryRegID = :benRegID
-	// AND t.beneficiaryID = :benID ")
-	// public int updateBenFlowStatusAfterDoctorActivity(@Param("benFlowID") Long
-	// benFlowID,
-	// @Param("benRegID") Long benRegID, @Param("benID") Long benID,
-	// @Param("docFlag") Short docFlag,
-	// @Param("pharmaFlag") Short pharmaFlag, @Param("oncologistFlag") Short
-	// oncologistFlag,
-	// @Param("tcSpecialistFlag") Short tcSpecialistFlag,
-	// @Param("tcSpecialistUserID") int tcSpecialistUserID,
-	// @Param("tcDate") Timestamp tcDate);
 
 	@Transactional
 	@Modifying

@@ -261,22 +261,6 @@ obj.setVanSerialNo((objRS.getBenFlowID()));
 		return obj;
 	}
 
-	// public int updateBenFlowAfterDocData(Long benFlowID, Long benRegID, Long
-	// benID, Long benVisitID, short docFlag,
-	// short pharmaFlag, short oncologistFlag, short tcSpecialistFlag, int tcUserID,
-	// Timestamp tcDate) {
-	// int i = 0;
-	// try {
-	// i =
-	// beneficiaryFlowStatusRepo.updateBenFlowStatusAfterDoctorActivity(benFlowID,
-	// benRegID, benID, docFlag,
-	// pharmaFlag, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate);
-	// } catch (Exception e) {
-	// logger.error("Error in ben flow creation = " + e);
-	// }
-	// return i;
-	// }
-
 	public int updateBenFlowAfterDocData(Long benFlowID, Long benRegID, Long benID, Long benVisitID,
 			short docFlag, short pharmaFlag, short oncologistFlag, short tcSpecialistFlag,
 			int tcUserID, Timestamp tcDate, Boolean signatureFlag) throws Exception {
