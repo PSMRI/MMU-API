@@ -721,26 +721,25 @@ public class CommonDoctorServiceImpl {
 
 					if (sm.getServiceName().equalsIgnoreCase(tmReferCheckValue)) {
 						TMReferred = 1;
-					}
-					else
-					{
+					} else {
 						TMReferred = 0;
 					}
-					
+
 					if (referDetails.getRevisitDate() != null)
 						referDetailsTemp.setRevisitDate(referDetails.getRevisitDate());
-					
+
 					if (referDetails.getReferralReason() != null)
 						referDetailsTemp.setReferralReason(referDetails.getReferralReason());
 
 					referDetailsList.add(referDetailsTemp);
 				}
 			}
-		} /*
-			 * else { if (referDetails.getReferredToInstituteName() != null ||
-			 * referDetails.getRevisitDate() != null || referDetails.getReferralReason() !=
-			 * null) referDetailsList.add(referDetails); TMReferred = 0; }
-			 */
+		} else {
+			if (referDetails.getReferredToInstituteName() != null || referDetails.getRevisitDate() != null
+					|| referDetails.getReferralReason() != null)
+				referDetailsList.add(referDetails);
+			TMReferred = 0;
+		}
 
 		ArrayList<BenReferDetails> res = (ArrayList<BenReferDetails>) benReferDetailsRepo.saveAll(referDetailsList);
 		if (referDetailsList.size() == res.size()) {
