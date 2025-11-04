@@ -107,16 +107,16 @@ public class DataSyncRepository {
 	
 		if (tableName != null && tableName.toLowerCase().equals("i_ben_flow_outreach")) {
 			query = "UPDATE " + schemaName + "." + tableName
-					+ " SET created_date = ? , processed = ?, SyncedDate = ?, Syncedby = ? , SyncFailureReason = ? "
+					+ " SET processed = ?, SyncedDate = ?, Syncedby = ? , SyncFailureReason = ? "
 					+ "WHERE " + autoIncreamentColumn + " IN (" + String.join(",", vanSerialNos) + ")";
 		} else {
 			query = "UPDATE " + schemaName + "." + tableName
-					+ " SET CreatedDate = ? , processed = ?, SyncedDate = ?, Syncedby = ? , SyncFailureReason = ? "
+					+ " SET processed = ?, SyncedDate = ?, Syncedby = ? , SyncFailureReason = ? "
 					+ "WHERE " + autoIncreamentColumn + " IN (" + String.join(",", vanSerialNos) + ")";
 		}
 
 		Timestamp syncedDate = new Timestamp(System.currentTimeMillis());
-		int updatedRows = jdbcTemplate.update(query, syncedDate, status, syncedDate, user, reason);
+		int updatedRows = jdbcTemplate.update(query, status, syncedDate, user, reason);
 		return updatedRows;
 
 	}
