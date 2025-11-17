@@ -24,6 +24,7 @@ package com.iemr.mmu.controller.teleconsultation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.iemr.mmu.utils.JwtUtil;
 
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -48,6 +49,9 @@ public class TeleConsultationController {
 
 	@Autowired
 	private TeleConsultationServiceImpl teleConsultationServiceImpl;
+	
+	@Autowired
+	private JwtUtil jwtUtil;
 
 	@Operation(summary = "Update beneficiary arrival status based on request")
 	@PostMapping(value = { "/update/benArrivalStatus" })
@@ -137,12 +141,16 @@ public class TeleConsultationController {
 
 	@Operation(summary = "Get TC request list for a specialist")
 	@PostMapping(value = { "/getTCRequestList" })
-	public String getTCSpecialistWorkListNew(@RequestBody String requestOBJ) {
+	public String getTCSpecialistWorkListNew(@RequestBody String requestOBJ, HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
+		String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+		String userId = jwtUtil.getUserIdFromToken(jwtToken);
 		try {
 			if (requestOBJ != null) {
 				JsonObject jsnOBJ = parseJsonRequest(requestOBJ);
-
+				if(!userId.equals(String.valueOf(jsnOBJ.get("userID").getAsInt()))) {
+					throw new Exception("Unauthorized access");
+				}
 				String s = teleConsultationServiceImpl.getTCRequestListBySpecialistIdAndDate(
 						jsnOBJ.get("psmID").getAsInt(), jsnOBJ.get("userID").getAsInt(),
 						jsnOBJ.get("date").getAsString());
