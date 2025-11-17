@@ -162,9 +162,8 @@ public class LocationController {
 			} else {
 				response.setError(5000, "Invalid request");
 			}
-			}
-			else {
-				response.setError(5000, "Unauthorized access");
+			} else {
+				response.setError(403, "Unauthorized access: User ID does not match token");
 			}
 		} catch (Exception e) {
 			logger.error(e.getMessage());

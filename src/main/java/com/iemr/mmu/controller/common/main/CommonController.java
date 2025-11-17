@@ -668,12 +668,15 @@ public class CommonController {
 	public String getTCSpecialistWorkListNew(@PathVariable("providerServiceMapID") Integer providerServiceMapID,
 			@PathVariable("userID") Integer userID, @PathVariable("serviceID") Integer serviceID,HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
+		try {
+
 		String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
 		String userId = jwtUtil.getUserIdFromToken(jwtToken);
-			
-		try {
+			if(jwtToken == null || userId == null) {
+				response.setError(403, "Unauthorized access: Missing or invalid token");
+			}
 			if(!userId.equals(String.valueOf(userID))) {
-				throw new IEMRException("Unauthorized access");
+				response.setError(403, "Unauthorized access: User ID does not match token");
 			}
 			if (providerServiceMapID != null && userID != null) {
 				String s = commonDoctorServiceImpl.getTCSpecialistWorkListNewForTM(providerServiceMapID, userID,
@@ -700,11 +703,14 @@ public class CommonController {
 			@PathVariable("providerServiceMapID") Integer providerServiceMapID, @PathVariable("userID") Integer userID,
 			@PathVariable("serviceID") Integer serviceID, HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
-		String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
-		String userId = jwtUtil.getUserIdFromToken(jwtToken);	
 		try {
+			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+			String userId = jwtUtil.getUserIdFromToken(jwtToken);	
 			if(!userId.equals(String.valueOf(userID))) {
-				throw new IEMRException("Unauthorized access");
+				response.setError(403, "Unauthorized access: User ID does not match token");
+			}
+			if(jwtToken == null || userId == null) {
+				response.setError(403, "Unauthorized access: Missing or invalid token");
 			}
 			if (providerServiceMapID != null && userID != null) {
 				String s = commonDoctorServiceImpl.getTCSpecialistWorkListNewFutureScheduledForTM(providerServiceMapID,

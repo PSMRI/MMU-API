@@ -143,13 +143,14 @@ public class TeleConsultationController {
 	@PostMapping(value = { "/getTCRequestList" })
 	public String getTCSpecialistWorkListNew(@RequestBody String requestOBJ, HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
+		try {
 		String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
 		String userId = jwtUtil.getUserIdFromToken(jwtToken);
-		try {
 			if (requestOBJ != null) {
 				JsonObject jsnOBJ = parseJsonRequest(requestOBJ);
-				if(!userId.equals(String.valueOf(jsnOBJ.get("userID").getAsInt()))) {
-					throw new Exception("Unauthorized access");
+				if(userId == null || !jsnOBJ.has("userID") || !userId.equals(String.valueOf(jsnOBJ.get("userID").getAsInt()))) {
+					response.setError(403, "Unauthorized access: User ID does not match token");
+					return response.toString();
 				}
 				String s = teleConsultationServiceImpl.getTCRequestListBySpecialistIdAndDate(
 						jsnOBJ.get("psmID").getAsInt(), jsnOBJ.get("userID").getAsInt(),

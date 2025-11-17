@@ -66,9 +66,9 @@ public class IemrMmuLoginController {
 	@GetMapping(value = "/getUserServicePointVanDetails", consumes = "application/json", produces = "application/json")
 	public String getUserServicePointVanDetails(@RequestBody String comingRequest, HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
+		try {
 		String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
 		String userId = jwtUtil.getUserIdFromToken(jwtToken);
-		try {
 
 			JSONObject obj = new JSONObject(comingRequest);
 			logger.info("getUserServicePointVanDetails request " + comingRequest);
@@ -77,7 +77,7 @@ public class IemrMmuLoginController {
 			response.setResponse(responseData);
 			}
 			else {
-				response.setError(5000, "Unauthorized access");
+				response.setError(403, "Unauthorized access: User ID does not match token");
 				return response.toString();
 			}
 			
@@ -121,7 +121,7 @@ public class IemrMmuLoginController {
 			String userId = jwtUtil.getUserIdFromToken(jwtToken);
 			
 			logger.info("getServicepointVillages request " + comingRequest);
-			if(userId != null && userId.equals(String.valueOf( obj.getInt("userID")))) {
+			if (userId != null && userId.equals(String.valueOf( obj.getInt("userID")))) {
 			if (obj.has("userID") && obj.has("providerServiceMapID")) {
 				String responseData = iemrMmuLoginServiceImpl.getUserVanSpDetails(obj.getInt("userID"),
 						obj.getInt("providerServiceMapID"));
@@ -131,7 +131,7 @@ public class IemrMmuLoginController {
 			}
 			}
 			else {
-				response.setError(5000, "Unauthorized access");
+				response.setError(403, "Unauthorized access: User ID does not match token");
 			}
 		} catch (Exception e) {
 			response.setError(5000, "Error while getting van and service points data");
