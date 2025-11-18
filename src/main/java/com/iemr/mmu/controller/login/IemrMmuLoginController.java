@@ -72,12 +72,12 @@ public class IemrMmuLoginController {
 
 			JSONObject obj = new JSONObject(comingRequest);
 			logger.info("getUserServicePointVanDetails request " + comingRequest);
-			if(userId != null && obj.has("userID") && userId.equals(String.valueOf( obj.getInt("userID")))) {
-				String responseData = iemrMmuLoginServiceImpl.getUserServicePointVanDetails(obj.getInt("userID"));
+			if(userId != null ) {
+				String responseData = iemrMmuLoginServiceImpl.getUserServicePointVanDetails(Integer.parseInt(userId));
 			response.setResponse(responseData);
 			}
 			else {
-				response.setError(403, "Unauthorized access: User ID does not match token");
+				response.setError(403, "Unauthorized access: Missing or invalid token");
 				return response.toString();
 			}
 			
@@ -119,20 +119,19 @@ public class IemrMmuLoginController {
 			JSONObject obj = new JSONObject(comingRequest);
 			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
 			String userId = jwtUtil.getUserIdFromToken(jwtToken);
-			
+			int userID = Integer.parseInt(userId);
 			logger.info("getServicepointVillages request " + comingRequest);
-			if (userId != null && userId.equals(String.valueOf( obj.getInt("userID")))) {
-			if (obj.has("userID") && obj.has("providerServiceMapID")) {
-				String responseData = iemrMmuLoginServiceImpl.getUserVanSpDetails(obj.getInt("userID"),
+			if (userId != null && obj.has("providerServiceMapID")) {
+				String responseData = iemrMmuLoginServiceImpl.getUserVanSpDetails(userID,
 						obj.getInt("providerServiceMapID"));
 				response.setResponse(responseData);
+			} else if (userId == null || jwtToken == null) {
+				response.setError(403, "Unauthorized access: Missing or invalid token");
 			} else {
 				response.setError(5000, "Invalid request");
 			}
-			}
-			else {
-				response.setError(403, "Unauthorized access: User ID does not match token");
-			}
+			
+			
 		} catch (Exception e) {
 			response.setError(5000, "Error while getting van and service points data");
 			logger.error("getUserVanSpDetails failed with " + e.getMessage(), e);

@@ -664,21 +664,20 @@ public class CommonController {
 	}
 
 	@Operation(summary = "TC specialist")
-	@GetMapping(value = { "/getTCSpecialistWorklist/{providerServiceMapID}/{serviceID}/{userID}" })
+	@GetMapping(value = { "/getTCSpecialistWorklist/{providerServiceMapID}/{serviceID}" })
 	public String getTCSpecialistWorkListNew(@PathVariable("providerServiceMapID") Integer providerServiceMapID,
-			@PathVariable("userID") Integer userID, @PathVariable("serviceID") Integer serviceID,HttpServletRequest request) {
+			@PathVariable("serviceID") Integer serviceID,HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
 		try {
 
 		String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
 		String userId = jwtUtil.getUserIdFromToken(jwtToken);
+		int userID = Integer.parseInt(userId);
 			if(jwtToken == null || userId == null) {
 				response.setError(403, "Unauthorized access: Missing or invalid token");
 			}
-			if(!userId.equals(String.valueOf(userID))) {
-				response.setError(403, "Unauthorized access: User ID does not match token");
-			}
-			if (providerServiceMapID != null && userID != null) {
+			
+			if (providerServiceMapID != null && userId != null) {
 				String s = commonDoctorServiceImpl.getTCSpecialistWorkListNewForTM(providerServiceMapID, userID,
 						serviceID);
 				if (s != null)
@@ -698,21 +697,20 @@ public class CommonController {
 
 	@Operation(summary = "TC specialist future scheduled")
 	@GetMapping(value = {
-			"/getTCSpecialistWorklistFutureScheduled/{providerServiceMapID}/{serviceID}/{userID}" })
+			"/getTCSpecialistWorklistFutureScheduled/{providerServiceMapID}/{serviceID}" })
 	public String getTCSpecialistWorklistFutureScheduled(
-			@PathVariable("providerServiceMapID") Integer providerServiceMapID, @PathVariable("userID") Integer userID,
+			@PathVariable("providerServiceMapID") Integer providerServiceMapID, 
 			@PathVariable("serviceID") Integer serviceID, HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
 		try {
 			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
 			String userId = jwtUtil.getUserIdFromToken(jwtToken);	
-			if(!userId.equals(String.valueOf(userID))) {
-				response.setError(403, "Unauthorized access: User ID does not match token");
-			}
+			int userID = Integer.parseInt(userId);
+			
 			if(jwtToken == null || userId == null) {
 				response.setError(403, "Unauthorized access: Missing or invalid token");
 			}
-			if (providerServiceMapID != null && userID != null) {
+			if (providerServiceMapID != null && userId != null) {
 				String s = commonDoctorServiceImpl.getTCSpecialistWorkListNewFutureScheduledForTM(providerServiceMapID,
 						userID, serviceID);
 				if (s != null)

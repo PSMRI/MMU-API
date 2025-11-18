@@ -148,12 +148,12 @@ public class TeleConsultationController {
 		String userId = jwtUtil.getUserIdFromToken(jwtToken);
 			if (requestOBJ != null) {
 				JsonObject jsnOBJ = parseJsonRequest(requestOBJ);
-				if(userId == null || !jsnOBJ.has("userID") || !userId.equals(String.valueOf(jsnOBJ.get("userID").getAsInt()))) {
-					response.setError(403, "Unauthorized access: User ID does not match token");
+				if(userId == null) {
+					response.setError(403, "Unauthorized access: Missing or invalid token");
 					return response.toString();
 				}
 				String s = teleConsultationServiceImpl.getTCRequestListBySpecialistIdAndDate(
-						jsnOBJ.get("psmID").getAsInt(), jsnOBJ.get("userID").getAsInt(),
+						jsnOBJ.get("psmID").getAsInt(), Integer.parseInt(userId),
 						jsnOBJ.get("date").getAsString());
 				if (s != null)
 					response.setResponse(s);

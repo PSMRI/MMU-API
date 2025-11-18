@@ -149,13 +149,11 @@ public class LocationController {
 			JSONObject obj = new JSONObject(comingRequest);
 			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
 			String userId = jwtUtil.getUserIdFromToken(jwtToken);
-			if(userId != null && obj.has("userId") && userId.equals(String.valueOf( obj.getInt("userId")))) {
+			if(userId != null) {
+				int userID = Integer.parseInt(userId);
 			if (obj != null && obj.has("spID") && obj.has("spPSMID") && obj.get("spID") != null
 					&& obj.get("spPSMID") != null) {
-				Integer userID = null;
-				if (obj.has("userId") && null != obj.get("userId")) {
-					userID = Integer.valueOf(obj.get("userId").toString());
-				}
+			
 				String s = locationServiceImpl.getLocDetailsNew(obj.getInt("spID"), obj.getInt("spPSMID"), userID);
 
 				response.setResponse(s);
@@ -163,7 +161,7 @@ public class LocationController {
 				response.setError(5000, "Invalid request");
 			}
 			} else {
-				response.setError(403, "Unauthorized access: User ID does not match token");
+				response.setError(403, "Unauthorized access");
 			}
 		} catch (Exception e) {
 			logger.error(e.getMessage());
