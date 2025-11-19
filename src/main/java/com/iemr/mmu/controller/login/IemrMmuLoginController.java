@@ -33,9 +33,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
+import com.iemr.mmu.utils.CookieUtil;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import com.iemr.mmu.controller.registrar.main.RegistrarController;
 import com.iemr.mmu.service.login.IemrMmuLoginServiceImpl;
+import com.iemr.mmu.utils.JwtUtil;
 import com.iemr.mmu.utils.mapper.InputMapper;
 import com.iemr.mmu.utils.response.OutputResponse;
 
@@ -51,20 +55,32 @@ public class IemrMmuLoginController {
 	private IemrMmuLoginServiceImpl iemrMmuLoginServiceImpl;
 
 	@Autowired
+	private JwtUtil jwtUtil;
+
+	@Autowired
 	public void setIemrMmuLoginServiceImpl(IemrMmuLoginServiceImpl iemrMmuLoginServiceImpl) {
 		this.iemrMmuLoginServiceImpl = iemrMmuLoginServiceImpl;
 	}
 
 	@Operation(summary = "Get user service point van details")
 	@GetMapping(value = "/getUserServicePointVanDetails", consumes = "application/json", produces = "application/json")
-	public String getUserServicePointVanDetails(@RequestBody String comingRequest) {
+	public String getUserServicePointVanDetails(@RequestBody String comingRequest, HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
 		try {
+		String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+		String userId = jwtUtil.getUserIdFromToken(jwtToken);
 
 			JSONObject obj = new JSONObject(comingRequest);
 			logger.info("getUserServicePointVanDetails request " + comingRequest);
-			String responseData = iemrMmuLoginServiceImpl.getUserServicePointVanDetails(obj.getInt("userID"));
+			if(userId != null ) {
+				String responseData = iemrMmuLoginServiceImpl.getUserServicePointVanDetails(Integer.parseInt(userId));
 			response.setResponse(responseData);
+			}
+			else {
+				response.setError(403, "Unauthorized access: Missing or invalid token");
+				return response.toString();
+			}
+			
 		} catch (Exception e) {
 			response.setError(5000, "Error while getting service points and van data");
 			logger.error("get User SP and van details failed with " + e.getMessage(), e);
@@ -95,19 +111,27 @@ public class IemrMmuLoginController {
 
 	@Operation(summary = "Get user van details")
 	@PostMapping(value = "/getUserVanSpDetails", consumes = "application/json", produces = "application/json")
-	public String getUserVanSpDetails(@RequestBody String comingRequest) {
+	public String getUserVanSpDetails(@RequestBody String comingRequest, HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
+		
 		try {
 
 			JSONObject obj = new JSONObject(comingRequest);
+			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+			String userId = jwtUtil.getUserIdFromToken(jwtToken);
+			int userID = Integer.parseInt(userId);
 			logger.info("getServicepointVillages request " + comingRequest);
-			if (obj.has("userID") && obj.has("providerServiceMapID")) {
-				String responseData = iemrMmuLoginServiceImpl.getUserVanSpDetails(obj.getInt("userID"),
+			if (userId != null && obj.has("providerServiceMapID")) {
+				String responseData = iemrMmuLoginServiceImpl.getUserVanSpDetails(userID,
 						obj.getInt("providerServiceMapID"));
 				response.setResponse(responseData);
+			} else if (userId == null || jwtToken == null) {
+				response.setError(403, "Unauthorized access: Missing or invalid token");
 			} else {
 				response.setError(5000, "Invalid request");
 			}
+			
+			
 		} catch (Exception e) {
 			response.setError(5000, "Error while getting van and service points data");
 			logger.error("getUserVanSpDetails failed with " + e.getMessage(), e);
@@ -129,7 +153,7 @@ public class IemrMmuLoginController {
 		} catch (Exception e) {
 			logger.info("Error occurred while fetching van master is  : " + e);
 			response.setError(5000, "Error occurred while fetching van master is  : " + e);
-			;
+			
 		}
 		return response.toString();
 	}

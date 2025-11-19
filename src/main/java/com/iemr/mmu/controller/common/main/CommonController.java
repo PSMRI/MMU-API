@@ -40,6 +40,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.iemr.mmu.utils.JwtUtil;
 
 import com.iemr.mmu.data.benFlowStatus.BeneficiaryFlowStatus;
 import com.iemr.mmu.service.common.transaction.CommonDoctorServiceImpl;
@@ -50,6 +51,7 @@ import com.iemr.mmu.utils.AESEncryption.AESEncryptionDecryption;
 import com.iemr.mmu.utils.exception.IEMRException;
 import com.iemr.mmu.utils.mapper.InputMapper;
 import com.iemr.mmu.utils.response.OutputResponse;
+import com.iemr.mmu.utils.CookieUtil;
 
 import io.swagger.annotations.ApiParam;
 import io.swagger.v3.oas.annotations.Operation;
@@ -67,6 +69,9 @@ public class CommonController {
 	private InputMapper inputMapper = new InputMapper();
 	@Autowired
 	private ServletContext servletContext;
+
+	@Autowired
+	private JwtUtil jwtUtil;
 
 	@Autowired
 	private AESEncryptionDecryption aESEncryptionDecryption;
@@ -659,12 +664,20 @@ public class CommonController {
 	}
 
 	@Operation(summary = "TC specialist")
-	@GetMapping(value = { "/getTCSpecialistWorklist/{providerServiceMapID}/{serviceID}/{userID}" })
+	@GetMapping(value = { "/getTCSpecialistWorklist/{providerServiceMapID}/{serviceID}" })
 	public String getTCSpecialistWorkListNew(@PathVariable("providerServiceMapID") Integer providerServiceMapID,
-			@PathVariable("userID") Integer userID, @PathVariable("serviceID") Integer serviceID) {
+			@PathVariable("serviceID") Integer serviceID,HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
 		try {
-			if (providerServiceMapID != null && userID != null) {
+
+		String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+		String userId = jwtUtil.getUserIdFromToken(jwtToken);
+		int userID = Integer.parseInt(userId);
+			if(jwtToken == null || userId == null) {
+				response.setError(403, "Unauthorized access: Missing or invalid token");
+			}
+			
+			if (providerServiceMapID != null && userId != null) {
 				String s = commonDoctorServiceImpl.getTCSpecialistWorkListNewForTM(providerServiceMapID, userID,
 						serviceID);
 				if (s != null)
@@ -684,13 +697,20 @@ public class CommonController {
 
 	@Operation(summary = "TC specialist future scheduled")
 	@GetMapping(value = {
-			"/getTCSpecialistWorklistFutureScheduled/{providerServiceMapID}/{serviceID}/{userID}" })
+			"/getTCSpecialistWorklistFutureScheduled/{providerServiceMapID}/{serviceID}" })
 	public String getTCSpecialistWorklistFutureScheduled(
-			@PathVariable("providerServiceMapID") Integer providerServiceMapID, @PathVariable("userID") Integer userID,
-			@PathVariable("serviceID") Integer serviceID) {
+			@PathVariable("providerServiceMapID") Integer providerServiceMapID, 
+			@PathVariable("serviceID") Integer serviceID, HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
 		try {
-			if (providerServiceMapID != null && userID != null) {
+			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+			String userId = jwtUtil.getUserIdFromToken(jwtToken);	
+			int userID = Integer.parseInt(userId);
+			
+			if(jwtToken == null || userId == null) {
+				response.setError(403, "Unauthorized access: Missing or invalid token");
+			}
+			if (providerServiceMapID != null && userId != null) {
 				String s = commonDoctorServiceImpl.getTCSpecialistWorkListNewFutureScheduledForTM(providerServiceMapID,
 						userID, serviceID);
 				if (s != null)
