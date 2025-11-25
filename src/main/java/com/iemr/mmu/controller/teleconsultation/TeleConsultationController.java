@@ -24,7 +24,6 @@ package com.iemr.mmu.controller.teleconsultation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import com.iemr.mmu.utils.JwtUtil;
 import org.springframework.security.access.prepost.PreAuthorize;
 import com.iemr.mmu.utils.JwtUtil;
 
@@ -33,7 +32,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
+import com.iemr.mmu.utils.JwtUtil;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
