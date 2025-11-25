@@ -46,13 +46,10 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException, java.io.IOException {
-				 logger.info(">>> RoleAuthenticationFilter STARTED for URI: {}", request.getRequestURI());
-       System.out.println(">>> RoleAuthenticationFilter STARTED for URI: " + request.getRequestURI());
-
 		List<String> authRoles = null;
 		try {
 			String jwtFromCookie = CookieUtil.getJwtTokenFromCookie(request);
-		String jwtFromHeader = request.getHeader("Jwttoken");
+			String jwtFromHeader = request.getHeader("Jwttoken");
 
 			String jwtToken = jwtFromCookie != null ? jwtFromCookie : jwtFromHeader;
 			if(null == jwtToken || jwtToken.trim().isEmpty()) {
@@ -66,8 +63,6 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
 			}
 			Object userIdObj = extractAllClaims.get("userId");
 			String userId = userIdObj != null ? userIdObj.toString() : null;
-			logger.info("Extracted userId from JWT: {}", userId.toString());
-			System.out.println("Extracted userId from JWT: " + userId.toString());	
 			if (null == userId || userId.trim().isEmpty()) {
 				filterChain.doFilter(request, response);
 				return;
@@ -81,16 +76,14 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
 				return;
 			}
 			authRoles = redisService.getUserRoleFromCache(userIdLong);
-			System.out.println("Roles fetched from Redis for userId " + userId + ": " + authRoles);
-			logger.info("Roles fetched from Redis for userId {}: {}", userId, authRoles);
 			if (authRoles == null || authRoles.isEmpty()) {
-			    List<String> roles = userService.getUserRoles(Long.valueOf(userId)); // assuming this returns multiple roles
+			    List<String> roles = userService.getUserRoles(userIdLong); // assuming this returns multiple roles
 			    authRoles = roles.stream()
 			    	    .filter(Objects::nonNull)
 			    	    .map(String::trim)
 			    	    .map(role -> "ROLE_" + role.toUpperCase().replace(" ", "_"))
 			    	    .collect(Collectors.toList());
-			    redisService.cacheUserRoles(Long.valueOf(userId), authRoles);
+			    redisService.cacheUserRoles(userIdLong, authRoles);
 			}
 
 			List<GrantedAuthority> authorities = authRoles.stream()

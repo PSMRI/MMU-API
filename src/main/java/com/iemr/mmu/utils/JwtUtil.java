@@ -1,18 +1,13 @@
 package com.iemr.mmu.utils;
 
-import java.util.List;
 import java.util.function.Function;
-
 import javax.crypto.SecretKey;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import com.iemr.mmu.repo.login.UserLoginRepo;
-
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -28,9 +23,6 @@ public class JwtUtil {
 	@Autowired
 	private TokenDenylist tokenDenylist;
 
-	@Autowired
-	private UserLoginRepo userLoginRepo;
-	
 	// Generate a key using the secret
 	private SecretKey getSigningKey() {
 		if (SECRET_KEY == null || SECRET_KEY.isEmpty()) {

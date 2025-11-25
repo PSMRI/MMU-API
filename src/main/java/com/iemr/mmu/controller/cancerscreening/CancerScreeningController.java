@@ -68,7 +68,7 @@ public class CancerScreeningController {
 	 */
 	@Operation(summary = "Save cancer screening nurse data")
 	@PostMapping(value = { "/save/nurseData" })
-	@PreAuthorize("hasRole('DOCTOR')")
+	@PreAuthorize("hasRole('NURSE')")
 	public String saveBenCancerScreeningNurseData(@RequestBody String requestObj,
 			@RequestHeader(value = "Authorization") String authorization) {
 		OutputResponse response = new OutputResponse();

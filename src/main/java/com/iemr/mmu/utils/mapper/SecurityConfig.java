@@ -32,12 +32,10 @@ public class SecurityConfig {
 
 @Bean
 public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    System.out.println("Inside SecurityConfig - securityFilterChain");
     CookieCsrfTokenRepository csrfTokenRepository = new CookieCsrfTokenRepository();
     csrfTokenRepository.setCookieHttpOnly(true);
     csrfTokenRepository.setCookiePath("/");
     http
-        // .csrf(csrf -> csrf.csrfTokenRepository(csrfTokenRepository))
         .csrf(csrf -> csrf.disable())
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
