@@ -114,7 +114,6 @@ public class RedisStorage {
 
 	public void cacheUserRoles(Long userId, List<String> roles) {
 		try {
-			logger.info("Caching roles for user {} : {} ", userId, roles);
 			 String key = "roles:" + userId;
 		        redisTemplate.delete(key); // Clear previous cache
 		        redisTemplate.opsForList().rightPushAll(key, roles);
@@ -126,7 +125,6 @@ public class RedisStorage {
 
 	public List<String> getUserRoleFromCache(Long userId) {
 		try {
-			logger.info("get user role from cache",userId);
 			return redisTemplate.opsForList().range("roles:" + userId, 0, -1);
 		} catch (Exception e) {
 			logger.warn("Failed to retrieve cached role for user {} : {} ", userId, e.getMessage());
