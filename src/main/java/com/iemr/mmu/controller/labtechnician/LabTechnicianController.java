@@ -24,6 +24,7 @@ package com.iemr.mmu.controller.labtechnician;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -44,6 +45,7 @@ import io.swagger.v3.oas.annotations.Operation;
 
 @RestController
 @RequestMapping(value = "/labTechnician", headers = "Authorization", consumes = "application/json", produces = "application/json")
+@PreAuthorize("hasRole('LABTECHNICIAN') || hasRole('LAB_TECHNICIAN') ")
 public class LabTechnicianController {
 
 	private Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());

@@ -25,6 +25,7 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.web.bind.annotation.PostMapping;
@@ -67,6 +68,7 @@ public class CancerScreeningController {
 	 */
 	@Operation(summary = "Save cancer screening nurse data")
 	@PostMapping(value = { "/save/nurseData" })
+	@PreAuthorize("hasRole('DOCTOR')")
 	public String saveBenCancerScreeningNurseData(@RequestBody String requestObj,
 			@RequestHeader(value = "Authorization") String authorization) {
 		OutputResponse response = new OutputResponse();
@@ -106,6 +108,7 @@ public class CancerScreeningController {
 	 */
 	@Operation(summary = "Save cancer screening doctor data")
 	@PostMapping(value = { "/save/doctorData" })
+	@PreAuthorize("hasRole('DOCTOR')")
 	public String saveBenCancerScreeningDoctorData(@RequestBody String requestObj,
 			@RequestHeader String authorization) {
 		OutputResponse response = new OutputResponse();
@@ -132,6 +135,7 @@ public class CancerScreeningController {
 
 	@Operation(summary = "Get beneficiary visit details from nurse screen")
 	@PostMapping(value = { "/getBenDataFrmNurseToDocVisitDetailsScreen" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String getBenDataFrmNurseScrnToDocScrnVisitDetails(
 			@ApiParam(value = "{\"benRegID\":\"Long\", \"visitCode\":\"Long\"}") @RequestBody String comingRequest) {
 		OutputResponse response = new OutputResponse();
@@ -161,6 +165,7 @@ public class CancerScreeningController {
 	 */
 	@Operation(summary = "Get beneficiary cancer history details from nurse screen")
 	@PostMapping(value = { "/getBenDataFrmNurseToDocHistoryScreen" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String getBenDataFrmNurseScrnToDocScrnHistory(
 			@ApiParam(value = "{\"benRegID\":\"Long\", \"visitCode\":\"Long\"}") @RequestBody String comingRequest) {
 		OutputResponse response = new OutputResponse();
@@ -189,6 +194,7 @@ public class CancerScreeningController {
 	 */
 	@Operation(summary = "Get beneficiary vital details from nurse screen")
 	@PostMapping(value = { "/getBenDataFrmNurseToDocVitalScreen" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String getBenDataFrmNurseScrnToDocScrnVital(
 			@ApiParam(value = "{\"benRegID\":\"Long\", \"visitCode\":\"Long\"}") @RequestBody String comingRequest) {
 		OutputResponse response = new OutputResponse();
@@ -218,6 +224,7 @@ public class CancerScreeningController {
 	 */
 	@Operation(summary = "Get beneficiary examination details from nurse screen")
 	@PostMapping(value = { "/getBenDataFrmNurseToDocExaminationScreen" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String getBenDataFrmNurseScrnToDocScrnExamination(
 			@ApiParam(value = "{\"benRegID\":\"Long\", \"visitCode\":\"Long\"}") @RequestBody String comingRequest) {
 		OutputResponse response = new OutputResponse();
@@ -247,6 +254,7 @@ public class CancerScreeningController {
 	 */
 	@Operation(summary = "Get beneficiary cancer family history")
 	@PostMapping(value = { "/getBenCancerFamilyHistory" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String getBenCancerFamilyHistory(
 			@ApiParam(value = "{\"benRegID\":\"Long\"}") @RequestBody String comingRequest) {
 		OutputResponse response = new OutputResponse();
@@ -278,6 +286,7 @@ public class CancerScreeningController {
 	 */
 	@Operation(summary = "Get beneficiary cancer personal history")
 	@PostMapping(value = { "/getBenCancerPersonalHistory" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String getBenCancerPersonalHistory(
 			@ApiParam(value = "{\"benRegID\":\"Long\"}") @RequestBody String comingRequest) {
 		OutputResponse response = new OutputResponse();
@@ -309,6 +318,7 @@ public class CancerScreeningController {
 	 */
 	@Operation(summary = "Get beneficiary cancer personal diet history")
 	@PostMapping(value = { "/getBenCancerPersonalDietHistory" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String getBenCancerPersonalDietHistory(
 			@ApiParam(value = "{\"benRegID\":\"Long\"}") @RequestBody String comingRequest) {
 		OutputResponse response = new OutputResponse();
@@ -340,6 +350,7 @@ public class CancerScreeningController {
 	 */
 	@Operation(summary = "Get beneficiary cancer obstetric history")
 	@PostMapping(value = { "/getBenCancerObstetricHistory" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String getBenCancerObstetricHistory(
 			@ApiParam(value = "{\"benRegID\":\"Long\"}") @RequestBody String comingRequest) {
 		OutputResponse response = new OutputResponse();
@@ -370,6 +381,7 @@ public class CancerScreeningController {
 	 */
 	@Operation(summary = "Get beneficiary doctor entered details")
 	@PostMapping(value = { "/getBenCaseRecordFromDoctorCS" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	@Transactional(rollbackFor = Exception.class)
 	public String getBenCaseRecordFromDoctorCS(
 			@ApiParam(value = "{\"benRegID\":\"Long\", \"visitCode\":\"Long\"}") @RequestBody String comingRequest) {
@@ -396,6 +408,7 @@ public class CancerScreeningController {
 
 	@Operation(summary = "Update cancer screening history nurse data in doctor screen")
 	@PostMapping(value = { "/update/historyScreen" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String updateCSHistoryNurse(
 			@ApiParam(value = "{\"historyDetails\": {\"familyHistory\":{\"diseases\": [{\"beneficiaryRegID\":\"Long\", \"benVisitID\":\"Long\", "
 					+ "\"providerServiceMapID\":\"Integer\", \"cancerDiseaseType\":\"String\", \"otherDiseaseType\":\"String\", \"familyMemberList\":\"List\", "
@@ -440,6 +453,7 @@ public class CancerScreeningController {
 	 */
 	@Operation(summary = "Update beneficiary vital detail")
 	@PostMapping(value = { "/update/vitalScreen" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String upodateBenVitalDetail(
 			@ApiParam(value = "{\"ID\": \"Long\", \"beneficiaryRegID\":\"Long\",\"benVisitID\":\"Long\","
 					+ "\"weight_Kg\":\"Double\", \"height_cm\":\"Double\", \"waistCircumference_cm\":\"Double\", \"bloodGlucose_Fasting\":\"Short\","
@@ -476,6 +490,7 @@ public class CancerScreeningController {
 	 */
 	@Operation(summary = "Update beneficiary examination detail")
 	@PostMapping(value = { "/update/examinationScreen" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String upodateBenExaminationDetail(@RequestBody String requestObj) {
 
 		OutputResponse response = new OutputResponse();
@@ -505,6 +520,7 @@ public class CancerScreeningController {
 	 */
 	@Operation(summary = "Update cancer diagnosis details by oncologist")
 	@PostMapping(value = { "/update/examinationScreen/diagnosis" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR') || hasRole('ONCOLOGIST')")
 	public String updateCancerDiagnosisDetailsByOncologist(
 			@ApiParam(value = "{\"beneficiaryRegID\":\"Long\", \"benVisitID\":\"Long\", \"visitCode\":\"Long\", "
 					+ "\"provisionalDiagnosisOncologist\":\"String\", \"modifiedBy\":\"string\"}") @RequestBody String requestObj) {
@@ -536,6 +552,7 @@ public class CancerScreeningController {
 	 */
 	@Operation(summary = "Update cancer screening doctor data")
 	@PostMapping(value = { "/update/doctorData" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String updateCancerScreeningDoctorData(@RequestBody String requestObj) {
 
 		OutputResponse response = new OutputResponse();

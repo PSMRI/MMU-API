@@ -1,11 +1,17 @@
 package com.iemr.mmu.utils;
 
+import java.util.List;
 import java.util.function.Function;
+
 import javax.crypto.SecretKey;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.iemr.mmu.repo.login.UserLoginRepo;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -14,12 +20,17 @@ import io.jsonwebtoken.security.Keys;
 @Component
 public class JwtUtil {
 
+	private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
+
 	@Value("${jwt.secret}")
 	private String SECRET_KEY;
 
 	@Autowired
 	private TokenDenylist tokenDenylist;
 
+	@Autowired
+	private UserLoginRepo userLoginRepo;
+	
 	// Generate a key using the secret
 	private SecretKey getSigningKey() {
 		if (SECRET_KEY == null || SECRET_KEY.isEmpty()) {
@@ -59,7 +70,7 @@ public class JwtUtil {
 		return claims != null ? claimsResolver.apply(claims) : null;
 	}
 
-	private Claims extractAllClaims(String token) {
+	public Claims extractAllClaims(String token) {
 		return Jwts.parser()
 			.verifyWith(getSigningKey())
 			.build()

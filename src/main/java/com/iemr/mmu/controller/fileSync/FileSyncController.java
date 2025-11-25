@@ -24,6 +24,7 @@ package com.iemr.mmu.controller.fileSync;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -38,6 +39,7 @@ import io.swagger.v3.oas.annotations.Operation;
 
 @RequestMapping("/fileSyncController")
 @RestController
+@PreAuthorize("hasRole('DATASYNC') || hasRole('DATA_SYNC') ")
 public class FileSyncController {
 
 	private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
