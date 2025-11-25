@@ -339,13 +339,13 @@ public class CommonDoctorServiceImpl {
 		if (docWL != null && docWL > 0 && docWL <= 30)
 			cal.add(Calendar.DAY_OF_YEAR, -docWL);
 		else
-			cal.add(Calendar.DAY_OF_YEAR, -7);
-		long sevenDaysAgo = cal.getTimeInMillis();
+			cal.add(Calendar.DAY_OF_YEAR, -10);
+		long cutoffTime = cal.getTimeInMillis();
 
 		ArrayList<BeneficiaryFlowStatus> docWorkList = new ArrayList<>();
 		// MMU doc work-list
 		if (serviceID != null && serviceID == 2) {
-			docWorkList = beneficiaryFlowStatusRepo.getDocWorkListNew(providerServiceMapId, new Timestamp(sevenDaysAgo),
+			docWorkList = beneficiaryFlowStatusRepo.getDocWorkListNew(providerServiceMapId, new Timestamp(cutoffTime),
 					vanID);
 		}
 		// TC doc work-list
