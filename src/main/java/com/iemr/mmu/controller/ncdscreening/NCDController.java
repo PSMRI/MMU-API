@@ -25,6 +25,7 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.web.bind.annotation.GetMapping;
@@ -73,8 +74,8 @@ public class NCDController {
 	 * @return success or failure response
 	 */
 	@Operation(summary = "Save beneficiary NCD screening details")
-
 	@PostMapping(value = { "/save/nurseData" })
+	@PreAuthorize("hasRole('NURSE')")
 	public String saveBeneficiaryNCDScreeningDetails(@RequestBody String requestObj,
 			@RequestHeader(value = "Authorization") String authorization) {
 
@@ -109,6 +110,7 @@ public class NCDController {
 	 */
 	@Operation(summary = "Save NCD screening doctor data")
 	@PostMapping(value = { "/save/doctorData" })
+	@PreAuthorize("hasRole('DOCTOR')")
 	public String saveBenNCDScreeningDoctorData(@RequestBody String requestObj,
 			@RequestHeader(value = "Authorization") String authorization) {
 		OutputResponse response = new OutputResponse();
@@ -135,8 +137,8 @@ public class NCDController {
 	}
 
 	@Operation(summary = "Get NCD screening visit details")
-
 	@PostMapping(value = { "/get/nurseData" })
+	@PreAuthorize("hasRole('NURSE')")
 	public String getNCDScreenigDetails(
 			@ApiParam(value = "{\"benRegID\":\"Long\",\"visitCode\":\"Long\"}") @RequestBody String comingRequest) {
 
@@ -162,6 +164,7 @@ public class NCDController {
 
 	@Operation(summary = "Get NCD screening visit count for beneficiary registration id")
 	@GetMapping(value = { "/getNcdScreeningVisitCount/{beneficiaryRegID}" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String getNcdScreeningVisitCount(@PathVariable("beneficiaryRegID") Long beneficiaryRegID) {
 		OutputResponse response = new OutputResponse();
 		try {
@@ -185,6 +188,7 @@ public class NCDController {
 	@Operation(summary = "Get beneficiary visit details from nurse NCD screening")
 	@PostMapping(value = { "/getBenVisitDetailsFrmNurseNCDScreening" })
 	@Transactional(rollbackFor = Exception.class)
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String getBenVisitDetailsFrmNurseGOPD(
 			@ApiParam(value = "{\"benRegID\":\"Long\",\"visitCode\":\"Long\"}") @RequestBody String comingRequest) {
 		OutputResponse response = new OutputResponse();
@@ -211,7 +215,7 @@ public class NCDController {
 
 	@Operation(summary = "Get beneficiary general OPD history details from nurse to doctor ")
 	@PostMapping(value = { "/getBenHistoryDetails" })
-
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String getBenHistoryDetails(
 			@ApiParam(value = "{\"benRegID\":\"Long\",\"visitCode\":\"Long\"}") @RequestBody String comingRequest) {
 		OutputResponse response = new OutputResponse();
@@ -237,6 +241,7 @@ public class NCDController {
 
 	@Operation(summary = "Get beneficiary vital details from nurse general OPD")
 	@PostMapping(value = { "/getBenVitalDetailsFrmNurse" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String getBenVitalDetailsFrmNurse(
 			@ApiParam(value = "{\"benRegID\":\"Long\",\"visitCode\":\"Long\"}") @RequestBody String comingRequest) {
 		OutputResponse response = new OutputResponse();
@@ -263,6 +268,7 @@ public class NCDController {
 
 	@Operation(summary = "Get beneficiary vital details from nurse general OPD")
 	@PostMapping(value = { "/getBenIdrsDetailsFrmNurse" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String getBenIdrsDetailsFrmNurse(
 			@ApiParam(value = "{\"benRegID\":\"Long\",\"visitCode\":\"Long\"}") @RequestBody String comingRequest) {
 		OutputResponse response = new OutputResponse();
@@ -294,6 +300,7 @@ public class NCDController {
 	 */
 	@Operation(summary = "Get beneficiary doctor entered details")
 	@PostMapping(value = { "/getBenCaseRecordFromDoctorNCDScreening" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	@Transactional(rollbackFor = Exception.class)
 	public String getBenCaseRecordFromDoctorNCDCare(
 			@ApiParam(value = "{\"benRegID\":\"Long\",\"visitCode\":\"Long\"}") @RequestBody String comingRequest) {
@@ -321,6 +328,7 @@ public class NCDController {
 
 	@Operation(summary = "Update beneficiary NCD screening details")
 	@PostMapping(value = { "/update/nurseData" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String updateBeneficiaryNCDScreeningDetails(@RequestBody String requestObj) {
 
 		OutputResponse response = new OutputResponse();
@@ -348,6 +356,7 @@ public class NCDController {
 
 	@Operation(summary = "Update history data in doctor screen")
 	@PostMapping(value = { "/update/historyScreen" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String updateHistoryNurse(@RequestBody String requestObj) {
 
 		OutputResponse response = new OutputResponse();
@@ -372,6 +381,7 @@ public class NCDController {
 
 	@Operation(summary = "Update NCD screening vital data in doctor screen")
 	@PostMapping(value = { "/update/vitalScreen" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String updateVitalNurse(@RequestBody String requestObj) {
 
 		OutputResponse response = new OutputResponse();
@@ -395,6 +405,7 @@ public class NCDController {
 
 	@Operation(summary = "Update history data in doctor screen")
 	@PostMapping(value = { "/update/idrsScreen" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String updateIDRSScreen(@RequestBody String requestObj) {
 
 		OutputResponse response = new OutputResponse();
@@ -418,6 +429,7 @@ public class NCDController {
 
 	@Operation(summary = "Update doctor data")
 	@PostMapping(value = { "/update/doctorData" })
+	@PreAuthorize("hasRole('DOCTOR')")
 	public String updateDoctorData(@RequestBody String requestObj) {
 
 		OutputResponse response = new OutputResponse();

@@ -2,6 +2,7 @@ package com.iemr.mmu.utils;
 
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,6 +77,10 @@ public class JwtAuthenticationUtil {
 
 			// Check if user data is present in Redis
 			Users user = getUserFromCache(userId);
+			if(user != null) {
+				// Store roles in security context or cache for authorization
+				List<String> roles = getUserRoles(user.getUserID());
+			}
 			if (user == null) {
 				// If not in Redis, fetch from DB and cache the result
 				user = fetchUserFromDB(userId);
@@ -128,5 +133,20 @@ public class JwtAuthenticationUtil {
 		}
 
 		return null;
+	}
+
+	public List<String> getUserRoles(Long userId) throws IEMRException {
+		if (null == userId || userId <= 0) {
+			throw new IEMRException("Invalid User ID : " + userId);
+		}
+		try {
+			List<String> role = userLoginRepo.getRoleNamebyUserId(userId);
+			if (null == role || role.isEmpty()) {
+				throw new IEMRException("No role found for userId : " + userId);
+			}
+			return role;
+		} catch (Exception e) {
+			throw new IEMRException("Failed to retrieverole for usedId : " + userId + " error : " + e.getMessage());
+		}
 	}
 }

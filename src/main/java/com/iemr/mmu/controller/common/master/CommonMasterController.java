@@ -24,6 +24,7 @@ package com.iemr.mmu.controller.common.master;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -55,6 +56,7 @@ public class CommonMasterController {
 	 */
 	@Operation(summary = "Master data for visit reasons & categories")
 	@GetMapping(value = "/get/visitReasonAndCategories", consumes = "application/json", produces = "application/json")
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String getVisitReasonAndCategories() {
 		logger.info("getVisitReasonAndCategories ...");
 		OutputResponse response = new OutputResponse();
@@ -68,8 +70,10 @@ public class CommonMasterController {
 	 * @param visitCategoryID
 	 * @return nurse master data for the provided visitCategoryID
 	 */
+
 	@Operation(summary = "Master data API for nurse")
 	@GetMapping(value = "/nurse/masterData/{visitCategoryID}/{providerServiceMapID}/{gender}", consumes = "application/json", produces = "application/json")
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String nurseMasterData(@PathVariable("visitCategoryID") Integer visitCategoryID,
 			@PathVariable("providerServiceMapID") Integer providerServiceMapID, @PathVariable("gender") String gender) {
 		logger.info("Nurse master Data for categoryID:" + visitCategoryID + " and providerServiceMapID:"
@@ -87,8 +91,10 @@ public class CommonMasterController {
 	 * @param visitCategoryID
 	 * @return doctor master data for the provided visitCategoryID
 	 */
+
 	@Operation(summary = "Master data API for doctor")
 	@GetMapping(value = "/doctor/masterData/{visitCategoryID}/{providerServiceMapID}/{gender}/{facilityID}/{vanID}", produces = "application/json")
+	@PreAuthorize("hasRole('DOCTOR')")
 	public String doctorMasterData(@PathVariable("visitCategoryID") Integer visitCategoryID,
 			@PathVariable("providerServiceMapID") Integer providerServiceMapID, @PathVariable("gender") String gender,
 			@PathVariable("facilityID") Integer facilityID, @PathVariable("vanID") Integer vanID) {
@@ -103,6 +109,7 @@ public class CommonMasterController {
 
 	@Operation(summary = "Get ECG abnormalities")
 	@GetMapping(value = "/ecgAbnormalities", consumes = "application/json", produces = "application/json")
+	@PreAuthorize("hasRole('LAB_TECHNICIAN') || hasRole('LABTECHNICIAN')")
 	public String getECGAbnormalities() {
 
 		OutputResponse response = new OutputResponse();
