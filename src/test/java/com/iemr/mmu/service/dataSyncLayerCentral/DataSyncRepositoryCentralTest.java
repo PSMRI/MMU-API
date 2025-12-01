@@ -48,8 +48,7 @@ class DataSyncRepositoryCentralTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        repository = spy(new DataSyncRepositoryCentral());
-        doReturn(jdbcTemplate).when(repository).getJdbcTemplate();
+        repository = new DataSyncRepositoryCentral();
     }
 
     @Test
