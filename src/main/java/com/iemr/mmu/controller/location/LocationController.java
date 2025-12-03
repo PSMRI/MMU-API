@@ -25,14 +25,18 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.iemr.mmu.utils.JwtUtil;
+import org.springframework.security.access.prepost.PreAuthorize;
+import com.iemr.mmu.utils.JwtUtil;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.servlet.http.HttpServletRequest;
+import com.iemr.mmu.utils.CookieUtil;
 
 import com.iemr.mmu.controller.common.master.CommonMasterController;
 import com.iemr.mmu.service.location.LocationServiceImpl;
@@ -42,11 +46,14 @@ import io.swagger.v3.oas.annotations.Operation;
 
 @RestController
 @RequestMapping(value = "/location", headers = "Authorization")
+@PreAuthorize("hasRole('NURSE') || hasRole('PHARMACIST') || hasRole('LABTECHNICIAN') || hasRole('REGISTRAR') || hasRole('DATASYNC') || hasRole('DATA_SYNC') || hasRole('DOCTOR') || hasRole('LAB_TECHNICIAN')  || hasRole('TC_SPECIALIST') || hasRole('ONCOLOGIST') || hasRole('RADIOLOGIST')")
 public class LocationController {
 	private OutputResponse response;
 	private Logger logger = LoggerFactory.getLogger(CommonMasterController.class);
-
 	private LocationServiceImpl locationServiceImpl;
+
+	@Autowired
+	private JwtUtil jwtUtil;
 
 	@Autowired
 	public void setLocationServiceImpl(LocationServiceImpl locationServiceImpl) {
@@ -137,21 +144,25 @@ public class LocationController {
 
 	@Operation(summary = "Get location details based on SP id and PSM id")
 	@PostMapping(value = "/getLocDetailsBasedOnSpIDAndPsmID", consumes = "application/json", produces = "application/json")
-	public String getLocDetailsBasedOnSpIDAndPsmIDNew(@RequestBody String comingRequest) {
+	public String getLocDetailsBasedOnSpIDAndPsmIDNew(@RequestBody String comingRequest, HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
 		try {
 			JSONObject obj = new JSONObject(comingRequest);
+			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+			String userId = jwtUtil.getUserIdFromToken(jwtToken);
+			if(userId != null) {
+				int userID = Integer.parseInt(userId);
 			if (obj != null && obj.has("spID") && obj.has("spPSMID") && obj.get("spID") != null
 					&& obj.get("spPSMID") != null) {
-				Integer userId = null;
-				if (obj.has("userId") && null != obj.get("userId")) {
-					userId = Integer.valueOf(obj.get("userId").toString());
-				}
-				String s = locationServiceImpl.getLocDetailsNew(obj.getInt("spID"), obj.getInt("spPSMID"), userId);
+			
+				String s = locationServiceImpl.getLocDetailsNew(obj.getInt("spID"), obj.getInt("spPSMID"), userID);
 
 				response.setResponse(s);
 			} else {
 				response.setError(5000, "Invalid request");
+			}
+			} else {
+				response.setError(403, "Unauthorized access");
 			}
 		} catch (Exception e) {
 			logger.error(e.getMessage());

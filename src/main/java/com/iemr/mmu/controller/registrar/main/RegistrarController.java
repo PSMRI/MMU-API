@@ -29,6 +29,7 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -82,6 +83,7 @@ public class RegistrarController {
 		this.nurseServiceImpl = nurseServiceImpl;
 	}
 
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR') || hasRole('REGISTRAR')")
 	@Operation(summary = "Get registrar worklist data")
 	@PostMapping(value = { "/registrarWorkListData" })
 	public String getRegistrarWorkList(@ApiParam(value = "{\"spID\": \"Integer\"}") @RequestBody String comingRequest)
@@ -100,6 +102,7 @@ public class RegistrarController {
 		return response.toString();
 	}
 
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR') || hasRole('REGISTRAR')")
 	@Operation(summary = "Search for the beneficiary by beneficiary id")
 	@PostMapping(value = { "/quickSearch" })
 	public String quickSearchBeneficiary(
@@ -118,6 +121,7 @@ public class RegistrarController {
 		return response.toString();
 	}
 
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR') || hasRole('REGISTRAR')")
 	@Operation(summary = "Search for the beneficiary based on provided data")
 	@PostMapping(value = { "/advanceSearch" })
 	public String advanceSearch(
@@ -138,6 +142,7 @@ public class RegistrarController {
 		return response.toString();
 	}
 
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR') || hasRole('REGISTRAR')")
 	@Operation(summary = "Get beneficiary details of given beneficiary registration id")
 	@PostMapping(value = { "/get/benDetailsByRegID" })
 	public String getBenDetailsByRegID(
@@ -167,6 +172,7 @@ public class RegistrarController {
 		return response.toString();
 	}
 
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR') || hasRole('LABTECHNICIAN') || hasRole('LAB_TECHNICIAN') || hasRole('PHARMACIST') || hasRole('REGISTRAR')")
 	@Operation(summary = "Get beneficiary details")
 	@PostMapping(value = { "/get/beneficiaryDetails" })
 	public String getBeneficiaryDetails(
@@ -201,6 +207,7 @@ public class RegistrarController {
 		return response.toString();
 	}
 
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR') || hasRole('LABTECHNICIAN') || hasRole('LAB_TECHNICIAN') || hasRole('PHARMACIST')")
 	@Operation(summary = "Get beneficiary image")
 	@PostMapping(value = { "/get/beneficiaryImage" })
 	public String getBeneficiaryImage(
@@ -226,6 +233,7 @@ public class RegistrarController {
 		return response.toString();
 	}
 
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR') || hasRole('REGISTRAR')")
 	@Operation(summary = "Search beneficiary for beneficiary id or beneficiary phone no")
 	@PostMapping(value = { "/quickSearchNew" })
 	public String quickSearchNew(@RequestBody String requestObj,
@@ -249,6 +257,7 @@ public class RegistrarController {
 
 	}
 
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR') || hasRole('REGISTRAR')")
 	@Operation(summary = "Search beneficiary advance search new")
 	@PostMapping(value = { "/advanceSearchNew" })
 	public String advanceSearchNew(@RequestBody String requestObj,
@@ -272,6 +281,7 @@ public class RegistrarController {
 
 	}
 
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR') || hasRole('LABTECHNICIAN') || hasRole('LAB_TECHNICIAN') || hasRole('PHARMACIST')")
 	@Operation(summary = "Get beneficiary details for left side panel of given beneficiary registration id")
 	@PostMapping(value = { "/get/benDetailsByRegIDForLeftPanelNew" })
 	public String getBenDetailsForLeftSidePanelByRegID(
@@ -301,7 +311,8 @@ public class RegistrarController {
 		}
 		return response.toString();
 	}
-
+	
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR') || hasRole('LABTECHNICIAN') || hasRole('LAB_TECHNICIAN')  || hasRole('PHARMACIST')")
 	@Operation(summary = "Get beneficiary image")
 	@PostMapping(value = { "/getBenImage" })
 	public String getBenImage(@RequestBody String requestObj,
@@ -319,6 +330,7 @@ public class RegistrarController {
 
 	}
 
+	@PreAuthorize("hasRole('NURSE') || hasRole('REGISTRAR')")
 	@Operation(summary = "Register a new beneficiary")
 	@PostMapping(value = { "/registrarBeneficaryRegistration" })
 	public String createBeneficiary(
@@ -381,6 +393,7 @@ public class RegistrarController {
 		return response.toString();
 	}
 
+	@PreAuthorize("hasRole('NURSE') || hasRole('REGISTRAR')")
 	@Operation(summary = "Register a new beneficiary API")
 	@PostMapping(value = { "/registrarBeneficaryRegistrationNew" })
 	public String registrarBeneficaryRegistrationNew(@RequestBody String comingReq,
@@ -399,6 +412,7 @@ public class RegistrarController {
 
 	}
 
+	@PreAuthorize("hasRole('NURSE') || hasRole('REGISTRAR') || hasRole('DOCTOR')")
 	@Operation(summary = "Update registered beneficiary data")
 	@PostMapping(value = { "/update/BeneficiaryDetails" })
 	public String updateBeneficiary(
@@ -457,6 +471,7 @@ public class RegistrarController {
 		return response.toString();
 	}
 
+	@PreAuthorize("hasRole('NURSE') || hasRole('REGISTRAR')")
 	@Operation(summary = "Registrar will submit a beneficiary to nurse for revisit")
 	@PostMapping(value = { "/create/BenReVisitToNurse" })
 	public String createReVisitForBenToNurse(@RequestBody String requestOBJ) {
@@ -478,6 +493,7 @@ public class RegistrarController {
 		return response.toString();
 	}
 
+	@PreAuthorize("hasRole('NURSE') || hasRole('REGISTRAR')")
 	@Operation(summary = "Beneficiary edit, save or submit")
 	@PostMapping(value = { "/update/BeneficiaryUpdate" })
 	public String beneficiaryUpdate(@RequestBody String requestOBJ,
@@ -502,6 +518,7 @@ public class RegistrarController {
 		return response.toString();
 	}
 
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR') || hasRole('REGISTRAR')")
 	@Operation(summary = "Get master data for registrar")
 	@PostMapping(value = { "/registrarMasterData" })
 	public String masterDataForRegistration(

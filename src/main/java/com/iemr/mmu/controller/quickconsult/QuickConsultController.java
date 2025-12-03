@@ -25,6 +25,7 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.web.bind.annotation.PostMapping;
@@ -75,6 +76,7 @@ public class QuickConsultController {
 	 */
 	@Operation(summary = "Save quick consult nurse data")
 	@PostMapping(value = { "/save/nurseData" })
+	@PreAuthorize("hasRole('NURSE') ")
 	public String saveBenQuickConsultDataNurse(@RequestBody String requestObj) {
 		OutputResponse response = new OutputResponse();
 		try {
@@ -107,6 +109,7 @@ public class QuickConsultController {
 	 */
 	@Operation(summary = "Save quick consultation detail for doctor")
 	@PostMapping(value = { "/save/doctorData" })
+	@PreAuthorize("hasRole('DOCTOR') ")
 	public String saveQuickConsultationDetail(
 			@ApiParam(value = "{\"quickConsultation\":{\"beneficiaryRegID\":\"Long\",\"providerServiceMapID\": \"Integer\", \"benVisitID\":\"Long\", \"benChiefComplaint\":[{\"chiefComplaintID\":\"Integer\", "
 					+ "\"chiefComplaint\":\"String\", \"duration\":\"Integer\", \"unitOfDuration\":\"String\"}], \"description\":\"String\""
@@ -162,6 +165,7 @@ public class QuickConsultController {
 
 	@Operation(summary = "Get quick consult beneficiary visit details")
 	@PostMapping(value = { "/getBenDataFrmNurseToDocVisitDetailsScreen" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR') ")
 	public String getBenDataFrmNurseScrnToDocScrnVisitDetails(
 			@ApiParam(value = "{\"benRegID\":\"Long\",\"visitCode\":\"Long\"}") @RequestBody String comingRequest) {
 		OutputResponse response = new OutputResponse();
@@ -192,6 +196,7 @@ public class QuickConsultController {
 	 */
 	@Operation(summary = "Get quick consult beneficiary vital details")
 	@PostMapping(value = { "/getBenVitalDetailsFrmNurse" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR') ")
 	public String getBenVitalDetailsFrmNurse(
 			@ApiParam(value = "{\"benRegID\":\"Long\",\"visitCode\":\"Long\"}") @RequestBody String comingRequest) {
 		OutputResponse response = new OutputResponse();
@@ -224,6 +229,7 @@ public class QuickConsultController {
 	@Operation(summary = "Get quick consult beneficiary case record")
 	@PostMapping(value = { "/getBenCaseRecordFromDoctorQuickConsult" })
 	@Transactional(rollbackFor = Exception.class)
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR') ")
 	public String getBenCaseRecordFromDoctorQuickConsult(
 			@ApiParam(value = "{\"benRegID\":\"Long\",\"visitCode\":\"Long\"}") @RequestBody String comingRequest) {
 		OutputResponse response = new OutputResponse();
@@ -250,6 +256,7 @@ public class QuickConsultController {
 
 	@Operation(summary = "Update quick consult doctor data")
 	@PostMapping(value = { "/update/doctorData" })
+	@PreAuthorize("hasRole('DOCTOR') ")
 	public String updateGeneralOPDQCDoctorData(@RequestBody String requestObj,
 			@RequestHeader(value = "Authorization") String authorization) {
 
