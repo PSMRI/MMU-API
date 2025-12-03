@@ -726,6 +726,10 @@ public class CSServiceImpl implements CSService {
 	// -------Create/save (Doctor)---------------------------
 	@Transactional(rollbackFor = Exception.class)
 	public Long saveCancerScreeningDoctorData(JsonObject requestOBJ, String Authorization) throws Exception {
+		Boolean doctorSignatureFlag = false;
+		if (requestOBJ.has("doctorSignatureFlag") && !requestOBJ.get("doctorSignatureFlag").isJsonNull()) {
+			doctorSignatureFlag = requestOBJ.get("doctorSignatureFlag").getAsBoolean();
+		}
 		Long docDataSuccessFlag = null;
 		Integer tcRequestStatusFlag = null;
 
@@ -809,11 +813,11 @@ public class CSServiceImpl implements CSService {
 					tcUserID = tcRequestOBJ.getUserID();
 					tcDate = tcRequestOBJ.getAllocationDate();
 
-				}		
-				
+				}
+
 				int l = commonBenStatusFlowServiceImpl.updateBenFlowAfterDocData(tmpBenFlowID, tmpbeneficiaryRegID,
 						tmpBeneficiaryID, tmpBenVisitID, docFlag, pharmaFalg, oncologistFlag, tcSpecialistFlag,
-						tcUserID, tcDate);
+						tcUserID, tcDate, doctorSignatureFlag);
 
 				docDataSuccessFlag = diagnosisSuccessFlag;
 			}

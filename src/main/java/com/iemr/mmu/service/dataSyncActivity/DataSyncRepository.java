@@ -98,8 +98,8 @@ public class DataSyncRepository {
 		return resultSetList;
 	}
 
-	public int updateProcessedFlagInVan(String schemaName, String tableName, StringBuilder vanSerialNos,
-			String autoIncreamentColumn, String user) throws Exception {
+	public int updateProcessedFlagInVan(String schemaName, String tableName, List<String> vanSerialNos,
+			String autoIncreamentColumn, String user, String status, String reason) throws Exception {
 		jdbcTemplate = getJdbcTemplate();
 		String query = "";
 
@@ -107,16 +107,16 @@ public class DataSyncRepository {
 	
 		if (tableName != null && tableName.toLowerCase().equals("i_ben_flow_outreach")) {
 			query = "UPDATE " + schemaName + "." + tableName
-					+ " SET created_date = ? , processed = 'P', SyncedDate = ?, Syncedby = ? "
-					+ "WHERE " + autoIncreamentColumn + " IN (" + vanSerialNos + ")";
+					+ " SET processed = ?, SyncedDate = ?, Syncedby = ? , SyncFailureReason = ? "
+					+ "WHERE " + autoIncreamentColumn + " IN (" + String.join(",", vanSerialNos) + ")";
 		} else {
 			query = "UPDATE " + schemaName + "." + tableName
-					+ " SET CreatedDate = ? , processed = 'P', SyncedDate = ?, Syncedby = ? "
-					+ "WHERE " + autoIncreamentColumn + " IN (" + vanSerialNos + ")";
+					+ " SET processed = ?, SyncedDate = ?, Syncedby = ? , SyncFailureReason = ? "
+					+ "WHERE " + autoIncreamentColumn + " IN (" + String.join(",", vanSerialNos) + ")";
 		}
 
 		Timestamp syncedDate = new Timestamp(System.currentTimeMillis());
-		int updatedRows = jdbcTemplate.update(query, syncedDate, syncedDate, user);
+		int updatedRows = jdbcTemplate.update(query, status, syncedDate, user, reason);
 		return updatedRows;
 
 	}
