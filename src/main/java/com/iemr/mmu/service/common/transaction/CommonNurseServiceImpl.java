@@ -2782,7 +2782,9 @@ public class CommonNurseServiceImpl implements CommonNurseService {
 		return returnOBJ;
 	}
 
-	public Integer saveBenPrescribedDrugsList(List<PrescribedDrugDetail> prescribedDrugDetailList) {
+	public Map<String, Object> saveBenPrescribedDrugsList(List<PrescribedDrugDetail> prescribedDrugDetailList) {
+		Map<String, Object> result = new HashMap<>();
+		List<Long> prescribedDrugIDs = new ArrayList<>();
 		Integer r = 0;
 
 		if (prescribedDrugDetailList.size() > 0) {
@@ -2798,11 +2800,20 @@ public class CommonNurseServiceImpl implements CommonNurseService {
 					.saveAll(prescribedDrugDetailList);
 			if (prescribedDrugDetailList.size() == prescribedDrugDetailListRS.size()) {
 				r = prescribedDrugDetailListRS.size();
+				// Extract the IDs from saved entities
+				for (PrescribedDrugDetail savedDrug : prescribedDrugDetailListRS) {
+					if (savedDrug.getId() != null) {
+						prescribedDrugIDs.add(savedDrug.getId());
+					}
+				}
 			}
 		} else {
 			r = 1;
 		}
-		return r;
+
+		result.put("count", r);
+		result.put("prescribedDrugIDs", prescribedDrugIDs);
+		return result;
 	}
 
 	private int calculateQtyPrescribed(String form, String dose, String frequency, String duration,
