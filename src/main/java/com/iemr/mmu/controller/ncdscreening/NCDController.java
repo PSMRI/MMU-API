@@ -21,6 +21,11 @@
 */
 package com.iemr.mmu.controller.ncdscreening;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +41,8 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -121,7 +128,23 @@ public class NCDController {
 			if (jsnOBJ != null) {
 				Long ncdCareRes = ncdScreeningServiceImpl.saveDoctorData(jsnOBJ, authorization);
 				if (null != ncdCareRes && ncdCareRes > 0) {
-					response.setResponse("Data saved successfully");
+					// Extract drug IDs from JsonObject
+					List<Long> prescribedDrugIDs = new ArrayList<>();
+					if (jsnOBJ.has("savedDrugIDs") && !jsnOBJ.get("savedDrugIDs").isJsonNull()) {
+						JsonArray drugIDsArray = jsnOBJ.getAsJsonArray("savedDrugIDs");
+						for (int j = 0; j < drugIDsArray.size(); j++) {
+							prescribedDrugIDs.add(drugIDsArray.get(j).getAsLong());
+						}
+					}
+
+					// Create response with message and IDs
+					Map<String, Object> responseData = new HashMap<>();
+					responseData.put("message", "Data saved successfully");
+					responseData.put("prescribedDrugIDs", prescribedDrugIDs);
+
+					Gson gson = new Gson();
+					String responseJson = gson.toJson(responseData);
+					response.setResponse(responseJson);
 				} else {
 					response.setResponse("Unable to save data");
 				}
@@ -438,10 +461,27 @@ public class NCDController {
 		try {
 			JsonObject jsnOBJ = parseJsonRequest(requestObj);
 			int i = ncdSCreeningDoctorService.updateDoctorData(jsnOBJ);
-			if (i > 0)
-				response.setResponse("Data updated successfully");
-			else
+			if (i > 0) {
+				// Extract drug IDs from JsonObject
+				List<Long> prescribedDrugIDs = new ArrayList<>();
+				if (jsnOBJ.has("savedDrugIDs") && !jsnOBJ.get("savedDrugIDs").isJsonNull()) {
+					JsonArray drugIDsArray = jsnOBJ.getAsJsonArray("savedDrugIDs");
+					for (int j = 0; j < drugIDsArray.size(); j++) {
+						prescribedDrugIDs.add(drugIDsArray.get(j).getAsLong());
+					}
+				}
+
+				// Create response with message and IDs
+				Map<String, Object> responseData = new HashMap<>();
+				responseData.put("message", "Data updated successfully");
+				responseData.put("prescribedDrugIDs", prescribedDrugIDs);
+
+				Gson gson = new Gson();
+				String responseJson = gson.toJson(responseData);
+				response.setResponse(responseJson);
+			} else {
 				response.setError(5000, "Error in data update");
+			}
 		} catch (Exception e) {
 			response.setError(5000, "Unable to modify data");
 			logger.error("Error while updating doctor data :" + e);

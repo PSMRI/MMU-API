@@ -34,6 +34,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -44,6 +45,10 @@ import com.iemr.mmu.utils.response.OutputResponse;
 
 import io.swagger.annotations.ApiParam;
 import io.swagger.v3.oas.annotations.Operation;
+
+import java.util.*;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 
 /**
  * @Objective Saving general OPD quick consult data for Nurse and Doctor both.
@@ -127,7 +132,25 @@ public class QuickConsultController {
 			Integer i = quickConsultationServiceImpl.quickConsultDoctorDataInsert(quickConsultDoctorOBJ, authorization);
 
 			if (i != null && i > 0) {
-				response.setResponse("Data saved successfully");
+				// Check if drug IDs were saved and added to the JsonObject
+				List<Long> prescribedDrugIDs = new ArrayList<>();
+				if (quickConsultDoctorOBJ.has("savedDrugIDs")
+						&& !quickConsultDoctorOBJ.get("savedDrugIDs").isJsonNull()) {
+					JsonArray drugIDsArray = quickConsultDoctorOBJ.getAsJsonArray("savedDrugIDs");
+					for (int j = 0; j < drugIDsArray.size(); j++) {
+						prescribedDrugIDs.add(drugIDsArray.get(j).getAsLong());
+					}
+				}
+
+				// Create response data with message and drug IDs
+				Map<String, Object> responseData = new HashMap<>();
+				responseData.put("message", "Data saved successfully");
+				responseData.put("prescribedDrugIDs", prescribedDrugIDs);
+
+				// Convert to JSON string and set response
+				Gson gson = new Gson();
+				String responseJson = gson.toJson(responseData);
+				response.setResponse(responseJson);
 			} else {
 				response.setError(5000, "Unable to save data");
 			}
@@ -248,7 +271,25 @@ public class QuickConsultController {
 			Long result = quickConsultationServiceImpl.updateGeneralOPDQCDoctorData(quickConsultDoctorOBJ,
 					authorization);
 			if (null != result && result > 0) {
-				response.setResponse("Data updated successfully");
+				// Check if drug IDs were saved and added to the JsonObject
+				List<Long> prescribedDrugIDs = new ArrayList<>();
+				if (quickConsultDoctorOBJ.has("savedDrugIDs")
+						&& !quickConsultDoctorOBJ.get("savedDrugIDs").isJsonNull()) {
+					JsonArray drugIDsArray = quickConsultDoctorOBJ.getAsJsonArray("savedDrugIDs");
+					for (int j = 0; j < drugIDsArray.size(); j++) {
+						prescribedDrugIDs.add(drugIDsArray.get(j).getAsLong());
+					}
+				}
+
+				// Create response data with message and drug IDs
+				Map<String, Object> responseData = new HashMap<>();
+				responseData.put("message", "Data updated successfully");
+				responseData.put("prescribedDrugIDs", prescribedDrugIDs);
+
+				// Convert to JSON string and set response
+				Gson gson = new Gson();
+				String responseJson = gson.toJson(responseData);
+				response.setResponse(responseJson);
 			} else {
 				response.setError(500, "Unable to modify data");
 			}

@@ -48,4 +48,8 @@ public interface BenChiefComplaintRepo extends CrudRepository<BenChiefComplaint,
 	@Query(" Delete from BenChiefComplaint WHERE beneficiaryRegID = :benRegID AND visitCode = :visitCode")
 	public int deleteExistingBenChiefComplaints(@Param("benRegID") Long benRegID, @Param("visitCode") Long visitCode);
 
+	@Transactional
+	@Modifying
+	@Query(" UPDATE BenChiefComplaint set vanSerialNo = :benChiefComplaintID WHERE benChiefComplaintID = :benChiefComplaintID")
+	int updateVanSerialNo(@Param("benChiefComplaintID") Long benChiefComplaintID);
 }

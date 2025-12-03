@@ -259,6 +259,7 @@ public class CommonNurseServiceImpl implements CommonNurseService {
 		beneficiaryVisitDetail.setReportFilePath(sb.toString());
 
 		response = benVisitDetailRepo.save(beneficiaryVisitDetail);
+		benVisitDetailRepo.updateVanSerialNo(response.getBenVisitID());
 
 		if (response != null) {
 			// Long visitCode = updateVisitCode(response, 10);
@@ -435,7 +436,14 @@ public class CommonNurseServiceImpl implements CommonNurseService {
 			List<BenChiefComplaint> benChiefComplaintResultList = (List<BenChiefComplaint>) benChiefComplaintRepo
 					.saveAll(benChiefComplaintListNew);
 			if (benChiefComplaintListNew.size() == benChiefComplaintResultList.size())
+			{
+				 for (BenChiefComplaint complaint : benChiefComplaintResultList) {
+            if (complaint.getBenChiefComplaintID() != null) {
+                benChiefComplaintRepo.updateVanSerialNo(complaint.getBenChiefComplaintID());
+            }
+        }
 				r = 1;
+			}
 		} else {
 			r = 1;
 		}
@@ -2076,7 +2084,13 @@ public class CommonNurseServiceImpl implements CommonNurseService {
 			List<BenChiefComplaint> benChiefComplaintResultList = (List<BenChiefComplaint>) benChiefComplaintRepo
 					.saveAll(benChiefComplaintList);
 
+
 			if (!benChiefComplaintResultList.isEmpty()) {
+				  for (BenChiefComplaint complaint : benChiefComplaintResultList) {
+                if (complaint.getBenChiefComplaintID() != null) {
+                    benChiefComplaintRepo.updateVanSerialNo(complaint.getBenChiefComplaintID());
+                }
+            }
 				r = benChiefComplaintResultList.size();
 			}
 		}
@@ -2685,6 +2699,8 @@ public class CommonNurseServiceImpl implements CommonNurseService {
 		}
 
 		PrescriptionDetail prescriptionRS = prescriptionDetailRepo.save(prescription);
+		prescriptionDetailRepo.updateVanSerialNo(prescriptionRS.getPrescriptionID());
+		
 		if (prescriptionRS != null && prescriptionRS.getPrescriptionID() > 0) {
 			r = prescriptionRS.getPrescriptionID();
 		}
@@ -2766,7 +2782,9 @@ public class CommonNurseServiceImpl implements CommonNurseService {
 		return returnOBJ;
 	}
 
-	public Integer saveBenPrescribedDrugsList(List<PrescribedDrugDetail> prescribedDrugDetailList) {
+	public Map<String, Object> saveBenPrescribedDrugsList(List<PrescribedDrugDetail> prescribedDrugDetailList) {
+		Map<String, Object> result = new HashMap<>();
+		List<Long> prescribedDrugIDs = new ArrayList<>();
 		Integer r = 0;
 
 		if (prescribedDrugDetailList.size() > 0) {
@@ -2782,11 +2800,20 @@ public class CommonNurseServiceImpl implements CommonNurseService {
 					.saveAll(prescribedDrugDetailList);
 			if (prescribedDrugDetailList.size() == prescribedDrugDetailListRS.size()) {
 				r = prescribedDrugDetailListRS.size();
+				// Extract the IDs from saved entities
+				for (PrescribedDrugDetail savedDrug : prescribedDrugDetailListRS) {
+					if (savedDrug.getId() != null) {
+						prescribedDrugIDs.add(savedDrug.getId());
+					}
+				}
 			}
 		} else {
 			r = 1;
 		}
-		return r;
+
+		result.put("count", r);
+		result.put("prescribedDrugIDs", prescribedDrugIDs);
+		return result;
 	}
 
 	private int calculateQtyPrescribed(String form, String dose, String frequency, String duration,
@@ -2815,7 +2842,8 @@ public class CommonNurseServiceImpl implements CommonNurseService {
 	private double getQtyForOneDay(String form, String dose, String frequency) {
 		double qtyInOneDay = 0;
 		if (form != null && dose != null && frequency != null) {
-			if (frequency.equalsIgnoreCase("Once Daily(OD)")) {
+			if (frequency.equalsIgnoreCase("Once Daily(OD)") || frequency.equalsIgnoreCase("Once Daily(OD) Before Food")||
+					frequency.equalsIgnoreCase("Once Daily(OD) After Food")|| frequency.equalsIgnoreCase("Once Daily(OD) At Bedtime")) {
 				if (form.equalsIgnoreCase("Tablet")) {
 					if (dose.equalsIgnoreCase("Half Tab")) {
 						qtyInOneDay = .5;
@@ -2839,7 +2867,8 @@ public class CommonNurseServiceImpl implements CommonNurseService {
 					}
 				}
 			} else {
-				if (frequency.equalsIgnoreCase("Twice Daily(BD)")) {
+				if (frequency.equalsIgnoreCase("Twice Daily(BD)") || frequency.equalsIgnoreCase("Twice Daily(BD) Before Food")||
+						frequency.equalsIgnoreCase("Twice Daily(BD) After Food")) {
 					if (form.equalsIgnoreCase("Tablet")) {
 						if (dose.equalsIgnoreCase("Half Tab")) {
 							qtyInOneDay = 1;
@@ -2863,7 +2892,8 @@ public class CommonNurseServiceImpl implements CommonNurseService {
 						}
 					}
 				} else {
-					if (frequency.equalsIgnoreCase("Thrice Daily (TID)")) {
+					if (frequency.equalsIgnoreCase("Thrice Daily (TID)") || frequency.equalsIgnoreCase("Thrice Daily (TID) After Food")||
+							frequency.equalsIgnoreCase("Thrice Daily (TID) Before Food")) {
 						if (form.equalsIgnoreCase("Tablet")) {
 							if (dose.equalsIgnoreCase("Half Tab")) {
 								qtyInOneDay = 1.5;
@@ -2887,7 +2917,8 @@ public class CommonNurseServiceImpl implements CommonNurseService {
 							}
 						}
 					} else {
-						if (frequency.equalsIgnoreCase("Four Times in a Day (QID)")) {
+						if (frequency.equalsIgnoreCase("Four Times in a Day (QID)") || frequency.equalsIgnoreCase("Four Times in a Day AF")||
+								frequency.equalsIgnoreCase("Four Times in a Day BF")) {
 							if (form.equalsIgnoreCase("Tablet")) {
 								if (dose.equalsIgnoreCase("Half Tab")) {
 									qtyInOneDay = 2;
@@ -2911,7 +2942,8 @@ public class CommonNurseServiceImpl implements CommonNurseService {
 								}
 							}
 						} else {
-							if (frequency.equalsIgnoreCase("Single Dose") || frequency.equalsIgnoreCase("Stat Dose")) {
+							if (frequency.equalsIgnoreCase("Single Dose") || frequency.equalsIgnoreCase("Stat Dose")|| 
+									frequency.equalsIgnoreCase("Single Dose Before  Food") || frequency.equalsIgnoreCase("Single Dose After Food")) {
 								if (form.equalsIgnoreCase("Tablet")) {
 									if (dose.equalsIgnoreCase("Half Tab")) {
 										qtyInOneDay = .5;
@@ -2935,7 +2967,8 @@ public class CommonNurseServiceImpl implements CommonNurseService {
 									}
 								}
 							} else {
-								if (frequency.equalsIgnoreCase("Once in a Week")) {
+								if (frequency.equalsIgnoreCase("Once in a Week") || frequency.equalsIgnoreCase("Once in a Week After Food")
+										|| frequency.equalsIgnoreCase("Once in a Week Before Food")) {
 									if (form.equalsIgnoreCase("Tablet")) {
 										if (dose.equalsIgnoreCase("Half Tab")) {
 											qtyInOneDay = .07142;
