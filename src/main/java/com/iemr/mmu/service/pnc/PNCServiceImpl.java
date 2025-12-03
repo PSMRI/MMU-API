@@ -237,6 +237,10 @@ public class PNCServiceImpl implements PNCService {
 
 	@Transactional(rollbackFor = Exception.class)
 	public Long savePNCDoctorData(JsonObject requestOBJ, String Authorization) throws Exception {
+		Boolean doctorSignatureFlag = false;
+		if (requestOBJ.has("doctorSignatureFlag") && !requestOBJ.get("doctorSignatureFlag").isJsonNull()) {
+			doctorSignatureFlag = requestOBJ.get("doctorSignatureFlag").getAsBoolean();
+		}
 		Long saveSuccessFlag = null;
 		Long prescriptionID = null;
 		Long investigationSuccessFlag = null;
@@ -383,7 +387,7 @@ public class PNCServiceImpl implements PNCService {
 
 				// call method to update beneficiary flow table
 				int i = commonDoctorServiceImpl.updateBenFlowtableAfterDocDataSave(commonUtilityClass, isTestPrescribed,
-						isMedicinePrescribed, tcRequestOBJ);
+						isMedicinePrescribed, tcRequestOBJ, doctorSignatureFlag);
 
 				if (i > 0) {
 					saveSuccessFlag = diagnosisSuccessFlag;
@@ -1428,6 +1432,11 @@ public class PNCServiceImpl implements PNCService {
 		Long referSaveSuccessFlag = null;
 		Integer tcRequestStatusFlag = null;
 
+		Boolean doctorSignatureFlag = false;
+		if (requestOBJ.has("doctorSignatureFlag") && !requestOBJ.get("doctorSignatureFlag").isJsonNull()) {
+			doctorSignatureFlag = requestOBJ.get("doctorSignatureFlag").getAsBoolean();
+		}
+
 		if (requestOBJ != null) {
 			TeleconsultationRequestOBJ tcRequestOBJ = null;
 			TcSpecialistSlotBookingRequestOBJ tcSpecialistSlotBookingRequestOBJ = null;
@@ -1576,7 +1585,7 @@ public class PNCServiceImpl implements PNCService {
 
 				// call method to update beneficiary flow table
 				int i = commonDoctorServiceImpl.updateBenFlowtableAfterDocDataUpdate(commonUtilityClass,
-						isTestPrescribed, isMedicinePrescribed, tcRequestOBJ);
+						isTestPrescribed, isMedicinePrescribed, tcRequestOBJ, doctorSignatureFlag);
 
 				if (i > 0) {
 					updateSuccessFlag = investigationSuccessFlag;

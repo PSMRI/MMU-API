@@ -214,6 +214,11 @@ public class CommonDoctorServiceImpl {
 			ArrayList<BenChiefComplaint> benChiefComplaintListRS = (ArrayList<BenChiefComplaint>) benChiefComplaintRepo
 					.saveAll(tmpBenCHiefComplaintsTMP);
 			if (tmpBenCHiefComplaintsTMP.size() == benChiefComplaintListRS.size()) {
+				  for (BenChiefComplaint complaint : benChiefComplaintListRS) {
+            if (complaint.getBenChiefComplaintID() != null) {
+                benChiefComplaintRepo.updateVanSerialNo(complaint.getBenChiefComplaintID());
+            }
+        }
 				chiefComFlag = 1;
 			}
 		} else {
@@ -721,26 +726,25 @@ public class CommonDoctorServiceImpl {
 
 					if (sm.getServiceName().equalsIgnoreCase(tmReferCheckValue)) {
 						TMReferred = 1;
-					}
-					else
-					{
+					} else {
 						TMReferred = 0;
 					}
-					
+
 					if (referDetails.getRevisitDate() != null)
 						referDetailsTemp.setRevisitDate(referDetails.getRevisitDate());
-					
+
 					if (referDetails.getReferralReason() != null)
 						referDetailsTemp.setReferralReason(referDetails.getReferralReason());
 
 					referDetailsList.add(referDetailsTemp);
 				}
 			}
-		} /*
-			 * else { if (referDetails.getReferredToInstituteName() != null ||
-			 * referDetails.getRevisitDate() != null || referDetails.getReferralReason() !=
-			 * null) referDetailsList.add(referDetails); TMReferred = 0; }
-			 */
+		} else {
+			if (referDetails.getReferredToInstituteName() != null || referDetails.getRevisitDate() != null
+					|| referDetails.getReferralReason() != null)
+				referDetailsList.add(referDetails);
+			TMReferred = 0;
+		}
 
 		ArrayList<BenReferDetails> res = (ArrayList<BenReferDetails>) benReferDetailsRepo.saveAll(referDetailsList);
 		if (referDetailsList.size() == res.size()) {
@@ -759,8 +763,10 @@ public class CommonDoctorServiceImpl {
 	 */
 	/// ------Start of beneficiary flow table after doctor data save-------------
 
-	public int updateBenFlowtableAfterDocDataSave(CommonUtilityClass commonUtilityClass, Boolean isTestPrescribed,
-			Boolean isMedicinePrescribed, TeleconsultationRequestOBJ tcRequestOBJ) {
+	public int updateBenFlowtableAfterDocDataSave(CommonUtilityClass commonUtilityClass,
+			Boolean isTestPrescribed, Boolean isMedicinePrescribed,
+			TeleconsultationRequestOBJ tcRequestOBJ, Boolean doctorSignatureFlag) throws Exception {
+
 		short pharmaFalg;
 		short docFlag;
 		short tcSpecialistFlag = (short) 0;
@@ -802,7 +808,8 @@ public class CommonDoctorServiceImpl {
 		}
 
 		int i = commonBenStatusFlowServiceImpl.updateBenFlowAfterDocData(tmpBenFlowID, tmpbeneficiaryRegID,
-				tmpBeneficiaryID, tmpBenVisitID, docFlag, pharmaFalg, (short) 0, tcSpecialistFlag, tcUserID, tcDate);
+				tmpBeneficiaryID, tmpBenVisitID, docFlag, pharmaFalg, (short) 0, tcSpecialistFlag,
+				tcUserID, tcDate, doctorSignatureFlag);
 		return i;
 	}
 
@@ -817,8 +824,10 @@ public class CommonDoctorServiceImpl {
 	 * @param isMedicinePrescribed
 	 * @return
 	 */
-	public int updateBenFlowtableAfterDocDataUpdate(CommonUtilityClass commonUtilityClass, Boolean isTestPrescribed,
-			Boolean isMedicinePrescribed, TeleconsultationRequestOBJ tcRequestOBJ) throws Exception {
+	public int updateBenFlowtableAfterDocDataUpdate(CommonUtilityClass commonUtilityClass,
+			Boolean isTestPrescribed, Boolean isMedicinePrescribed,
+			TeleconsultationRequestOBJ tcRequestOBJ, Boolean doctorSignatureFlag) throws Exception {
+
 		int i = 0;
 		short pharmaFalg;
 		short docFlag = (short) 0;
@@ -844,7 +853,7 @@ public class CommonDoctorServiceImpl {
 
 			i = commonBenStatusFlowServiceImpl.updateBenFlowAfterDocDataUpdateTCSpecialist(tmpBenFlowID,
 					tmpbeneficiaryRegID, tmpBeneficiaryID, tmpBenVisitID, docFlag, pharmaFalg, (short) 0,
-					tcSpecialistFlag, tcUserID, tcDate);
+					tcSpecialistFlag, tcUserID, tcDate, doctorSignatureFlag);
 		} else {
 
 			if (isTestPrescribed)
@@ -872,13 +881,13 @@ public class CommonDoctorServiceImpl {
 					tcSpecialistFlag = (short) 100;
 				i = commonBenStatusFlowServiceImpl.updateBenFlowAfterDocDataUpdate(tmpBenFlowID, tmpbeneficiaryRegID,
 						tmpBeneficiaryID, tmpBenVisitID, docFlag, pharmaFalg, (short) 0, tcSpecialistFlag, tcUserID,
-						tcDate);
+						tcDate, doctorSignatureFlag);
 			}
 			
 			else
 				i = commonBenStatusFlowServiceImpl.updateBenFlowAfterDocDataUpdateWDF(tmpBenFlowID, tmpbeneficiaryRegID,
 						tmpBeneficiaryID, tmpBenVisitID, docFlag, pharmaFalg, (short) 0, tcUserID,
-						tcDate);
+						tcDate, doctorSignatureFlag);
 
 		}
 

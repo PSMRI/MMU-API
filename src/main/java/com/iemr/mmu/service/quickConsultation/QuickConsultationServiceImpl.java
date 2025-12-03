@@ -31,6 +31,8 @@ import java.util.Objects;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -83,6 +85,8 @@ public class QuickConsultationServiceImpl implements QuickConsultationService {
 
 	@Autowired
 	private TeleConsultationServiceImpl teleConsultationServiceImpl;
+
+	private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
 	@Autowired
 	public void setGeneralOPDDoctorServiceImpl(GeneralOPDDoctorServiceImpl generalOPDDoctorServiceImpl) {
@@ -170,10 +174,18 @@ public class QuickConsultationServiceImpl implements QuickConsultationService {
 		if (benChiefComplaints != null && benChiefComplaints.size() > 0) {
 			List<BenChiefComplaint> chiefComplaints = (List<BenChiefComplaint>) benChiefComplaintRepo
 					.saveAll(benChiefComplaints);
-
-			if (benChiefComplaints.size() == chiefComplaints.size()) {
-				returnOBJ = new Long(1);
-			}
+        if (benChiefComplaints.size() == chiefComplaints.size()) {
+            // Update vanSerialNo for each saved record
+            for (BenChiefComplaint complaint : chiefComplaints) {
+                if (complaint.getBenChiefComplaintID() != null) {
+                    benChiefComplaintRepo.updateVanSerialNo(complaint.getBenChiefComplaintID());
+                }
+            }
+            returnOBJ = new Long(1);
+        }
+			// if (benChiefComplaints.size() == chiefComplaints.size()) {
+			// 	returnOBJ = new Long(1);
+			// }
 		} else {
 			returnOBJ = new Long(1);
 		}
@@ -345,6 +357,11 @@ public class QuickConsultationServiceImpl implements QuickConsultationService {
 	@Override
 	public Integer quickConsultDoctorDataInsert(JsonObject quickConsultDoctorOBJ, String Authorization)
 			throws Exception {
+		Boolean doctorSignatureFlag = false;
+		if (quickConsultDoctorOBJ.has("doctorSignatureFlag")
+				&& !quickConsultDoctorOBJ.get("doctorSignatureFlag").isJsonNull()) {
+			doctorSignatureFlag = quickConsultDoctorOBJ.get("doctorSignatureFlag").getAsBoolean();
+		}
 		Integer returnOBJ = 0;
 		Integer prescriptionSuccessFlag = null;
 		Integer investigationSuccessFlag = null;
@@ -476,7 +493,7 @@ public class QuickConsultationServiceImpl implements QuickConsultationService {
 
 			// call method to update beneficiary flow table
 			int i = commonDoctorServiceImpl.updateBenFlowtableAfterDocDataSave(commonUtilityClass, isTestPrescribed,
-					isMedicinePrescribed, tcRequestOBJ);
+					isMedicinePrescribed, tcRequestOBJ, doctorSignatureFlag);
 
 			if (i > 0) {
 				returnOBJ = 1;
@@ -554,6 +571,12 @@ public class QuickConsultationServiceImpl implements QuickConsultationService {
 		Long vitalsRBSTestFlag = null;
 		Long referupdateSuccessFlag = null;
 		Integer tcRequestStatusFlag = null;
+
+		Boolean doctorSignatureFlag = false;
+		if (quickConsultDoctorOBJ.has("doctorSignatureFlag")
+				&& !quickConsultDoctorOBJ.get("doctorSignatureFlag").isJsonNull()) {
+			doctorSignatureFlag = quickConsultDoctorOBJ.get("doctorSignatureFlag").getAsBoolean();
+		}
 
 		TeleconsultationRequestOBJ tcRequestOBJ = null;
 		TcSpecialistSlotBookingRequestOBJ tcSpecialistSlotBookingRequestOBJ = null;
@@ -694,7 +717,7 @@ public class QuickConsultationServiceImpl implements QuickConsultationService {
 
 			// call method to update beneficiary flow table
 			int i = commonDoctorServiceImpl.updateBenFlowtableAfterDocDataUpdate(commonUtilityClass, isTestPrescribed,
-					isMedicinePrescribed, tcRequestOBJ);
+					isMedicinePrescribed, tcRequestOBJ, doctorSignatureFlag);
 
 			if (i > 0) {
 				updateSuccessFlag = benChiefComplaintID;

@@ -83,4 +83,10 @@ public interface PrescriptionDetailRepo extends CrudRepository<PrescriptionDetai
 			@Param("diagnosisProvided_SCTCode") String diagnosisProvided_SCTCode,
 			@Param("diagnosisProvided_SCTTerm") String diagnosisProvided_SCTTerm);
 
+	@Transactional
+	@Modifying
+	@Query(" UPDATE PrescriptionDetail set vanSerialNo = :prescriptionID WHERE prescriptionID = :prescriptionID")
+	int updateVanSerialNo(@Param("prescriptionID") Long prescriptionID);
+
+
 }
