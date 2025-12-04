@@ -48,6 +48,13 @@ import java.sql.Timestamp;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class ANCServiceImplTest {
@@ -696,11 +703,11 @@ class ANCServiceImplTest {
         when(commonDoctorServiceImpl.callTmForSpecialistSlotBook(any(), any())).thenReturn(1);
         when(teleConsultationServiceImpl.createTCRequest(any())).thenReturn(1);
         when(commonDoctorServiceImpl.updateDocFindings(any())).thenReturn(1);
-        when(commonDoctorServiceImpl.updateBenFlowtableAfterDocDataUpdate(any(), anyBoolean(), anyBoolean(), any())).thenReturn(1);
+        when(commonDoctorServiceImpl.updateBenFlowtableAfterDocDataUpdate(any(), anyBoolean(), anyBoolean(), any(),null)).thenReturn(1);
         when(commonNurseServiceImpl.updatePrescription(any())).thenReturn(1);
         when(ancDoctorServiceImpl.updateBenANCDiagnosis(any())).thenReturn(1);
         when(commonNurseServiceImpl.saveBenInvestigation(any())).thenReturn(1L);
-        when(commonNurseServiceImpl.saveBenPrescribedDrugsList(any())).thenReturn(1);
+        when(commonNurseServiceImpl.saveBenPrescribedDrugsList(any())).thenReturn(new HashMap<String, Object>());
         when(commonDoctorServiceImpl.updateBenReferDetails(any())).thenReturn(1L);
 
         try {
@@ -726,11 +733,11 @@ class ANCServiceImplTest {
         when(commonDoctorServiceImpl.callTmForSpecialistSlotBook(any(), any())).thenReturn(0);
         when(teleConsultationServiceImpl.createTCRequest(any())).thenReturn(0);
         when(commonDoctorServiceImpl.updateDocFindings(any())).thenReturn(0);
-        when(commonDoctorServiceImpl.updateBenFlowtableAfterDocDataUpdate(any(), anyBoolean(), anyBoolean(), any())).thenReturn(0);
+        when(commonDoctorServiceImpl.updateBenFlowtableAfterDocDataUpdate(any(), anyBoolean(), anyBoolean(), any(),null)).thenReturn(0);
         when(commonNurseServiceImpl.updatePrescription(any())).thenReturn(0);
         when(ancDoctorServiceImpl.updateBenANCDiagnosis(any())).thenReturn(0);
         when(commonNurseServiceImpl.saveBenInvestigation(any())).thenReturn(0L);
-        when(commonNurseServiceImpl.saveBenPrescribedDrugsList(any())).thenReturn(0);
+        when(commonNurseServiceImpl.saveBenPrescribedDrugsList(any())).thenReturn(new HashMap<String, Object>());
         when(commonDoctorServiceImpl.updateBenReferDetails(any())).thenReturn(0L);
 
         try {
@@ -759,13 +766,13 @@ class ANCServiceImplTest {
         when(commonDoctorServiceImpl.callTmForSpecialistSlotBook(any(), any())).thenReturn(1);
         when(teleConsultationServiceImpl.createTCRequest(any())).thenReturn(1);
         when(commonDoctorServiceImpl.saveDocFindings(any())).thenReturn(1);
-        when(commonDoctorServiceImpl.updateBenFlowtableAfterDocDataSave(any(), anyBoolean(), anyBoolean(), any())).thenReturn(1);
+        when(commonDoctorServiceImpl.updateBenFlowtableAfterDocDataSave(any(), anyBoolean(), anyBoolean(), any(),null)).thenReturn(1);
         when(commonNurseServiceImpl.savePrescriptionDetailsAndGetPrescriptionID(
             any(Long.class), any(Long.class), any(Integer.class), any(String.class), any(String.class),
             any(Long.class), any(Integer.class), any(Integer.class), any(ArrayList.class)
         )).thenReturn(1L);
         when(commonNurseServiceImpl.saveBenInvestigation(any())).thenReturn(1L);
-        when(commonNurseServiceImpl.saveBenPrescribedDrugsList(any())).thenReturn(1);
+        when(commonNurseServiceImpl.saveBenPrescribedDrugsList(any())).thenReturn(new HashMap<String, Object>());
         when(ancDoctorServiceImpl.saveBenANCDiagnosis(any(), any())).thenReturn(1L);
         when(commonDoctorServiceImpl.saveBenReferDetails(any())).thenReturn(1L);
 
@@ -793,13 +800,13 @@ class ANCServiceImplTest {
         when(commonDoctorServiceImpl.callTmForSpecialistSlotBook(any(), any())).thenReturn(0);
         when(teleConsultationServiceImpl.createTCRequest(any())).thenReturn(0);
         when(commonDoctorServiceImpl.saveDocFindings(any())).thenReturn(0);
-        when(commonDoctorServiceImpl.updateBenFlowtableAfterDocDataSave(any(), anyBoolean(), anyBoolean(), any())).thenReturn(0);
+        when(commonDoctorServiceImpl.updateBenFlowtableAfterDocDataSave(any(), anyBoolean(), anyBoolean(), any(),null)).thenReturn(0);
         when(commonNurseServiceImpl.savePrescriptionDetailsAndGetPrescriptionID(
             any(Long.class), any(Long.class), any(Integer.class), any(String.class), any(String.class),
             any(Long.class), any(Integer.class), any(Integer.class), any(ArrayList.class)
         )).thenReturn(0L);
         when(commonNurseServiceImpl.saveBenInvestigation(any())).thenReturn(0L);
-        when(commonNurseServiceImpl.saveBenPrescribedDrugsList(any())).thenReturn(0);
+        when(commonNurseServiceImpl.saveBenPrescribedDrugsList(any())).thenReturn(new HashMap<String, Object>());
         when(ancDoctorServiceImpl.saveBenANCDiagnosis(any(), any())).thenReturn(0L);
         when(commonDoctorServiceImpl.saveBenReferDetails(any())).thenReturn(0L);
 
@@ -1099,10 +1106,10 @@ class ANCServiceImplTest {
 
         // Mock all service calls to return success
         when(doctorService.updateDocFindings(any())).thenReturn(1);
-        when(doctorService.updateBenFlowtableAfterDocDataUpdate(any(), anyBoolean(), anyBoolean(), any())).thenReturn(1);
+        when(doctorService.updateBenFlowtableAfterDocDataUpdate(any(), anyBoolean(), anyBoolean(), any(),null)).thenReturn(1);
         when(nurseService.savePrescriptionDetailsAndGetPrescriptionID(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(1L);
         when(nurseService.saveBenInvestigation(any())).thenReturn(1L);
-        when(nurseService.saveBenPrescribedDrugsList(any())).thenReturn(1);
+        when(nurseService.saveBenPrescribedDrugsList(any())).thenReturn(new HashMap<String, Object>());
         when(ancDoctorService.updateBenANCDiagnosis(any())).thenReturn(1);
         when(doctorService.updateBenReferDetails(any())).thenReturn(1L);
 
@@ -1244,10 +1251,10 @@ class ANCServiceImplTest {
         when(doctorService.callTmForSpecialistSlotBook(any(), any())).thenReturn(1);
         when(teleService.createTCRequest(any())).thenReturn(1);
         when(doctorService.saveDocFindings(any())).thenReturn(1);
-        when(doctorService.updateBenFlowtableAfterDocDataSave(any(), anyBoolean(), anyBoolean(), any())).thenReturn(1);
+        when(doctorService.updateBenFlowtableAfterDocDataSave(any(), anyBoolean(), anyBoolean(), any(),null)).thenReturn(1);
         when(nurseService.savePrescriptionDetailsAndGetPrescriptionID(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(1L);
         when(nurseService.saveBenInvestigation(any())).thenReturn(1L);
-        when(nurseService.saveBenPrescribedDrugsList(any())).thenReturn(1);
+        when(nurseService.saveBenPrescribedDrugsList(any())).thenReturn(new HashMap<String, Object>());
         when(ancDoctorService.saveBenANCDiagnosis(any(), any())).thenReturn(1L);
         when(doctorService.saveBenReferDetails(any())).thenReturn(1L);
 
@@ -1338,9 +1345,9 @@ class ANCServiceImplTest {
         when(doctorService.saveDocFindings(any())).thenReturn(1);
         when(nurseService.savePrescriptionDetailsAndGetPrescriptionID(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(100L);
         when(nurseService.saveBenInvestigation(any())).thenReturn(1L);
-        when(nurseService.saveBenPrescribedDrugsList(any())).thenReturn(1);
+        when(nurseService.saveBenPrescribedDrugsList(any())).thenReturn(new HashMap<String, Object>());
         when(ancDoctorService.saveBenANCDiagnosis(any(), any())).thenReturn(1L);
-        when(doctorService.updateBenFlowtableAfterDocDataSave(any(), anyBoolean(), anyBoolean(), any())).thenReturn(1);
+        when(doctorService.updateBenFlowtableAfterDocDataSave(any(), anyBoolean(), anyBoolean(), any(),null)).thenReturn(1);
 
         Long result = service.saveANCDoctorData(obj, "auth");
         assertNotNull(result);
@@ -1405,9 +1412,9 @@ class ANCServiceImplTest {
         when(doctorService.saveDocFindings(any())).thenReturn(1);
         when(nurseService.savePrescriptionDetailsAndGetPrescriptionID(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(999L);
         when(nurseService.saveBenInvestigation(any())).thenReturn(1L);
-        when(nurseService.saveBenPrescribedDrugsList(any())).thenReturn(2); // Return > 0
+        when(nurseService.saveBenPrescribedDrugsList(any())).thenReturn(new HashMap<String, Object>());
         when(ancDoctorService.saveBenANCDiagnosis(any(), any())).thenReturn(1L);
-        when(doctorService.updateBenFlowtableAfterDocDataSave(any(), anyBoolean(), anyBoolean(), any())).thenReturn(1);
+        when(doctorService.updateBenFlowtableAfterDocDataSave(any(), anyBoolean(), anyBoolean(), any(),null)).thenReturn(1);
 
         Long result = service.saveANCDoctorData(obj, "auth");
         assertNotNull(result);
@@ -1476,9 +1483,9 @@ class ANCServiceImplTest {
         when(nurseService.updatePrescription(any())).thenReturn(1);
         when(ancDoctorService.updateBenANCDiagnosis(any())).thenReturn(1);
         when(nurseService.saveBenInvestigation(any())).thenReturn(1L);
-        when(nurseService.saveBenPrescribedDrugsList(any())).thenReturn(1);
+        when(nurseService.saveBenPrescribedDrugsList(any())).thenReturn(new HashMap<String, Object>());
         when(doctorService.updateBenReferDetails(any())).thenReturn(1L);
-        when(doctorService.updateBenFlowtableAfterDocDataUpdate(any(), anyBoolean(), anyBoolean(), any())).thenReturn(1);
+        when(doctorService.updateBenFlowtableAfterDocDataUpdate(any(), anyBoolean(), anyBoolean(), any(), null)).thenReturn(1);
         
         // Call method - should cover prescription array processing
         service.updateANCDoctorData(obj, "auth");

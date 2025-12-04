@@ -37,6 +37,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyShort;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 import java.util.*;
@@ -279,9 +287,9 @@ class QuickConsultationServiceImplTest {
         obj.add("refer", new JsonObject());
         // Mocks for TC request block
         when(commonNurseServiceImpl.updatePrescription(any())).thenReturn(1);
-        when(commonNurseServiceImpl.saveBenPrescribedDrugsList(anyList())).thenReturn(1);
+        when(commonNurseServiceImpl.saveBenPrescribedDrugsList(anyList())).thenReturn(new HashMap<String, Object>());
         when(commonDoctorServiceImpl.updateBenClinicalObservations(any())).thenReturn(1);
-        when(commonDoctorServiceImpl.updateBenFlowtableAfterDocDataUpdate(any(), anyBoolean(), anyBoolean(), any())).thenReturn(1);
+        when(commonDoctorServiceImpl.updateBenFlowtableAfterDocDataUpdate(any(), anyBoolean(), anyBoolean(), any(),null)).thenReturn(1);
         when(commonDoctorServiceImpl.updateBenReferDetails(any())).thenReturn(1L);
         when(commonDoctorServiceImpl.callTmForSpecialistSlotBook(any(), anyString())).thenReturn(1);
         when(teleConsultationServiceImpl.createTCRequest(any())).thenReturn(1);
@@ -321,7 +329,7 @@ class QuickConsultationServiceImplTest {
             when(mockObs.getClinicalObservationID()).thenReturn(10L);
             when(commonNurseServiceImpl.saveBeneficiaryPrescription(any())).thenReturn(10L);
             when(commonDoctorServiceImpl.saveBenReferDetails(any())).thenReturn(1L);
-            when(commonDoctorServiceImpl.updateBenFlowtableAfterDocDataSave(any(), anyBoolean(), anyBoolean(), any())).thenReturn(1);
+            when(commonDoctorServiceImpl.updateBenFlowtableAfterDocDataSave(any(), anyBoolean(), anyBoolean(), any(), null)).thenReturn(1);
             when(commonDoctorServiceImpl.callTmForSpecialistSlotBook(any(), anyString())).thenReturn(1);
             when(teleConsultationServiceImpl.createTCRequest(any())).thenReturn(1);
             Integer result = service.quickConsultDoctorDataInsert(obj, "auth");
@@ -364,9 +372,9 @@ class QuickConsultationServiceImplTest {
             when(mockObs.getClinicalObservationID()).thenReturn(10L);
             when(commonNurseServiceImpl.saveBeneficiaryPrescription(any())).thenReturn(10L);
             // Mock the prescription save branch
-            when(commonNurseServiceImpl.saveBenPrescribedDrugsList(anyList())).thenReturn(1);
+            when(commonNurseServiceImpl.saveBenPrescribedDrugsList(anyList())).thenReturn(new HashMap<String, Object>());
             when(commonDoctorServiceImpl.saveBenReferDetails(any())).thenReturn(1L);
-            when(commonDoctorServiceImpl.updateBenFlowtableAfterDocDataSave(any(), anyBoolean(), anyBoolean(), any())).thenReturn(1);
+            when(commonDoctorServiceImpl.updateBenFlowtableAfterDocDataSave(any(), anyBoolean(), anyBoolean(), any(),null)).thenReturn(1);
             Integer result = service.quickConsultDoctorDataInsert(obj, "auth");
             assertEquals(1, result);
         }

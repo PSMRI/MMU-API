@@ -777,10 +777,10 @@ class GeneralOPDServiceImplTest {
 		// (Assume InputMapper is static, so skip actual mapping in test)
 
 		// Mock all service calls to return success
-		when(docService.updateBenFlowtableAfterDocDataSave(any(), anyBoolean(), anyBoolean(), any())).thenReturn(1);
+		when(docService.updateBenFlowtableAfterDocDataSave(any(), anyBoolean(), anyBoolean(), any(), null)).thenReturn(1);
 		when(nurseService.saveBenPrescription(any())).thenReturn(2L);
 		when(nurseService.saveBenInvestigation(any())).thenReturn(2L);
-		when(nurseService.saveBenPrescribedDrugsList(any())).thenReturn(2);
+		when(nurseService.saveBenPrescribedDrugsList(any())).thenReturn(new HashMap<String, Object>());
 		when(docService.saveDocFindings(any())).thenReturn(2);
 		when(docService.saveBenReferDetails(any())).thenReturn(2L);
 
@@ -828,10 +828,10 @@ class GeneralOPDServiceImplTest {
 	when(util.getCreatedBy()).thenReturn("1");
 
 		// Mock all service calls to return success
-		when(docService.updateBenFlowtableAfterDocDataUpdate(any(), anyBoolean(), anyBoolean(), any())).thenReturn(1);
+		when(docService.updateBenFlowtableAfterDocDataUpdate(any(), anyBoolean(), anyBoolean(), any(), null)).thenReturn(1);
 		when(nurseService.updatePrescription(any())).thenReturn(2);
 		when(nurseService.saveBenInvestigation(any())).thenReturn(2L);
-		when(nurseService.saveBenPrescribedDrugsList(any())).thenReturn(2);
+		when(nurseService.saveBenPrescribedDrugsList(any())).thenReturn(new HashMap<String, Object>());
 		when(docService.updateDocFindings(any())).thenReturn(2);
 		when(docService.updateBenReferDetails(any())).thenReturn(2L);
 
@@ -903,10 +903,10 @@ class GeneralOPDServiceImplTest {
 		// Mock slot booking and TC request creation
 		when(docService.callTmForSpecialistSlotBook(any(), any())).thenReturn(1);
 		when(teleService.createTCRequest(any())).thenReturn(1);
-		when(docService.updateBenFlowtableAfterDocDataUpdate(any(), anyBoolean(), anyBoolean(), any())).thenReturn(1);
+		when(docService.updateBenFlowtableAfterDocDataUpdate(any(), anyBoolean(), anyBoolean(), any(), null)).thenReturn(1);
 		when(nurseService.updatePrescription(any())).thenReturn(2);
 		when(nurseService.saveBenInvestigation(any())).thenReturn(2L);
-		when(nurseService.saveBenPrescribedDrugsList(any())).thenReturn(2);
+		when(nurseService.saveBenPrescribedDrugsList(any())).thenReturn(new HashMap<String, Object>());
 		when(docService.updateDocFindings(any())).thenReturn(2);
 		when(docService.updateBenReferDetails(any())).thenReturn(2L);
 
@@ -1043,10 +1043,10 @@ class GeneralOPDServiceImplTest {
 		// Mock service calls to return success values
 		when(docService.callTmForSpecialistSlotBook(any(), any())).thenReturn(1); // Must return > 0
 		when(teleService.createTCRequest(any())).thenReturn(1);
-		when(docService.updateBenFlowtableAfterDocDataSave(any(), anyBoolean(), anyBoolean(), any())).thenReturn(1);
+		when(docService.updateBenFlowtableAfterDocDataSave(any(), anyBoolean(), anyBoolean(), any(), null)).thenReturn(1);
 		when(nurseService.saveBenPrescription(any())).thenReturn(2L);
 		when(nurseService.saveBenInvestigation(any())).thenReturn(2L);
-		when(nurseService.saveBenPrescribedDrugsList(any())).thenReturn(2);
+		when(nurseService.saveBenPrescribedDrugsList(any())).thenReturn(new HashMap<String, Object>());
 		when(docService.saveDocFindings(any())).thenReturn(2);
 		when(docService.saveBenReferDetails(any())).thenReturn(2L);
 
@@ -1173,7 +1173,7 @@ class GeneralOPDServiceImplTest {
 		// Mock slot booking and TC request creation
 		when(docService.callTmForSpecialistSlotBook(any(), any())).thenReturn(1);
 		when(teleService.createTCRequest(any())).thenReturn(1);
-		when(docService.updateBenFlowtableAfterDocDataUpdate(any(), anyBoolean(), anyBoolean(), any())).thenReturn(1);
+		when(docService.updateBenFlowtableAfterDocDataUpdate(any(), anyBoolean(), anyBoolean(), any(), null)).thenReturn(1);
 		when(nurseService.updatePrescription(any())).thenReturn(2);
 		when(nurseService.saveBenInvestigation(any())).thenReturn(2L);
 		when(docService.updateDocFindings(any())).thenReturn(2);
