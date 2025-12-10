@@ -76,4 +76,9 @@ public interface ANCCareRepo extends CrudRepository<ANCCareDetails, Long> {
 			+ "  OR (a.bloodGroup = 'A-Ve' OR a.bloodGroup = 'B-Ve' OR a.bloodGroup = 'O-Ve' OR a.bloodGroup = 'AB-Ve'))"
 			+ " AND a.deleted is false ")
 	public ArrayList<ANCCareDetails> getANCCareDataForHRP(@Param("benRegID") Long benRegID);
+
+	@Transactional
+	@Modifying
+	@Query(" UPDATE ANCCareDetails set vanSerialNo = :ID WHERE ID = :ID")
+	int updateVanSerialNo(@Param("ID") Long ID);
 }

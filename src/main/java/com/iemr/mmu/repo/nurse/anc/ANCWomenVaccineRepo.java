@@ -60,4 +60,9 @@ public interface ANCWomenVaccineRepo extends CrudRepository<ANCWomenVaccineDetai
 			@Param("visitCode") Long visitCode,
 			@Param("vaccineName") String vaccineName);
 	
+
+	@Transactional
+	@Modifying
+	@Query(" UPDATE ANCWomenVaccineDetail set vanSerialNo = :ID WHERE ID = :ID")
+	int updateVanSerialNo(@Param("ID") Long ID);
 }

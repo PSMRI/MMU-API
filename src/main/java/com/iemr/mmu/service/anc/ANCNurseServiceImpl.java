@@ -164,7 +164,7 @@ public class ANCNurseServiceImpl implements ANCNurseService {
             }
             ANCCareDetails ancCareDetailsRS = ancCareRepo.save(ancCareDetailsOBJ);
             if (ancCareDetailsRS != null) {
-                ancCareDetailsRS.setVanSerialNo((ancCareDetailsRS.getID()));
+                ancCareRepo.updateVanSerialNo(ancCareDetailsRS.getID());
                 ancCareSuccessFlag = ancCareDetailsRS.getID();
             }
             return ancCareSuccessFlag;
@@ -178,7 +178,7 @@ public class ANCNurseServiceImpl implements ANCNurseService {
             List<ANCWomenVaccineDetail> ancWomenVaccineDetailRSList = (List<ANCWomenVaccineDetail>) ancWomenVaccineRepo
                     .saveAll(ancWomenVaccineDetailList);
             if (!ancWomenVaccineDetailRSList.isEmpty()) {
-                ancWomenVaccineDetailRSList.get(0).setVanSerialNo(ancWomenVaccineDetailRSList.get(0).getID());
+              ancWomenVaccineRepo.updateVanSerialNo(ancWomenVaccineDetailRSList.get(0).getID());
                 successFlag = ancWomenVaccineDetailRSList.get(0).getID();
             }
             return successFlag;
