@@ -141,50 +141,45 @@ public class ANCNurseServiceImpl implements ANCNurseService {
             } else {
                 r = 1;
             }
-		}
-            return r;
         }
-	
+        return r;
+    }
 
-        @Override
-        public Long saveBenAncCareDetails
-        (ANCCareDetails ancCareDetailsOBJ) throws ParseException {
-            Long ancCareSuccessFlag = null;
-            if (ancCareDetailsOBJ.getLmpDate() != null && !ancCareDetailsOBJ.getLmpDate().isEmpty()
-                    && ancCareDetailsOBJ.getLmpDate().length() >= 10) {
-                String lmpDate = ancCareDetailsOBJ.getLmpDate().split("T")[0];
-                ancCareDetailsOBJ
-                        .setLastMenstrualPeriod_LMP(new Date(new SimpleDateFormat("yyyy-MM-dd").parse(lmpDate).getTime()));
-            }
-            if (ancCareDetailsOBJ.getExpDelDt() != null && !ancCareDetailsOBJ.getExpDelDt().isEmpty()
-                    && ancCareDetailsOBJ.getExpDelDt().length() >= 10) {
-                String edDate = ancCareDetailsOBJ.getExpDelDt().split("T")[0];
-                ancCareDetailsOBJ
-                        .setExpectedDateofDelivery(new Date(new SimpleDateFormat("yyyy-MM-dd").parse(edDate).getTime()));
-            }
-            ANCCareDetails ancCareDetailsRS = ancCareRepo.save(ancCareDetailsOBJ);
-            if (ancCareDetailsRS != null) {
-                ancCareDetailsRS.setVanSerialNo((ancCareDetailsRS.getID()));
-                ancCareSuccessFlag = ancCareDetailsRS.getID();
-            }
-            return ancCareSuccessFlag;
+    @Override
+    public Long saveBenAncCareDetails(ANCCareDetails ancCareDetailsOBJ) throws ParseException {
+        Long ancCareSuccessFlag = null;
+        if (ancCareDetailsOBJ.getLmpDate() != null && !ancCareDetailsOBJ.getLmpDate().isEmpty()
+                && ancCareDetailsOBJ.getLmpDate().length() >= 10) {
+            String lmpDate = ancCareDetailsOBJ.getLmpDate().split("T")[0];
+            ancCareDetailsOBJ
+                    .setLastMenstrualPeriod_LMP(new Date(new SimpleDateFormat("yyyy-MM-dd").parse(lmpDate).getTime()));
         }
-
-        @Override
-        public Long saveAncImmunizationDetails
-        (WrapperAncImmunization wrapperAncImmunizationOBJ) throws ParseException {
-            Long successFlag = null;
-            List<ANCWomenVaccineDetail> ancWomenVaccineDetailList = getANCWomenVaccineDetail(wrapperAncImmunizationOBJ);
-            List<ANCWomenVaccineDetail> ancWomenVaccineDetailRSList = (List<ANCWomenVaccineDetail>) ancWomenVaccineRepo
-                    .saveAll(ancWomenVaccineDetailList);
-            if (!ancWomenVaccineDetailRSList.isEmpty()) {
-                ancWomenVaccineDetailRSList.get(0).setVanSerialNo(ancWomenVaccineDetailRSList.get(0).getID());
-                successFlag = ancWomenVaccineDetailRSList.get(0).getID();
-            }
-            return successFlag;
+        if (ancCareDetailsOBJ.getExpDelDt() != null && !ancCareDetailsOBJ.getExpDelDt().isEmpty()
+                && ancCareDetailsOBJ.getExpDelDt().length() >= 10) {
+            String edDate = ancCareDetailsOBJ.getExpDelDt().split("T")[0];
+            ancCareDetailsOBJ
+                    .setExpectedDateofDelivery(new Date(new SimpleDateFormat("yyyy-MM-dd").parse(edDate).getTime()));
         }
+        ANCCareDetails ancCareDetailsRS = ancCareRepo.save(ancCareDetailsOBJ);
+        if (ancCareDetailsRS != null) {
+            ancCareRepo.updateVanSerialNo(ancCareDetailsRS.getID());
+            ancCareSuccessFlag = ancCareDetailsRS.getID();
+        }
+        return ancCareSuccessFlag;
+    }
 
-	
+    @Override
+    public Long saveAncImmunizationDetails(WrapperAncImmunization wrapperAncImmunizationOBJ) throws ParseException {
+        Long successFlag = null;
+        List<ANCWomenVaccineDetail> ancWomenVaccineDetailList = getANCWomenVaccineDetail(wrapperAncImmunizationOBJ);
+        List<ANCWomenVaccineDetail> ancWomenVaccineDetailRSList = (List<ANCWomenVaccineDetail>) ancWomenVaccineRepo
+                .saveAll(ancWomenVaccineDetailList);
+        if (!ancWomenVaccineDetailRSList.isEmpty()) {
+            ancWomenVaccineRepo.updateVanSerialNo(ancWomenVaccineDetailRSList.get(0).getID());
+            successFlag = ancWomenVaccineDetailRSList.get(0).getID();
+        }
+        return successFlag;
+    }
 
     private List<ANCWomenVaccineDetail> getANCWomenVaccineDetail(WrapperAncImmunization wrapperAncImmunizationOBJ)
             throws ParseException {
