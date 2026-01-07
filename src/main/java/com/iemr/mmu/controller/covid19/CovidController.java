@@ -21,13 +21,16 @@
 */
 package com.iemr.mmu.controller.covid19;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,6 +39,8 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -65,6 +70,7 @@ public class CovidController {
 
 	@Operation(summary = "Save covid nurse data")
 	@PostMapping(value = { "/save/nurseData" })
+	@PreAuthorize("hasRole('NURSE')")
 	public String saveBenCovid19NurseData(@RequestBody String requestObj,
 			@RequestHeader(value = "Authorization") String authorization) {
 		OutputResponse outputResponse = new OutputResponse();
@@ -100,6 +106,7 @@ public class CovidController {
 	 */
 	@Operation(summary = "Save covid doctor data")
 	@PostMapping(value = { "/save/doctorData" })
+	@PreAuthorize("hasRole('DOCTOR')")
 	public String saveBenCovidDoctorData(@RequestBody String requestObj,
 			@RequestHeader(value = "Authorization") String authorization) {
 		OutputResponse response = new OutputResponse();
@@ -109,7 +116,23 @@ public class CovidController {
 			if (jsnOBJ != null) {
 				Long ncdCareRes = covid19Service.saveDoctorData(jsnOBJ, authorization);
 				if (null != ncdCareRes && ncdCareRes > 0) {
-					response.setResponse("Data saved successfully");
+					// Extract drug IDs from JsonObject
+					List<Long> prescribedDrugIDs = new ArrayList<>();
+					if (jsnOBJ.has("savedDrugIDs") && !jsnOBJ.get("savedDrugIDs").isJsonNull()) {
+						JsonArray drugIDsArray = jsnOBJ.getAsJsonArray("savedDrugIDs");
+						for (int j = 0; j < drugIDsArray.size(); j++) {
+							prescribedDrugIDs.add(drugIDsArray.get(j).getAsLong());
+						}
+					}
+
+					// Create response with message and IDs
+					Map<String, Object> responseData = new HashMap<>();
+					responseData.put("message", "Data saved successfully");
+					responseData.put("prescribedDrugIDs", prescribedDrugIDs);
+
+					Gson gson = new Gson();
+					String responseJson = gson.toJson(responseData);
+					response.setResponse(responseJson);
 				} else {
 					response.setResponse("Unable to save data");
 				}
@@ -126,6 +149,7 @@ public class CovidController {
 
 	@Operation(summary = "Get beneficiary visit details from nurse covid 19")
 	@PostMapping(value = { "/getBenVisitDetailsFrmNurseCovid" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	@Transactional(rollbackFor = Exception.class)
 	public String getBenVisitDetailsFrmNurseCovid19(
 			@ApiParam(value = "{\"benRegID\":\"Long\",\"visitCode\":\"Long\"}") @RequestBody String comingRequest) {
@@ -158,7 +182,7 @@ public class CovidController {
 	 */
 	@Operation(summary = "Get beneficiary covid 19 history details from nurse to doctor ")
 	@PostMapping(value = { "/getBenCovid19HistoryDetails" })
-
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String getBenCovid19HistoryDetails(
 			@ApiParam(value = "{\"benRegID\":\"Long\",\"visitCode\":\"Long\"}") @RequestBody String comingRequest) {
 		OutputResponse response = new OutputResponse();
@@ -189,6 +213,7 @@ public class CovidController {
 	 */
 	@Operation(summary = "Get beneficiary covid 19 vital details from nurse NCD care")
 	@PostMapping(value = { "/getBenVitalDetailsFrmNurseCovid" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String getBenVitalDetailsFrmNurseNCDCare(
 			@ApiParam(value = "{\"benRegID\":\"Long\",\"visitCode\":\"Long\"}") @RequestBody String comingRequest) {
 		OutputResponse response = new OutputResponse();
@@ -217,6 +242,7 @@ public class CovidController {
 	@Operation(summary = "Get beneficiary doctor entered details")
 	@PostMapping(value = { "/getBenCaseRecordFromDoctorCovid" })
 	@Transactional(rollbackFor = Exception.class)
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String getBenCaseRecordFromDoctorCovid19(
 			@ApiParam(value = "{\"benRegID\":\"Long\",\"visitCode\":\"Long\"}") @RequestBody String comingRequest) {
 		OutputResponse response = new OutputResponse();
@@ -243,6 +269,7 @@ public class CovidController {
 
 	@Operation(summary = "Update history data in doctor screen")
 	@PostMapping(value = { "/update/historyScreen" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String updateHistoryNurse(@RequestBody String requestObj) {
 
 		OutputResponse response = new OutputResponse();
@@ -275,6 +302,7 @@ public class CovidController {
 	 */
 	@Operation(summary = "Update covid vital data in doctor screen")
 	@PostMapping(value = { "/update/vitalScreen" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String updateVitalNurse(@RequestBody String requestObj) {
 
 		OutputResponse response = new OutputResponse();
@@ -304,6 +332,7 @@ public class CovidController {
 	 */
 	@Operation(summary = "Update covid 19 doctor data")
 	@PostMapping(value = { "/update/doctorData" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR')")
 	public String updateCovid19DoctorData(@RequestBody String requestObj,
 			@RequestHeader(value = "Authorization") String authorization) {
 
@@ -313,7 +342,23 @@ public class CovidController {
 		try {
 			Long result = covid19ServiceImpl.updateCovid19DoctorData(jsnOBJ, authorization);
 			if (null != result && result > 0) {
-				response.setResponse("Data updated successfully");
+				// Extract drug IDs from JsonObject
+				List<Long> prescribedDrugIDs = new ArrayList<>();
+				if (jsnOBJ.has("savedDrugIDs") && !jsnOBJ.get("savedDrugIDs").isJsonNull()) {
+					JsonArray drugIDsArray = jsnOBJ.getAsJsonArray("savedDrugIDs");
+					for (int j = 0; j < drugIDsArray.size(); j++) {
+						prescribedDrugIDs.add(drugIDsArray.get(j).getAsLong());
+					}
+				}
+
+				// Create response with message and IDs
+				Map<String, Object> responseData = new HashMap<>();
+				responseData.put("message", "Data updated successfully");
+				responseData.put("prescribedDrugIDs", prescribedDrugIDs);
+
+				Gson gson = new Gson();
+				String responseJson = gson.toJson(responseData);
+				response.setResponse(responseJson);
 			} else {
 				response.setError(500, "Unable to modify data");
 			}

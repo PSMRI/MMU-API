@@ -21,11 +21,14 @@
 */
 package com.iemr.mmu.utils.http;
 
+import java.util.Arrays;
+
 import javax.ws.rs.core.MediaType;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
@@ -42,6 +45,9 @@ public class HttpInterceptor implements HandlerInterceptor {
 	private Validator validator;
 
 	Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
+
+	@Value("${cors.allowed-origins}")
+	private String allowedOrigins;
 
 	@Autowired
 	public void setValidator(Validator validator) {
@@ -111,7 +117,14 @@ public class HttpInterceptor implements HandlerInterceptor {
 				response.setContentType(MediaType.APPLICATION_JSON);
 
 				response.setContentLength(output.toString().length());
-				response.setHeader("Access-Control-Allow-Origin", "*");
+				
+				String origin = request.getHeader("Origin");
+				if (origin != null && isOriginAllowed(origin)) {
+					response.setHeader("Access-Control-Allow-Origin", origin);
+					response.setHeader("Access-Control-Allow-Credentials", "true");
+				} else if (origin != null) {
+					logger.warn("CORS headers NOT added for error response | Unauthorized origin: {}", origin);
+				}
 				response.getOutputStream().print(output.toString());
 
 				status = false;
@@ -139,6 +152,22 @@ public class HttpInterceptor implements HandlerInterceptor {
 	public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object object, Exception arg3)
 			throws Exception {
 		logger.debug("In afterCompletion Request Completed");
+	}
+
+		private boolean isOriginAllowed(String origin) {
+		if (origin == null || allowedOrigins == null || allowedOrigins.trim().isEmpty()) {
+			return false;
+		}
+
+		return Arrays.stream(allowedOrigins.split(","))
+				.map(String::trim)
+				.anyMatch(pattern -> {
+					String regex = pattern
+							.replace(".", "\\.")
+							.replace("*", ".*")
+						    .replace("http://localhost:.*", "http://localhost:\\d+");
+					return origin.matches(regex);
+				});
 	}
 
 }

@@ -96,4 +96,9 @@ public interface BenVisitDetailRepo extends CrudRepository<BeneficiaryVisitDetai
 	@Query("SELECT MAX(bvd.createdDate) from BeneficiaryVisitDetail bvd WHERE bvd.beneficiaryRegID = :benRegID AND bvd.visitReason = :visitreason AND bvd.visitCategory = :visitcategory ")
     public String getMaxCreatedDate(@Param("benRegID") Long benRegID, @Param("visitreason") String visitreason,@Param("visitcategory") String visitcategory);
 
+	@Transactional
+	@Modifying
+	@Query(" UPDATE BeneficiaryVisitDetail set vanSerialNo = :benVisitID WHERE benVisitID = :benVisitID")
+	int updateVanSerialNo(@Param("benVisitID") Long benVisitID);
+
 }

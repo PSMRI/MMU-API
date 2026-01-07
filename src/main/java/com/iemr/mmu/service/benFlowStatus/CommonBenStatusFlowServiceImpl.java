@@ -72,6 +72,7 @@ public class CommonBenStatusFlowServiceImpl implements CommonBenStatusFlowServic
 
 			if (beneficiaryRegID != null && beneficiaryID != null && beneficiaryRegID > 0 && beneficiaryID > 0) {
 				objRS = beneficiaryFlowStatusRepo.save(obj);
+				obj.setVanSerialNo((objRS.getBenFlowID()));
 				if (objRS != null)
 					returnOBJ = 1;
 				else
@@ -91,6 +92,7 @@ public class CommonBenStatusFlowServiceImpl implements CommonBenStatusFlowServic
 					returnOBJ = 3;
 				} else {
 					objRS = beneficiaryFlowStatusRepo.save(obj);
+obj.setVanSerialNo((objRS.getBenFlowID()));
 					if (objRS != null)
 						returnOBJ = 1;
 					else
@@ -259,21 +261,26 @@ public class CommonBenStatusFlowServiceImpl implements CommonBenStatusFlowServic
 		return obj;
 	}
 
-	public int updateBenFlowAfterDocData(Long benFlowID, Long benRegID, Long benID, Long benVisitID, short docFlag,
-			short pharmaFlag, short oncologistFlag, short tcSpecialistFlag, int tcUserID, Timestamp tcDate) {
+	public int updateBenFlowAfterDocData(Long benFlowID, Long benRegID, Long benID, Long benVisitID,
+			short docFlag, short pharmaFlag, short oncologistFlag, short tcSpecialistFlag,
+			int tcUserID, Timestamp tcDate, Boolean signatureFlag) throws Exception {
 		int i = 0;
 		try {
-			i = beneficiaryFlowStatusRepo.updateBenFlowStatusAfterDoctorActivity(benFlowID, benRegID, benID, docFlag,
-					pharmaFlag, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate);
+			Short pharmaF = beneficiaryFlowStatusRepo.getPharmaFlag(benFlowID);
+			Short pharmaF1 = (pharmaF != null && pharmaF == 1) ? pharmaF : pharmaFlag;
+
+			i = beneficiaryFlowStatusRepo.updateBenFlowStatusAfterDoctorActivity(benFlowID, benRegID, benID,
+					docFlag, pharmaF1, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate, signatureFlag);
 		} catch (Exception e) {
-			logger.error("Error in ben flow creation = " + e);
+			logger.error("Error in ben flow update = " + e);
+			throw new Exception(e);
 		}
 		return i;
 	}
 
 	public int updateBenFlowAfterDocDataUpdate(Long benFlowID, Long benRegID, Long benID, Long benVisitID,
-			short docFlag, short pharmaFlag, short oncologistFlag, short tcSpecialistFlag, int tcUserID,
-			Timestamp tcDate) throws Exception {
+			short docFlag, short pharmaFlag, short oncologistFlag, short tcSpecialistFlag,
+			int tcUserID, Timestamp tcDate, Boolean signatureFlag) throws Exception {
 		int i = 0;
 		try {
 			Short pharmaF = beneficiaryFlowStatusRepo.getPharmaFlag(benFlowID);
@@ -284,8 +291,8 @@ public class CommonBenStatusFlowServiceImpl implements CommonBenStatusFlowServic
 			else
 				pharmaF1 = pharmaFlag;
 
-			i = beneficiaryFlowStatusRepo.updateBenFlowStatusAfterDoctorActivity(benFlowID, benRegID, benID, docFlag,
-					pharmaF1, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate);
+			i = beneficiaryFlowStatusRepo.updateBenFlowStatusAfterDoctorActivity(benFlowID, benRegID, benID,
+					docFlag, pharmaF1, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate, signatureFlag);
 		} catch (Exception e) {
 			logger.error("Error in ben flow creation = " + e);
 			throw new Exception(e);
@@ -295,7 +302,7 @@ public class CommonBenStatusFlowServiceImpl implements CommonBenStatusFlowServic
 	
 	public int updateBenFlowAfterDocDataUpdateWDF(Long benFlowID, Long benRegID, Long benID, Long benVisitID,
 			short docFlag, short pharmaFlag, short oncologistFlag, int tcUserID,
-			Timestamp tcDate) throws Exception {
+			Timestamp tcDate, Boolean signatureFlag) throws Exception {
 		int i = 0;
 		try {
 			Short pharmaF = beneficiaryFlowStatusRepo.getPharmaFlag(benFlowID);
@@ -306,8 +313,8 @@ public class CommonBenStatusFlowServiceImpl implements CommonBenStatusFlowServic
 			else
 				pharmaF1 = pharmaFlag;
 
-			i = beneficiaryFlowStatusRepo.updateBenFlowStatusAfterDoctorActivityWDF(benFlowID, benRegID, benID, docFlag,
-					pharmaF1, oncologistFlag, tcUserID, tcDate);
+			i = beneficiaryFlowStatusRepo.updateBenFlowStatusAfterDoctorActivityWDF(benFlowID, benRegID, benID,
+					docFlag, pharmaF1, oncologistFlag, tcUserID, tcDate, signatureFlag);
 		} catch (Exception e) {
 			logger.error("Error in ben flow creation = " + e);
 			throw new Exception(e);
@@ -316,8 +323,8 @@ public class CommonBenStatusFlowServiceImpl implements CommonBenStatusFlowServic
 	}
 
 	public int updateBenFlowAfterDocDataUpdateTCSpecialist(Long benFlowID, Long benRegID, Long benID, Long benVisitID,
-			short docFlag, short pharmaFlag, short oncologistFlag, short tcSpecialistFlag, int tcUserID,
-			Timestamp tcDate) throws Exception {
+			short docFlag, short pharmaFlag, short oncologistFlag, short tcSpecialistFlag,
+			int tcUserID, Timestamp tcDate, Boolean signatureFlag) throws Exception {
 		int i = 0;
 		try {
 			Short pharmaF = beneficiaryFlowStatusRepo.getPharmaFlag(benFlowID);
@@ -329,7 +336,7 @@ public class CommonBenStatusFlowServiceImpl implements CommonBenStatusFlowServic
 				pharmaF1 = pharmaFlag;
 
 			i = beneficiaryFlowStatusRepo.updateBenFlowStatusAfterDoctorActivityTCSpecialist(benFlowID, benRegID, benID,
-					pharmaF1, oncologistFlag, tcSpecialistFlag);
+					pharmaF1, oncologistFlag, tcSpecialistFlag, signatureFlag);
 		} catch (Exception e) {
 			logger.error("Error in ben flow creation = " + e);
 			throw new Exception(e);

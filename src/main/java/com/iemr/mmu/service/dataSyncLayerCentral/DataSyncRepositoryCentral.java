@@ -62,7 +62,7 @@ public class DataSyncRepositoryCentral {
             "t_ncdscreening", "t_ncdcare", "i_ben_flow_outreach", "t_covid19", "t_idrsdetails", "t_physicalactivity",
             "t_phy_generalexam", "t_phy_headtotoe", "t_sys_obstetric", "t_sys_gastrointestinal", "t_sys_cardiovascular",
             "t_sys_respiratory", "t_sys_centralnervous", "t_sys_musculoskeletalsystem", "t_sys_genitourinarysystem",
-            "t_ancdiagnosis", "t_ncddiagnosis", "t_pncdiagnosis", "t_benchefcomplaint", "t_benclinicalobservation",
+            "t_ancdiagnosis", "t_ncddiagnosis", "t_pncdiagnosis", "t_benchiefcomplaint", "t_benclinicalobservation",
             "t_prescription", "t_prescribeddrug", "t_lab_testorder", "t_benreferdetails",
             "t_lab_testresult", "t_physicalstockentry", "t_patientissue", "t_facilityconsumption", "t_itemstockentry",
             "t_itemstockexit", "t_benmedhistory", "t_femaleobstetrichistory", "t_benmenstrualdetails",
@@ -114,7 +114,8 @@ public class DataSyncRepositoryCentral {
 
     public int checkRecordIsAlreadyPresentOrNot(String schemaName, String tableName, String vanSerialNo, String vanID,
             String vanAutoIncColumnName, int syncFacilityID) {
-              
+              logger.info("Checking record presence: schema={}, table={}, vanSerialNo={}, vanID={}, column={}, syncFacilityID={}",
+                schemaName, tableName, vanSerialNo, vanID, vanAutoIncColumnName, syncFacilityID);
         jdbcTemplate = getJdbcTemplate();
         List<Object> params = new ArrayList<>();
 
@@ -128,16 +129,18 @@ public class DataSyncRepositoryCentral {
         StringBuilder queryBuilder = new StringBuilder("SELECT ")
                 .append(vanAutoIncColumnName).append(" FROM ")
                 .append(schemaName).append(".").append(tableName).append(" WHERE VanSerialNo = ?");
-
+        logger.info("Constructed query: {}", queryBuilder.toString());
         params.add(vanSerialNo);
-
+        logger.info("Table name="+tableName.toLowerCase());
         if (List.of("t_patientissue", "t_physicalstockentry", "t_stockadjustment", "t_saitemmapping",
                 "t_stocktransfer", "t_patientreturn", "t_facilityconsumption", "t_indent",
                 "t_indentorder", "t_indentissue", "t_itemstockentry", "t_itemstockexit")
                 .contains(tableName.toLowerCase()) && syncFacilityID > 0) {
+                    logger.info("If block");
             queryBuilder.append(" AND SyncFacilityID = ?");
             params.add(syncFacilityID);
         } else {
+            logger.info("Else part");
             queryBuilder.append(" AND VanID = ?");
             params.add(vanID);
         }

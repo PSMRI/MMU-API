@@ -390,7 +390,7 @@ class CommonBenStatusFlowServiceImplTest {
 
     @Test
     @DisplayName("Test updateBenFlowAfterDocData - Success")
-    void testUpdateBenFlowAfterDocData_Success() {
+    void testUpdateBenFlowAfterDocData_Success() throws Exception {
         // Arrange
         Long benFlowID = 1L;
         Long benRegID = 1L;
@@ -404,12 +404,12 @@ class CommonBenStatusFlowServiceImplTest {
         Timestamp tcDate = new Timestamp(System.currentTimeMillis());
 
         when(beneficiaryFlowStatusRepo.updateBenFlowStatusAfterDoctorActivity(
-            benFlowID, benRegID, benID, docFlag, pharmaFlag, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate))
+            benFlowID, benRegID, benID, docFlag, pharmaFlag, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate, null))
             .thenReturn(1);
 
         // Act
         int result = commonBenStatusFlowService.updateBenFlowAfterDocData(
-            benFlowID, benRegID, benID, benVisitID, docFlag, pharmaFlag, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate);
+            benFlowID, benRegID, benID, benVisitID, docFlag, pharmaFlag, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate, null);
 
         // Assert
         assertEquals(1, result);
@@ -417,7 +417,7 @@ class CommonBenStatusFlowServiceImplTest {
 
     @Test
     @DisplayName("Test updateBenFlowAfterDocData - Exception")
-    void testUpdateBenFlowAfterDocData_Exception() {
+    void testUpdateBenFlowAfterDocData_Exception() throws Exception {
         // Arrange
         Long benFlowID = 1L;
         Long benRegID = 1L;
@@ -431,12 +431,12 @@ class CommonBenStatusFlowServiceImplTest {
         Timestamp tcDate = new Timestamp(System.currentTimeMillis());
 
         when(beneficiaryFlowStatusRepo.updateBenFlowStatusAfterDoctorActivity(
-            benFlowID, benRegID, benID, docFlag, pharmaFlag, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate))
+            benFlowID, benRegID, benID, docFlag, pharmaFlag, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate, null))
             .thenThrow(new RuntimeException("Database error"));
 
         // Act
         int result = commonBenStatusFlowService.updateBenFlowAfterDocData(
-            benFlowID, benRegID, benID, benVisitID, docFlag, pharmaFlag, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate);
+            benFlowID, benRegID, benID, benVisitID, docFlag, pharmaFlag, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate, null);
 
         // Assert
         assertEquals(0, result);
@@ -459,12 +459,12 @@ class CommonBenStatusFlowServiceImplTest {
 
         when(beneficiaryFlowStatusRepo.getPharmaFlag(benFlowID)).thenReturn((short) 1);
         when(beneficiaryFlowStatusRepo.updateBenFlowStatusAfterDoctorActivity(
-            benFlowID, benRegID, benID, docFlag, (short) 1, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate))
+            benFlowID, benRegID, benID, docFlag, (short) 1, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate, null))
             .thenReturn(1);
 
         // Act
         int result = commonBenStatusFlowService.updateBenFlowAfterDocDataUpdate(
-            benFlowID, benRegID, benID, benVisitID, docFlag, pharmaFlag, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate);
+            benFlowID, benRegID, benID, benVisitID, docFlag, pharmaFlag, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate, null);
 
         // Assert
         assertEquals(1, result);
@@ -487,12 +487,12 @@ class CommonBenStatusFlowServiceImplTest {
 
         when(beneficiaryFlowStatusRepo.getPharmaFlag(benFlowID)).thenReturn((short) 0);
         when(beneficiaryFlowStatusRepo.updateBenFlowStatusAfterDoctorActivity(
-            benFlowID, benRegID, benID, docFlag, pharmaFlag, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate))
+            benFlowID, benRegID, benID, docFlag, pharmaFlag, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate, null))
             .thenReturn(1);
 
         // Act
         int result = commonBenStatusFlowService.updateBenFlowAfterDocDataUpdate(
-            benFlowID, benRegID, benID, benVisitID, docFlag, pharmaFlag, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate);
+            benFlowID, benRegID, benID, benVisitID, docFlag, pharmaFlag, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate, null);
 
         // Assert
         assertEquals(1, result);
@@ -519,7 +519,7 @@ class CommonBenStatusFlowServiceImplTest {
         // Act & Assert
         Exception exception = assertThrows(Exception.class, () -> {
             commonBenStatusFlowService.updateBenFlowAfterDocDataUpdate(
-                benFlowID, benRegID, benID, benVisitID, docFlag, pharmaFlag, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate);
+                benFlowID, benRegID, benID, benVisitID, docFlag, pharmaFlag, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate, null);
         });
 
         assertNotNull(exception);
@@ -541,12 +541,12 @@ class CommonBenStatusFlowServiceImplTest {
 
         when(beneficiaryFlowStatusRepo.getPharmaFlag(benFlowID)).thenReturn((short) 0);
         when(beneficiaryFlowStatusRepo.updateBenFlowStatusAfterDoctorActivityWDF(
-            benFlowID, benRegID, benID, docFlag, pharmaFlag, oncologistFlag, tcUserID, tcDate))
+            benFlowID, benRegID, benID, docFlag, pharmaFlag, oncologistFlag, tcUserID, tcDate, null))
             .thenReturn(1);
 
         // Act
         int result = commonBenStatusFlowService.updateBenFlowAfterDocDataUpdateWDF(
-            benFlowID, benRegID, benID, benVisitID, docFlag, pharmaFlag, oncologistFlag, tcUserID, tcDate);
+            benFlowID, benRegID, benID, benVisitID, docFlag, pharmaFlag, oncologistFlag, tcUserID, tcDate, null);
 
         // Assert
         assertEquals(1, result);
@@ -569,12 +569,12 @@ class CommonBenStatusFlowServiceImplTest {
 
         when(beneficiaryFlowStatusRepo.getPharmaFlag(benFlowID)).thenReturn((short) 0);
         when(beneficiaryFlowStatusRepo.updateBenFlowStatusAfterDoctorActivityTCSpecialist(
-            benFlowID, benRegID, benID, pharmaFlag, oncologistFlag, tcSpecialistFlag))
+            benFlowID, benRegID, benID, pharmaFlag, oncologistFlag, tcSpecialistFlag, null))
             .thenReturn(1);
 
         // Act
         int result = commonBenStatusFlowService.updateBenFlowAfterDocDataUpdateTCSpecialist(
-            benFlowID, benRegID, benID, benVisitID, docFlag, pharmaFlag, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate);
+            benFlowID, benRegID, benID, benVisitID, docFlag, pharmaFlag, oncologistFlag, tcSpecialistFlag, tcUserID, tcDate, null);
 
         // Assert
         assertEquals(1, result);

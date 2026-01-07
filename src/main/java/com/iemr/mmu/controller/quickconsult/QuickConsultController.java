@@ -25,6 +25,7 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,6 +34,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -43,6 +45,10 @@ import com.iemr.mmu.utils.response.OutputResponse;
 
 import io.swagger.annotations.ApiParam;
 import io.swagger.v3.oas.annotations.Operation;
+
+import java.util.*;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 
 /**
  * @Objective Saving general OPD quick consult data for Nurse and Doctor both.
@@ -70,6 +76,7 @@ public class QuickConsultController {
 	 */
 	@Operation(summary = "Save quick consult nurse data")
 	@PostMapping(value = { "/save/nurseData" })
+	@PreAuthorize("hasRole('NURSE') ")
 	public String saveBenQuickConsultDataNurse(@RequestBody String requestObj) {
 		OutputResponse response = new OutputResponse();
 		try {
@@ -102,6 +109,7 @@ public class QuickConsultController {
 	 */
 	@Operation(summary = "Save quick consultation detail for doctor")
 	@PostMapping(value = { "/save/doctorData" })
+	@PreAuthorize("hasRole('DOCTOR') ")
 	public String saveQuickConsultationDetail(
 			@ApiParam(value = "{\"quickConsultation\":{\"beneficiaryRegID\":\"Long\",\"providerServiceMapID\": \"Integer\", \"benVisitID\":\"Long\", \"benChiefComplaint\":[{\"chiefComplaintID\":\"Integer\", "
 					+ "\"chiefComplaint\":\"String\", \"duration\":\"Integer\", \"unitOfDuration\":\"String\"}], \"description\":\"String\""
@@ -124,7 +132,25 @@ public class QuickConsultController {
 			Integer i = quickConsultationServiceImpl.quickConsultDoctorDataInsert(quickConsultDoctorOBJ, authorization);
 
 			if (i != null && i > 0) {
-				response.setResponse("Data saved successfully");
+				// Check if drug IDs were saved and added to the JsonObject
+				List<Long> prescribedDrugIDs = new ArrayList<>();
+				if (quickConsultDoctorOBJ.has("savedDrugIDs")
+						&& !quickConsultDoctorOBJ.get("savedDrugIDs").isJsonNull()) {
+					JsonArray drugIDsArray = quickConsultDoctorOBJ.getAsJsonArray("savedDrugIDs");
+					for (int j = 0; j < drugIDsArray.size(); j++) {
+						prescribedDrugIDs.add(drugIDsArray.get(j).getAsLong());
+					}
+				}
+
+				// Create response data with message and drug IDs
+				Map<String, Object> responseData = new HashMap<>();
+				responseData.put("message", "Data saved successfully");
+				responseData.put("prescribedDrugIDs", prescribedDrugIDs);
+
+				// Convert to JSON string and set response
+				Gson gson = new Gson();
+				String responseJson = gson.toJson(responseData);
+				response.setResponse(responseJson);
 			} else {
 				response.setError(5000, "Unable to save data");
 			}
@@ -139,6 +165,7 @@ public class QuickConsultController {
 
 	@Operation(summary = "Get quick consult beneficiary visit details")
 	@PostMapping(value = { "/getBenDataFrmNurseToDocVisitDetailsScreen" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR') ")
 	public String getBenDataFrmNurseScrnToDocScrnVisitDetails(
 			@ApiParam(value = "{\"benRegID\":\"Long\",\"visitCode\":\"Long\"}") @RequestBody String comingRequest) {
 		OutputResponse response = new OutputResponse();
@@ -169,6 +196,7 @@ public class QuickConsultController {
 	 */
 	@Operation(summary = "Get quick consult beneficiary vital details")
 	@PostMapping(value = { "/getBenVitalDetailsFrmNurse" })
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR') ")
 	public String getBenVitalDetailsFrmNurse(
 			@ApiParam(value = "{\"benRegID\":\"Long\",\"visitCode\":\"Long\"}") @RequestBody String comingRequest) {
 		OutputResponse response = new OutputResponse();
@@ -201,6 +229,7 @@ public class QuickConsultController {
 	@Operation(summary = "Get quick consult beneficiary case record")
 	@PostMapping(value = { "/getBenCaseRecordFromDoctorQuickConsult" })
 	@Transactional(rollbackFor = Exception.class)
+	@PreAuthorize("hasRole('NURSE') || hasRole('DOCTOR') ")
 	public String getBenCaseRecordFromDoctorQuickConsult(
 			@ApiParam(value = "{\"benRegID\":\"Long\",\"visitCode\":\"Long\"}") @RequestBody String comingRequest) {
 		OutputResponse response = new OutputResponse();
@@ -227,6 +256,7 @@ public class QuickConsultController {
 
 	@Operation(summary = "Update quick consult doctor data")
 	@PostMapping(value = { "/update/doctorData" })
+	@PreAuthorize("hasRole('DOCTOR') ")
 	public String updateGeneralOPDQCDoctorData(@RequestBody String requestObj,
 			@RequestHeader(value = "Authorization") String authorization) {
 
@@ -241,7 +271,25 @@ public class QuickConsultController {
 			Long result = quickConsultationServiceImpl.updateGeneralOPDQCDoctorData(quickConsultDoctorOBJ,
 					authorization);
 			if (null != result && result > 0) {
-				response.setResponse("Data updated successfully");
+				// Check if drug IDs were saved and added to the JsonObject
+				List<Long> prescribedDrugIDs = new ArrayList<>();
+				if (quickConsultDoctorOBJ.has("savedDrugIDs")
+						&& !quickConsultDoctorOBJ.get("savedDrugIDs").isJsonNull()) {
+					JsonArray drugIDsArray = quickConsultDoctorOBJ.getAsJsonArray("savedDrugIDs");
+					for (int j = 0; j < drugIDsArray.size(); j++) {
+						prescribedDrugIDs.add(drugIDsArray.get(j).getAsLong());
+					}
+				}
+
+				// Create response data with message and drug IDs
+				Map<String, Object> responseData = new HashMap<>();
+				responseData.put("message", "Data updated successfully");
+				responseData.put("prescribedDrugIDs", prescribedDrugIDs);
+
+				// Convert to JSON string and set response
+				Gson gson = new Gson();
+				String responseJson = gson.toJson(responseData);
+				response.setResponse(responseJson);
 			} else {
 				response.setError(500, "Unable to modify data");
 			}
