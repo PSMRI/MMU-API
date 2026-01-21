@@ -1,6 +1,6 @@
 # AMRIT - Mobile Medical Unit (MMU) Service
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) ![branch parameter](https://github.com/PSMRI/MMU-API/actions/workflows/sast-and-package.yml/badge.svg)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![DeepWiki](https://img.shields.io/badge/DeepWiki-PSMRI%2FMMU--API-blue)](https://deepwiki.com/PSMRI/MMU-API)
 
 The AMRIT Mobile Medical Unit (MMU) service provides essential medical assistance to individuals without requiring them to be admitted to a hospital. This service operates through a mobile unit equipped with a laboratory for conducting medical tests and the capability to dispense medicines. The MMU employs an internet-connected device to collect and transmit medical data to the AMRIT application. It supports various medical standards and incorporates a feature that allows data capture and synchronization even when an internet connection is unavailable.
 
