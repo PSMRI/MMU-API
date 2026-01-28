@@ -810,24 +810,25 @@ public class ANCServiceImpl implements ANCService {
 		return vitalSuccessFlag;
 	}
 
-
 	/**
 	 * 
 	 * @param requestOBJ
 	 * @return success or failure flag for visitDetails data saving
-	*/
+	 */
 	public Long saveBenANCExaminationDetails(JsonObject examinationDetailsOBJ, Long benVisitID, Long benVisitCode)
 			throws Exception {
 
-		// Initialize all flags with default success values
-		Long genExmnSuccessFlag = 1L;
-		Long headToToeExmnSuccessFlag = 1L;
-		Long cardiExmnSuccessFlag = 1L;
-		Long respiratoryExmnSuccessFlag = 1L;
-		Long centralNrvsExmnSuccessFlag = 1L;
-		Long muskelstlExmnSuccessFlag = 1L;
-		Long genitorinaryExmnSuccessFlag = 1L;
-		Long obstetricExmnSuccessFlag = 1L;
+		Long exmnSuccessFlag = null;
+
+		Long genExmnSuccessFlag = null;
+		Long headToToeExmnSuccessFlag = null;
+		// Long gastroIntsExmnSuccessFlag = null;
+		Long cardiExmnSuccessFlag = null;
+		Long respiratoryExmnSuccessFlag = null;
+		Long centralNrvsExmnSuccessFlag = null;
+		Long muskelstlExmnSuccessFlag = null;
+		Long genitorinaryExmnSuccessFlag = null;
+		Long obstetricExmnSuccessFlag = null;
 
 		// Save General Examination Details
 		if (examinationDetailsOBJ != null && examinationDetailsOBJ.has("generalExamination")
@@ -837,13 +838,11 @@ public class ANCServiceImpl implements ANCService {
 			if (null != generalExamination) {
 				generalExamination.setBenVisitID(benVisitID);
 				generalExamination.setVisitCode(benVisitCode);
-				Long result = commonNurseServiceImpl.savePhyGeneralExamination(generalExamination);
-				if (result != null && result > 0) {
-					genExmnSuccessFlag = result;
-				} else {
-					genExmnSuccessFlag = null; // Actual failure
-				}
+				genExmnSuccessFlag = commonNurseServiceImpl.savePhyGeneralExamination(generalExamination);
+				// genExmnSuccessFlag =
+				// ancNurseServiceImpl.savePhyGeneralExamination(generalExamination);
 			}
+
 		}
 
 		// Save Head to toe Examination Details
@@ -854,14 +853,16 @@ public class ANCServiceImpl implements ANCService {
 			if (null != headToToeExamination) {
 				headToToeExamination.setBenVisitID(benVisitID);
 				headToToeExamination.setVisitCode(benVisitCode);
-				Long result = commonNurseServiceImpl.savePhyHeadToToeExamination(headToToeExamination);
-				if (result != null && result > 0) {
-					headToToeExmnSuccessFlag = result;
-				} else {
-					headToToeExmnSuccessFlag = null; // Actual failure
-				}
+				headToToeExmnSuccessFlag = commonNurseServiceImpl.savePhyHeadToToeExamination(headToToeExamination);
+				// headToToeExmnSuccessFlag =
+				// ancNurseServiceImpl.savePhyHeadToToeExamination(headToToeExamination);
 			}
+
 		}
+		// Save Gastro Intestinal Examination Details
+		/**
+		 * Removed from anc. Only applicable for generalOPD. date: 07-02-2018
+		 */
 
 		// Save Cardio Vascular Examination Details
 		if (examinationDetailsOBJ != null && examinationDetailsOBJ.has("cardioVascularExamination")
@@ -871,13 +872,11 @@ public class ANCServiceImpl implements ANCService {
 			if (null != cardiovascularExamination) {
 				cardiovascularExamination.setBenVisitID(benVisitID);
 				cardiovascularExamination.setVisitCode(benVisitCode);
-				Long result = commonNurseServiceImpl
+				cardiExmnSuccessFlag = commonNurseServiceImpl
 						.saveSysCardiovascularExamination(cardiovascularExamination);
-				if (result != null && result > 0) {
-					cardiExmnSuccessFlag = result;
-				} else {
-					cardiExmnSuccessFlag = null; // Actual failure
-				}
+				// cardiExmnSuccessFlag =
+				// ancNurseServiceImpl.saveSysCardiovascularExamination(cardiovascularExamination);
+
 			}
 		}
 
@@ -889,13 +888,10 @@ public class ANCServiceImpl implements ANCService {
 			if (null != sysRespiratoryExamination) {
 				sysRespiratoryExamination.setBenVisitID(benVisitID);
 				sysRespiratoryExamination.setVisitCode(benVisitCode);
-				Long result = commonNurseServiceImpl
+				respiratoryExmnSuccessFlag = commonNurseServiceImpl
 						.saveSysRespiratoryExamination(sysRespiratoryExamination);
-				if (result != null && result > 0) {
-					respiratoryExmnSuccessFlag = result;
-				} else {
-					respiratoryExmnSuccessFlag = null; // Actual failure
-				}
+				// respiratoryExmnSuccessFlag = ancNurseServiceImpl
+				// .saveSysRespiratoryExamination(sysRespiratoryExamination);
 			}
 		}
 
@@ -907,13 +903,10 @@ public class ANCServiceImpl implements ANCService {
 			if (null != sysCentralNervousExamination) {
 				sysCentralNervousExamination.setBenVisitID(benVisitID);
 				sysCentralNervousExamination.setVisitCode(benVisitCode);
-				Long result = commonNurseServiceImpl
+				centralNrvsExmnSuccessFlag = commonNurseServiceImpl
 						.saveSysCentralNervousExamination(sysCentralNervousExamination);
-				if (result != null && result > 0) {
-					centralNrvsExmnSuccessFlag = result;
-				} else {
-					centralNrvsExmnSuccessFlag = null; // Actual failure
-				}
+				// centralNrvsExmnSuccessFlag = ancNurseServiceImpl
+				// .saveSysCentralNervousExamination(sysCentralNervousExamination);
 			}
 		}
 
@@ -926,13 +919,11 @@ public class ANCServiceImpl implements ANCService {
 			if (null != sysMusculoskeletalSystemExamination) {
 				sysMusculoskeletalSystemExamination.setBenVisitID(benVisitID);
 				sysMusculoskeletalSystemExamination.setVisitCode(benVisitCode);
-				Long result = commonNurseServiceImpl
+				muskelstlExmnSuccessFlag = commonNurseServiceImpl
 						.saveSysMusculoskeletalSystemExamination(sysMusculoskeletalSystemExamination);
-				if (result != null && result > 0) {
-					muskelstlExmnSuccessFlag = result;
-				} else {
-					muskelstlExmnSuccessFlag = null; // Actual failure
-				}
+				// muskelstlExmnSuccessFlag = ancNurseServiceImpl
+				// .saveSysMusculoskeletalSystemExamination(sysMusculoskeletalSystemExamination);
+
 			}
 		}
 
@@ -945,13 +936,11 @@ public class ANCServiceImpl implements ANCService {
 			if (null != sysGenitourinarySystemExamination) {
 				sysGenitourinarySystemExamination.setBenVisitID(benVisitID);
 				sysGenitourinarySystemExamination.setVisitCode(benVisitCode);
-				Long result = commonNurseServiceImpl
+				genitorinaryExmnSuccessFlag = commonNurseServiceImpl
 						.saveSysGenitourinarySystemExamination(sysGenitourinarySystemExamination);
-				if (result != null && result > 0) {
-					genitorinaryExmnSuccessFlag = result;
-				} else {
-					genitorinaryExmnSuccessFlag = null; // Actual failure
-				}
+				// genitorinaryExmnSuccessFlag = ancNurseServiceImpl
+				// .saveSysGenitourinarySystemExamination(sysGenitourinarySystemExamination);
+
 			}
 		}
 
@@ -963,32 +952,25 @@ public class ANCServiceImpl implements ANCService {
 			if (null != sysObstetricExamination) {
 				sysObstetricExamination.setBenVisitID(benVisitID);
 				sysObstetricExamination.setVisitCode(benVisitCode);
-				Long result = ancNurseServiceImpl.saveSysObstetricExamination(sysObstetricExamination);
-				if (result != null && result > 0) {
-					obstetricExmnSuccessFlag = result;
-				} else {
-					obstetricExmnSuccessFlag = null; // Actual failure
-				}
+				obstetricExmnSuccessFlag = ancNurseServiceImpl.saveSysObstetricExamination(sysObstetricExamination);
+
 			}
 		}
 
-		Long exmnSuccessFlag = null;
-		
-		if ((genExmnSuccessFlag != null && genExmnSuccessFlag > 0)
-				&& (headToToeExmnSuccessFlag != null && headToToeExmnSuccessFlag > 0)
-				&& (cardiExmnSuccessFlag != null && cardiExmnSuccessFlag > 0)
-				&& (respiratoryExmnSuccessFlag != null && respiratoryExmnSuccessFlag > 0)
-				&& (centralNrvsExmnSuccessFlag != null && centralNrvsExmnSuccessFlag > 0)
-				&& (muskelstlExmnSuccessFlag != null && muskelstlExmnSuccessFlag > 0)
-				&& (genitorinaryExmnSuccessFlag != null && genitorinaryExmnSuccessFlag > 0)
-				&& (obstetricExmnSuccessFlag != null && obstetricExmnSuccessFlag > 0)) {
+		if ((null != genExmnSuccessFlag && genExmnSuccessFlag > 0)
+				&& (null != headToToeExmnSuccessFlag && headToToeExmnSuccessFlag > 0)
+				// && (null != gastroIntsExmnSuccessFlag &&
+				// gastroIntsExmnSuccessFlag > 0)
+				&& (null != cardiExmnSuccessFlag && cardiExmnSuccessFlag > 0)
+				&& (null != respiratoryExmnSuccessFlag && respiratoryExmnSuccessFlag > 0)
+				&& (null != centralNrvsExmnSuccessFlag && centralNrvsExmnSuccessFlag > 0)
+				&& (null != muskelstlExmnSuccessFlag && muskelstlExmnSuccessFlag > 0)
+				&& (null != genitorinaryExmnSuccessFlag && genitorinaryExmnSuccessFlag > 0)
+				&& (null != obstetricExmnSuccessFlag && obstetricExmnSuccessFlag > 0)) {
 			exmnSuccessFlag = genExmnSuccessFlag;
 		}
-		
 		return exmnSuccessFlag;
 	}
-
-	
 
 	// ----------Fetch ANC (Nurse) --------------------------------------
 
