@@ -810,25 +810,24 @@ public class ANCServiceImpl implements ANCService {
 		return vitalSuccessFlag;
 	}
 
+
 	/**
 	 * 
 	 * @param requestOBJ
 	 * @return success or failure flag for visitDetails data saving
-	 */
+	*/
 	public Long saveBenANCExaminationDetails(JsonObject examinationDetailsOBJ, Long benVisitID, Long benVisitCode)
 			throws Exception {
 
-		Long exmnSuccessFlag = null;
-
-		Long genExmnSuccessFlag = null;
-		Long headToToeExmnSuccessFlag = null;
-		// Long gastroIntsExmnSuccessFlag = null;
-		Long cardiExmnSuccessFlag = null;
-		Long respiratoryExmnSuccessFlag = null;
-		Long centralNrvsExmnSuccessFlag = null;
-		Long muskelstlExmnSuccessFlag = null;
-		Long genitorinaryExmnSuccessFlag = null;
-		Long obstetricExmnSuccessFlag = null;
+		// Initialize all flags with default success values
+		Long genExmnSuccessFlag = 1L;
+		Long headToToeExmnSuccessFlag = 1L;
+		Long cardiExmnSuccessFlag = 1L;
+		Long respiratoryExmnSuccessFlag = 1L;
+		Long centralNrvsExmnSuccessFlag = 1L;
+		Long muskelstlExmnSuccessFlag = 1L;
+		Long genitorinaryExmnSuccessFlag = 1L;
+		Long obstetricExmnSuccessFlag = 1L;
 
 		// Save General Examination Details
 		if (examinationDetailsOBJ != null && examinationDetailsOBJ.has("generalExamination")
@@ -838,11 +837,13 @@ public class ANCServiceImpl implements ANCService {
 			if (null != generalExamination) {
 				generalExamination.setBenVisitID(benVisitID);
 				generalExamination.setVisitCode(benVisitCode);
-				genExmnSuccessFlag = commonNurseServiceImpl.savePhyGeneralExamination(generalExamination);
-				// genExmnSuccessFlag =
-				// ancNurseServiceImpl.savePhyGeneralExamination(generalExamination);
+				Long result = commonNurseServiceImpl.savePhyGeneralExamination(generalExamination);
+				if (result != null && result > 0) {
+					genExmnSuccessFlag = result;
+				} else {
+					genExmnSuccessFlag = null; // Actual failure
+				}
 			}
-
 		}
 
 		// Save Head to toe Examination Details
@@ -853,16 +854,14 @@ public class ANCServiceImpl implements ANCService {
 			if (null != headToToeExamination) {
 				headToToeExamination.setBenVisitID(benVisitID);
 				headToToeExamination.setVisitCode(benVisitCode);
-				headToToeExmnSuccessFlag = commonNurseServiceImpl.savePhyHeadToToeExamination(headToToeExamination);
-				// headToToeExmnSuccessFlag =
-				// ancNurseServiceImpl.savePhyHeadToToeExamination(headToToeExamination);
+				Long result = commonNurseServiceImpl.savePhyHeadToToeExamination(headToToeExamination);
+				if (result != null && result > 0) {
+					headToToeExmnSuccessFlag = result;
+				} else {
+					headToToeExmnSuccessFlag = null; // Actual failure
+				}
 			}
-
 		}
-		// Save Gastro Intestinal Examination Details
-		/**
-		 * Removed from anc. Only applicable for generalOPD. date: 07-02-2018
-		 */
 
 		// Save Cardio Vascular Examination Details
 		if (examinationDetailsOBJ != null && examinationDetailsOBJ.has("cardioVascularExamination")
@@ -872,11 +871,13 @@ public class ANCServiceImpl implements ANCService {
 			if (null != cardiovascularExamination) {
 				cardiovascularExamination.setBenVisitID(benVisitID);
 				cardiovascularExamination.setVisitCode(benVisitCode);
-				cardiExmnSuccessFlag = commonNurseServiceImpl
+				Long result = commonNurseServiceImpl
 						.saveSysCardiovascularExamination(cardiovascularExamination);
-				// cardiExmnSuccessFlag =
-				// ancNurseServiceImpl.saveSysCardiovascularExamination(cardiovascularExamination);
-
+				if (result != null && result > 0) {
+					cardiExmnSuccessFlag = result;
+				} else {
+					cardiExmnSuccessFlag = null; // Actual failure
+				}
 			}
 		}
 
@@ -888,10 +889,13 @@ public class ANCServiceImpl implements ANCService {
 			if (null != sysRespiratoryExamination) {
 				sysRespiratoryExamination.setBenVisitID(benVisitID);
 				sysRespiratoryExamination.setVisitCode(benVisitCode);
-				respiratoryExmnSuccessFlag = commonNurseServiceImpl
+				Long result = commonNurseServiceImpl
 						.saveSysRespiratoryExamination(sysRespiratoryExamination);
-				// respiratoryExmnSuccessFlag = ancNurseServiceImpl
-				// .saveSysRespiratoryExamination(sysRespiratoryExamination);
+				if (result != null && result > 0) {
+					respiratoryExmnSuccessFlag = result;
+				} else {
+					respiratoryExmnSuccessFlag = null; // Actual failure
+				}
 			}
 		}
 
@@ -903,10 +907,13 @@ public class ANCServiceImpl implements ANCService {
 			if (null != sysCentralNervousExamination) {
 				sysCentralNervousExamination.setBenVisitID(benVisitID);
 				sysCentralNervousExamination.setVisitCode(benVisitCode);
-				centralNrvsExmnSuccessFlag = commonNurseServiceImpl
+				Long result = commonNurseServiceImpl
 						.saveSysCentralNervousExamination(sysCentralNervousExamination);
-				// centralNrvsExmnSuccessFlag = ancNurseServiceImpl
-				// .saveSysCentralNervousExamination(sysCentralNervousExamination);
+				if (result != null && result > 0) {
+					centralNrvsExmnSuccessFlag = result;
+				} else {
+					centralNrvsExmnSuccessFlag = null; // Actual failure
+				}
 			}
 		}
 
@@ -919,11 +926,13 @@ public class ANCServiceImpl implements ANCService {
 			if (null != sysMusculoskeletalSystemExamination) {
 				sysMusculoskeletalSystemExamination.setBenVisitID(benVisitID);
 				sysMusculoskeletalSystemExamination.setVisitCode(benVisitCode);
-				muskelstlExmnSuccessFlag = commonNurseServiceImpl
+				Long result = commonNurseServiceImpl
 						.saveSysMusculoskeletalSystemExamination(sysMusculoskeletalSystemExamination);
-				// muskelstlExmnSuccessFlag = ancNurseServiceImpl
-				// .saveSysMusculoskeletalSystemExamination(sysMusculoskeletalSystemExamination);
-
+				if (result != null && result > 0) {
+					muskelstlExmnSuccessFlag = result;
+				} else {
+					muskelstlExmnSuccessFlag = null; // Actual failure
+				}
 			}
 		}
 
@@ -936,11 +945,13 @@ public class ANCServiceImpl implements ANCService {
 			if (null != sysGenitourinarySystemExamination) {
 				sysGenitourinarySystemExamination.setBenVisitID(benVisitID);
 				sysGenitourinarySystemExamination.setVisitCode(benVisitCode);
-				genitorinaryExmnSuccessFlag = commonNurseServiceImpl
+				Long result = commonNurseServiceImpl
 						.saveSysGenitourinarySystemExamination(sysGenitourinarySystemExamination);
-				// genitorinaryExmnSuccessFlag = ancNurseServiceImpl
-				// .saveSysGenitourinarySystemExamination(sysGenitourinarySystemExamination);
-
+				if (result != null && result > 0) {
+					genitorinaryExmnSuccessFlag = result;
+				} else {
+					genitorinaryExmnSuccessFlag = null; // Actual failure
+				}
 			}
 		}
 
@@ -952,25 +963,192 @@ public class ANCServiceImpl implements ANCService {
 			if (null != sysObstetricExamination) {
 				sysObstetricExamination.setBenVisitID(benVisitID);
 				sysObstetricExamination.setVisitCode(benVisitCode);
-				obstetricExmnSuccessFlag = ancNurseServiceImpl.saveSysObstetricExamination(sysObstetricExamination);
-
+				Long result = ancNurseServiceImpl.saveSysObstetricExamination(sysObstetricExamination);
+				if (result != null && result > 0) {
+					obstetricExmnSuccessFlag = result;
+				} else {
+					obstetricExmnSuccessFlag = null; // Actual failure
+				}
 			}
 		}
 
-		if ((null != genExmnSuccessFlag && genExmnSuccessFlag > 0)
-				&& (null != headToToeExmnSuccessFlag && headToToeExmnSuccessFlag > 0)
-				// && (null != gastroIntsExmnSuccessFlag &&
-				// gastroIntsExmnSuccessFlag > 0)
-				&& (null != cardiExmnSuccessFlag && cardiExmnSuccessFlag > 0)
-				&& (null != respiratoryExmnSuccessFlag && respiratoryExmnSuccessFlag > 0)
-				&& (null != centralNrvsExmnSuccessFlag && centralNrvsExmnSuccessFlag > 0)
-				&& (null != muskelstlExmnSuccessFlag && muskelstlExmnSuccessFlag > 0)
-				&& (null != genitorinaryExmnSuccessFlag && genitorinaryExmnSuccessFlag > 0)
-				&& (null != obstetricExmnSuccessFlag && obstetricExmnSuccessFlag > 0)) {
+		Long exmnSuccessFlag = null;
+		
+		if ((genExmnSuccessFlag != null && genExmnSuccessFlag > 0)
+				&& (headToToeExmnSuccessFlag != null && headToToeExmnSuccessFlag > 0)
+				&& (cardiExmnSuccessFlag != null && cardiExmnSuccessFlag > 0)
+				&& (respiratoryExmnSuccessFlag != null && respiratoryExmnSuccessFlag > 0)
+				&& (centralNrvsExmnSuccessFlag != null && centralNrvsExmnSuccessFlag > 0)
+				&& (muskelstlExmnSuccessFlag != null && muskelstlExmnSuccessFlag > 0)
+				&& (genitorinaryExmnSuccessFlag != null && genitorinaryExmnSuccessFlag > 0)
+				&& (obstetricExmnSuccessFlag != null && obstetricExmnSuccessFlag > 0)) {
 			exmnSuccessFlag = genExmnSuccessFlag;
 		}
+		
 		return exmnSuccessFlag;
 	}
+
+	// /**
+	//  * 
+	//  * @param requestOBJ
+	//  * @return success or failure flag for visitDetails data saving
+	//  */
+	// public Long saveBenANCExaminationDetails(JsonObject examinationDetailsOBJ, Long benVisitID, Long benVisitCode)
+	// 		throws Exception {
+
+	// 	Long exmnSuccessFlag = null;
+
+	// 	Long genExmnSuccessFlag = null;
+	// 	Long headToToeExmnSuccessFlag = null;
+	// 	// Long gastroIntsExmnSuccessFlag = null;
+	// 	Long cardiExmnSuccessFlag = null;
+	// 	Long respiratoryExmnSuccessFlag = null;
+	// 	Long centralNrvsExmnSuccessFlag = null;
+	// 	Long muskelstlExmnSuccessFlag = null;
+	// 	Long genitorinaryExmnSuccessFlag = null;
+	// 	Long obstetricExmnSuccessFlag = null;
+
+	// 	// Save General Examination Details
+	// 	if (examinationDetailsOBJ != null && examinationDetailsOBJ.has("generalExamination")
+	// 			&& !examinationDetailsOBJ.get("generalExamination").isJsonNull()) {
+	// 		PhyGeneralExamination generalExamination = InputMapper.gson()
+	// 				.fromJson(examinationDetailsOBJ.get("generalExamination"), PhyGeneralExamination.class);
+	// 		if (null != generalExamination) {
+	// 			generalExamination.setBenVisitID(benVisitID);
+	// 			generalExamination.setVisitCode(benVisitCode);
+	// 			genExmnSuccessFlag = commonNurseServiceImpl.savePhyGeneralExamination(generalExamination);
+	// 			// genExmnSuccessFlag =
+	// 			// ancNurseServiceImpl.savePhyGeneralExamination(generalExamination);
+	// 		}
+
+	// 	}
+
+	// 	// Save Head to toe Examination Details
+	// 	if (examinationDetailsOBJ != null && examinationDetailsOBJ.has("headToToeExamination")
+	// 			&& !examinationDetailsOBJ.get("headToToeExamination").isJsonNull()) {
+	// 		PhyHeadToToeExamination headToToeExamination = InputMapper.gson()
+	// 				.fromJson(examinationDetailsOBJ.get("headToToeExamination"), PhyHeadToToeExamination.class);
+	// 		if (null != headToToeExamination) {
+	// 			headToToeExamination.setBenVisitID(benVisitID);
+	// 			headToToeExamination.setVisitCode(benVisitCode);
+	// 			headToToeExmnSuccessFlag = commonNurseServiceImpl.savePhyHeadToToeExamination(headToToeExamination);
+	// 			// headToToeExmnSuccessFlag =
+	// 			// ancNurseServiceImpl.savePhyHeadToToeExamination(headToToeExamination);
+	// 		}
+
+	// 	}
+	// 	// Save Gastro Intestinal Examination Details
+	// 	/**
+	// 	 * Removed from anc. Only applicable for generalOPD. date: 07-02-2018
+	// 	 */
+
+	// 	// Save Cardio Vascular Examination Details
+	// 	if (examinationDetailsOBJ != null && examinationDetailsOBJ.has("cardioVascularExamination")
+	// 			&& !examinationDetailsOBJ.get("cardioVascularExamination").isJsonNull()) {
+	// 		SysCardiovascularExamination cardiovascularExamination = InputMapper.gson().fromJson(
+	// 				examinationDetailsOBJ.get("cardioVascularExamination"), SysCardiovascularExamination.class);
+	// 		if (null != cardiovascularExamination) {
+	// 			cardiovascularExamination.setBenVisitID(benVisitID);
+	// 			cardiovascularExamination.setVisitCode(benVisitCode);
+	// 			cardiExmnSuccessFlag = commonNurseServiceImpl
+	// 					.saveSysCardiovascularExamination(cardiovascularExamination);
+	// 			// cardiExmnSuccessFlag =
+	// 			// ancNurseServiceImpl.saveSysCardiovascularExamination(cardiovascularExamination);
+
+	// 		}
+	// 	}
+
+	// 	// Save Respiratory Examination Details
+	// 	if (examinationDetailsOBJ != null && examinationDetailsOBJ.has("respiratorySystemExamination")
+	// 			&& !examinationDetailsOBJ.get("respiratorySystemExamination").isJsonNull()) {
+	// 		SysRespiratoryExamination sysRespiratoryExamination = InputMapper.gson().fromJson(
+	// 				examinationDetailsOBJ.get("respiratorySystemExamination"), SysRespiratoryExamination.class);
+	// 		if (null != sysRespiratoryExamination) {
+	// 			sysRespiratoryExamination.setBenVisitID(benVisitID);
+	// 			sysRespiratoryExamination.setVisitCode(benVisitCode);
+	// 			respiratoryExmnSuccessFlag = commonNurseServiceImpl
+	// 					.saveSysRespiratoryExamination(sysRespiratoryExamination);
+	// 			// respiratoryExmnSuccessFlag = ancNurseServiceImpl
+	// 			// .saveSysRespiratoryExamination(sysRespiratoryExamination);
+	// 		}
+	// 	}
+
+	// 	// Save Central Nervous Examination Details
+	// 	if (examinationDetailsOBJ != null && examinationDetailsOBJ.has("centralNervousSystemExamination")
+	// 			&& !examinationDetailsOBJ.get("centralNervousSystemExamination").isJsonNull()) {
+	// 		SysCentralNervousExamination sysCentralNervousExamination = InputMapper.gson().fromJson(
+	// 				examinationDetailsOBJ.get("centralNervousSystemExamination"), SysCentralNervousExamination.class);
+	// 		if (null != sysCentralNervousExamination) {
+	// 			sysCentralNervousExamination.setBenVisitID(benVisitID);
+	// 			sysCentralNervousExamination.setVisitCode(benVisitCode);
+	// 			centralNrvsExmnSuccessFlag = commonNurseServiceImpl
+	// 					.saveSysCentralNervousExamination(sysCentralNervousExamination);
+	// 			// centralNrvsExmnSuccessFlag = ancNurseServiceImpl
+	// 			// .saveSysCentralNervousExamination(sysCentralNervousExamination);
+	// 		}
+	// 	}
+
+	// 	// Save Muskeloskeletal Examination Details
+	// 	if (examinationDetailsOBJ != null && examinationDetailsOBJ.has("musculoskeletalSystemExamination")
+	// 			&& !examinationDetailsOBJ.get("musculoskeletalSystemExamination").isJsonNull()) {
+	// 		SysMusculoskeletalSystemExamination sysMusculoskeletalSystemExamination = InputMapper.gson().fromJson(
+	// 				examinationDetailsOBJ.get("musculoskeletalSystemExamination"),
+	// 				SysMusculoskeletalSystemExamination.class);
+	// 		if (null != sysMusculoskeletalSystemExamination) {
+	// 			sysMusculoskeletalSystemExamination.setBenVisitID(benVisitID);
+	// 			sysMusculoskeletalSystemExamination.setVisitCode(benVisitCode);
+	// 			muskelstlExmnSuccessFlag = commonNurseServiceImpl
+	// 					.saveSysMusculoskeletalSystemExamination(sysMusculoskeletalSystemExamination);
+	// 			// muskelstlExmnSuccessFlag = ancNurseServiceImpl
+	// 			// .saveSysMusculoskeletalSystemExamination(sysMusculoskeletalSystemExamination);
+
+	// 		}
+	// 	}
+
+	// 	// Save Genito Urinary Examination Details
+	// 	if (examinationDetailsOBJ != null && examinationDetailsOBJ.has("genitoUrinarySystemExamination")
+	// 			&& !examinationDetailsOBJ.get("genitoUrinarySystemExamination").isJsonNull()) {
+	// 		SysGenitourinarySystemExamination sysGenitourinarySystemExamination = InputMapper.gson().fromJson(
+	// 				examinationDetailsOBJ.get("genitoUrinarySystemExamination"),
+	// 				SysGenitourinarySystemExamination.class);
+	// 		if (null != sysGenitourinarySystemExamination) {
+	// 			sysGenitourinarySystemExamination.setBenVisitID(benVisitID);
+	// 			sysGenitourinarySystemExamination.setVisitCode(benVisitCode);
+	// 			genitorinaryExmnSuccessFlag = commonNurseServiceImpl
+	// 					.saveSysGenitourinarySystemExamination(sysGenitourinarySystemExamination);
+	// 			// genitorinaryExmnSuccessFlag = ancNurseServiceImpl
+	// 			// .saveSysGenitourinarySystemExamination(sysGenitourinarySystemExamination);
+
+	// 		}
+	// 	}
+
+	// 	// Save Obstetric Examination Details
+	// 	if (examinationDetailsOBJ != null && examinationDetailsOBJ.has("obstetricExamination")
+	// 			&& !examinationDetailsOBJ.get("obstetricExamination").isJsonNull()) {
+	// 		SysObstetricExamination sysObstetricExamination = InputMapper.gson()
+	// 				.fromJson(examinationDetailsOBJ.get("obstetricExamination"), SysObstetricExamination.class);
+	// 		if (null != sysObstetricExamination) {
+	// 			sysObstetricExamination.setBenVisitID(benVisitID);
+	// 			sysObstetricExamination.setVisitCode(benVisitCode);
+	// 			obstetricExmnSuccessFlag = ancNurseServiceImpl.saveSysObstetricExamination(sysObstetricExamination);
+
+	// 		}
+	// 	}
+
+	// 	if ((null != genExmnSuccessFlag && genExmnSuccessFlag > 0)
+	// 			&& (null != headToToeExmnSuccessFlag && headToToeExmnSuccessFlag > 0)
+	// 			// && (null != gastroIntsExmnSuccessFlag &&
+	// 			// gastroIntsExmnSuccessFlag > 0)
+	// 			&& (null != cardiExmnSuccessFlag && cardiExmnSuccessFlag > 0)
+	// 			&& (null != respiratoryExmnSuccessFlag && respiratoryExmnSuccessFlag > 0)
+	// 			&& (null != centralNrvsExmnSuccessFlag && centralNrvsExmnSuccessFlag > 0)
+	// 			&& (null != muskelstlExmnSuccessFlag && muskelstlExmnSuccessFlag > 0)
+	// 			&& (null != genitorinaryExmnSuccessFlag && genitorinaryExmnSuccessFlag > 0)
+	// 			&& (null != obstetricExmnSuccessFlag && obstetricExmnSuccessFlag > 0)) {
+	// 		exmnSuccessFlag = genExmnSuccessFlag;
+	// 	}
+	// 	return exmnSuccessFlag;
+	// }
 
 	// ----------Fetch ANC (Nurse) --------------------------------------
 
