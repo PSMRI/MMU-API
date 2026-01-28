@@ -197,15 +197,22 @@ public class ANCServiceImpl implements ANCService {
 				// call method to save ANC data
 				ancSaveSuccessFlag = saveBenANCDetails(requestOBJ.getAsJsonObject("ancDetails"), benVisitID,
 						benVisitCode);
+            	System.out.println("ancSaveSuccessFlag: " + ancSaveSuccessFlag);
+
 				// call method to save History data
 				historySaveSuccessFlag = saveBenANCHistoryDetails(requestOBJ.getAsJsonObject("historyDetails"),
 						benVisitID, benVisitCode);
+				System.out.println("historySaveSuccessFlag: " + historySaveSuccessFlag);
+
 				// call method to save Vital data
 				vitalSaveSuccessFlag = saveBenANCVitalDetails(requestOBJ.getAsJsonObject("vitalDetails"), benVisitID,
 						benVisitCode);
+				System.out.println("vitalSaveSuccessFlag: " + vitalSaveSuccessFlag);
+
 				// call method to save Examination data
 				examtnSaveSuccessFlag = saveBenANCExaminationDetails(requestOBJ.getAsJsonObject("examinationDetails"),
 						benVisitID, benVisitCode);
+				System.out.println("examtnSaveSuccessFlag: " + examtnSaveSuccessFlag);
 
 			} else {
 				// Error in visit details saving or it is null
@@ -227,10 +234,17 @@ public class ANCServiceImpl implements ANCService {
 						requestOBJ.getAsJsonObject(VISITDETAILS).getAsJsonObject("investigation"), tmpOBJ, benVisitID,
 						benFlowID, benVisitCode, nurseUtilityClass.getVanID());
 
+						System.out.println("One or more save operations failed - " +
+                        "ANC: " + ancSaveSuccessFlag +
+                        ", History: " + historySaveSuccessFlag +
+                        ", Vital: " + vitalSaveSuccessFlag +
+                        ", Examination: " + examtnSaveSuccessFlag);
+
 				// End of update ben status flow new logic
 
 			}
 		} else {
+
 			// Can't create BenVisitID
 		}
 		return saveSuccessFlag;
@@ -546,230 +560,479 @@ public class ANCServiceImpl implements ANCService {
 	 * @throws ParseException
 	 */
 	public Long saveBenANCDetails(JsonObject ancDetailsOBJ, Long benVisitID, Long benVisitCode) throws Exception {
-		Long ancSuccessFlag = null;
-		Long ancCareSuccessFlag = null;
-		Long ancImunizationSuccessFlag = null;
-		if (ancDetailsOBJ != null && ancDetailsOBJ.has("ancObstetricDetails")
-				&& !ancDetailsOBJ.get("ancObstetricDetails").isJsonNull()) {
-			// Save Ben ANC Care Details
-			ANCCareDetails ancCareDetailsOBJ = InputMapper.gson().fromJson(ancDetailsOBJ.get("ancObstetricDetails"),
-					ANCCareDetails.class);
-			if (null != ancCareDetailsOBJ) {
-				ancCareDetailsOBJ.setBenVisitID(benVisitID);
-				ancCareDetailsOBJ.setVisitCode(benVisitCode);
-				ancCareSuccessFlag = ancNurseServiceImpl.saveBenAncCareDetails(ancCareDetailsOBJ);
-			}
-		}
-		if (ancDetailsOBJ != null && ancDetailsOBJ.has("ancImmunization")
-				&& !ancDetailsOBJ.get("ancImmunization").isJsonNull()) {
-			WrapperAncImmunization wrapperAncImmunizationOBJ = InputMapper.gson()
-					.fromJson(ancDetailsOBJ.get("ancImmunization"), WrapperAncImmunization.class);
-			if (null != wrapperAncImmunizationOBJ) {
-				wrapperAncImmunizationOBJ.setBenVisitID(benVisitID);
-				wrapperAncImmunizationOBJ.setVisitCode(benVisitCode);
-				ancImunizationSuccessFlag = ancNurseServiceImpl.saveAncImmunizationDetails(wrapperAncImmunizationOBJ);
-			}
+    // Initialize with default success values
+    Long ancCareSuccessFlag = 1L;
+    Long ancImmunizationSuccessFlag = 1L;
+    
+    if (ancDetailsOBJ != null && ancDetailsOBJ.has("ancObstetricDetails")
+            && !ancDetailsOBJ.get("ancObstetricDetails").isJsonNull()) {
+        // Save Ben ANC Care Details
+        ANCCareDetails ancCareDetailsOBJ = InputMapper.gson().fromJson(ancDetailsOBJ.get("ancObstetricDetails"),
+                ANCCareDetails.class);
+        if (null != ancCareDetailsOBJ) {
+            ancCareDetailsOBJ.setBenVisitID(benVisitID);
+            ancCareDetailsOBJ.setVisitCode(benVisitCode);
+            Long result = ancNurseServiceImpl.saveBenAncCareDetails(ancCareDetailsOBJ);
+            if (result != null && result > 0) {
+                ancCareSuccessFlag = result;
+            } else {
+                ancCareSuccessFlag = null; // Actual failure
+            }
+        }
+    }
+    
+    if (ancDetailsOBJ != null && ancDetailsOBJ.has("ancImmunization")
+            && !ancDetailsOBJ.get("ancImmunization").isJsonNull()) {
+        WrapperAncImmunization wrapperAncImmunizationOBJ = InputMapper.gson()
+                .fromJson(ancDetailsOBJ.get("ancImmunization"), WrapperAncImmunization.class);
+        if (null != wrapperAncImmunizationOBJ) {
+            wrapperAncImmunizationOBJ.setBenVisitID(benVisitID);
+            wrapperAncImmunizationOBJ.setVisitCode(benVisitCode);
+            Long result = ancNurseServiceImpl.saveAncImmunizationDetails(wrapperAncImmunizationOBJ);
+            if (result != null && result > 0) {
+                ancImmunizationSuccessFlag = result;
+            } else {
+                ancImmunizationSuccessFlag = null; // Actual failure
+            }
+        }
+    }
+    
+    Long ancSuccessFlag = null;
+    if ((ancCareSuccessFlag != null && ancCareSuccessFlag > 0)
+            && (ancImmunizationSuccessFlag != null && ancImmunizationSuccessFlag > 0)) {
+        ancSuccessFlag = ancCareSuccessFlag;
+    }
 
-		}
-		if ((null != ancCareSuccessFlag && ancCareSuccessFlag > 0)
-				&& (null != ancImunizationSuccessFlag && ancImunizationSuccessFlag > 0)) {
-			ancSuccessFlag = ancCareSuccessFlag;
-		}
+    return ancSuccessFlag;
+}
+	// public Long saveBenANCDetails(JsonObject ancDetailsOBJ, Long benVisitID, Long benVisitCode) throws Exception {
+	// 	Long ancSuccessFlag = null;
+	// 	Long ancCareSuccessFlag = null;
+	// 	Long ancImunizationSuccessFlag = null;
+	// 	if (ancDetailsOBJ != null && ancDetailsOBJ.has("ancObstetricDetails")
+	// 			&& !ancDetailsOBJ.get("ancObstetricDetails").isJsonNull()) {
+	// 		// Save Ben ANC Care Details
+	// 		ANCCareDetails ancCareDetailsOBJ = InputMapper.gson().fromJson(ancDetailsOBJ.get("ancObstetricDetails"),
+	// 				ANCCareDetails.class);
+	// 		if (null != ancCareDetailsOBJ) {
+	// 			ancCareDetailsOBJ.setBenVisitID(benVisitID);
+	// 			ancCareDetailsOBJ.setVisitCode(benVisitCode);
+	// 			ancCareSuccessFlag = ancNurseServiceImpl.saveBenAncCareDetails(ancCareDetailsOBJ);
+	// 		}
+	// 	}
+	// 	if (ancDetailsOBJ != null && ancDetailsOBJ.has("ancImmunization")
+	// 			&& !ancDetailsOBJ.get("ancImmunization").isJsonNull()) {
+	// 		WrapperAncImmunization wrapperAncImmunizationOBJ = InputMapper.gson()
+	// 				.fromJson(ancDetailsOBJ.get("ancImmunization"), WrapperAncImmunization.class);
+	// 		if (null != wrapperAncImmunizationOBJ) {
+	// 			wrapperAncImmunizationOBJ.setBenVisitID(benVisitID);
+	// 			wrapperAncImmunizationOBJ.setVisitCode(benVisitCode);
+	// 			ancImunizationSuccessFlag = ancNurseServiceImpl.saveAncImmunizationDetails(wrapperAncImmunizationOBJ);
+	// 		}
 
-		return ancSuccessFlag;
-	}
+	// 	}
+	// 	if ((null != ancCareSuccessFlag && ancCareSuccessFlag > 0)
+	// 			&& (null != ancImunizationSuccessFlag && ancImunizationSuccessFlag > 0)) {
+	// 		ancSuccessFlag = ancCareSuccessFlag;
+	// 	}
+
+	// 	return ancSuccessFlag;
+	// }
 
 	/**
 	 * 
 	 * @param requestOBJ
 	 * @return success or failure flag for history data saving
 	 */
+	// public Long saveBenANCHistoryDetails(JsonObject ancHistoryOBJ, Long benVisitID, Long benVisitCode)
+	// 		throws Exception {
+	// 	Long pastHistorySuccessFlag = null;
+	// 	Long comrbidSuccessFlag = null;
+	// 	Long medicationSuccessFlag = null;
+	// 	int personalHistorySuccessFlag = 0;
+	// 	Long allergyHistorySuccessFlag = null;
+	// 	Long familyHistorySuccessFlag = null;
+	// 	int menstrualHistorySuccessFlag = 0;
+	// 	Long obstetricSuccessFlag = null;
+	// 	Long immunizationSuccessFlag = null;
+	// 	Long childVaccineSuccessFlag = null;
+
+	// 	// Save Past History
+	// 	if (ancHistoryOBJ != null && ancHistoryOBJ.has("pastHistory")
+	// 			&& !ancHistoryOBJ.get("pastHistory").isJsonNull()) {
+	// 		BenMedHistory benMedHistory = InputMapper.gson().fromJson(ancHistoryOBJ.get("pastHistory"),
+	// 				BenMedHistory.class);
+	// 		if (null != benMedHistory) {
+	// 			benMedHistory.setBenVisitID(benVisitID);
+	// 			benMedHistory.setVisitCode(benVisitCode);
+	// 			pastHistorySuccessFlag = commonNurseServiceImpl.saveBenPastHistory(benMedHistory);
+	// 		}
+
+	// 	}
+
+	// 	// Save Comorbidity/concurrent Conditions
+	// 	if (ancHistoryOBJ != null && ancHistoryOBJ.has("comorbidConditions")
+	// 			&& !ancHistoryOBJ.get("comorbidConditions").isJsonNull()) {
+	// 		WrapperComorbidCondDetails wrapperComorbidCondDetails = InputMapper.gson()
+	// 				.fromJson(ancHistoryOBJ.get("comorbidConditions"), WrapperComorbidCondDetails.class);
+	// 		if (null != wrapperComorbidCondDetails) {
+	// 			wrapperComorbidCondDetails.setBenVisitID(benVisitID);
+	// 			wrapperComorbidCondDetails.setVisitCode(benVisitCode);
+	// 			comrbidSuccessFlag = commonNurseServiceImpl.saveBenComorbidConditions(wrapperComorbidCondDetails);
+	// 		}
+	// 	}
+
+	// 	// Save Medication History
+	// 	if (ancHistoryOBJ != null && ancHistoryOBJ.has("medicationHistory")
+	// 			&& !ancHistoryOBJ.get("medicationHistory").isJsonNull()) {
+	// 		WrapperMedicationHistory wrapperMedicationHistory = InputMapper.gson()
+	// 				.fromJson(ancHistoryOBJ.get("medicationHistory"), WrapperMedicationHistory.class);
+	// 		if (null != wrapperMedicationHistory) {
+	// 			wrapperMedicationHistory.setBenVisitID(benVisitID);
+	// 			wrapperMedicationHistory.setVisitCode(benVisitCode);
+	// 			medicationSuccessFlag = commonNurseServiceImpl.saveBenMedicationHistory(wrapperMedicationHistory);
+
+	// 			// medicationSuccessFlag =
+	// 			// ancNurseServiceImpl.saveBenANCMedicationHistory(wrapperMedicationHistory);
+	// 		}
+
+	// 	}
+	// 	// Save Personal History
+	// 	if (ancHistoryOBJ != null && ancHistoryOBJ.has("personalHistory")
+	// 			&& !ancHistoryOBJ.get("personalHistory").isJsonNull()) {
+	// 		// Save Ben Personal Habits..
+	// 		BenPersonalHabit personalHabit = InputMapper.gson().fromJson(ancHistoryOBJ.get("personalHistory"),
+	// 				BenPersonalHabit.class);
+	// 		if (null != personalHabit) {
+	// 			personalHabit.setBenVisitID(benVisitID);
+	// 			personalHabit.setVisitCode(benVisitCode);
+
+	// 			personalHistorySuccessFlag = commonNurseServiceImpl.savePersonalHistory(personalHabit);
+	// 			// personalHistorySuccessFlag =
+	// 			// ancNurseServiceImpl.saveANCPersonalHistory(personalHabit);
+	// 		}
+
+	// 		BenAllergyHistory benAllergyHistory = InputMapper.gson().fromJson(ancHistoryOBJ.get("personalHistory"),
+	// 				BenAllergyHistory.class);
+	// 		if (null != benAllergyHistory) {
+	// 			benAllergyHistory.setBenVisitID(benVisitID);
+	// 			benAllergyHistory.setVisitCode(benVisitCode);
+
+	// 			allergyHistorySuccessFlag = commonNurseServiceImpl.saveAllergyHistory(benAllergyHistory);
+	// 			// allergyHistorySuccessFlag =
+	// 			// ancNurseServiceImpl.saveANCAllergyHistory(benAllergyHistory);
+	// 		}
+
+	// 	}
+
+	// 	// Save Family History
+	// 	if (ancHistoryOBJ != null && ancHistoryOBJ.has("familyHistory")
+	// 			&& !ancHistoryOBJ.get("familyHistory").isJsonNull()) {
+	// 		BenFamilyHistory benFamilyHistory = InputMapper.gson().fromJson(ancHistoryOBJ.get("familyHistory"),
+	// 				BenFamilyHistory.class);
+	// 		if (null != benFamilyHistory) {
+	// 			benFamilyHistory.setBenVisitID(benVisitID);
+	// 			benFamilyHistory.setVisitCode(benVisitCode);
+	// 			familyHistorySuccessFlag = commonNurseServiceImpl.saveBenFamilyHistory(benFamilyHistory);
+	// 			// familyHistorySuccessFlag =
+	// 			// ancNurseServiceImpl.saveANCBenFamilyHistory(benFamilyHistory);
+	// 		}
+	// 	}
+
+	// 	// Save Menstrual History
+	// 	if (ancHistoryOBJ != null && ancHistoryOBJ.has("menstrualHistory")
+	// 			&& !ancHistoryOBJ.get("menstrualHistory").isJsonNull()) {
+	// 		BenMenstrualDetails menstrualDetails = InputMapper.gson().fromJson(ancHistoryOBJ.get("menstrualHistory"),
+	// 				BenMenstrualDetails.class);
+	// 		if (null != menstrualDetails) {
+	// 			menstrualDetails.setBenVisitID(benVisitID);
+	// 			menstrualDetails.setVisitCode(benVisitCode);
+	// 			menstrualHistorySuccessFlag = commonNurseServiceImpl.saveBenMenstrualHistory(menstrualDetails);
+	// 			// menstrualHistorySuccessFlag =
+	// 			// ancNurseServiceImpl.saveBenANCMenstrualHistory(menstrualDetails);
+	// 		}
+
+	// 	}
+
+	// 	// Save Past Obstetric History
+	// 	if (ancHistoryOBJ != null && ancHistoryOBJ.has("femaleObstetricHistory")
+	// 			&& !ancHistoryOBJ.get("femaleObstetricHistory").isJsonNull()) {
+	// 		WrapperFemaleObstetricHistory wrapperFemaleObstetricHistory = InputMapper.gson()
+	// 				.fromJson(ancHistoryOBJ.get("femaleObstetricHistory"), WrapperFemaleObstetricHistory.class);
+
+	// 		if (wrapperFemaleObstetricHistory != null) {
+	// 			wrapperFemaleObstetricHistory.setBenVisitID(benVisitID);
+	// 			wrapperFemaleObstetricHistory.setVisitCode(benVisitCode);
+	// 			obstetricSuccessFlag = commonNurseServiceImpl.saveFemaleObstetricHistory(wrapperFemaleObstetricHistory);
+	// 			// obstetricSuccessFlag =
+	// 			// ancNurseServiceImpl.saveFemaleObstetricHistory(wrapperFemaleObstetricHistory);
+	// 		} else {
+	// 			// Female Obstetric Details not provided.
+	// 		}
+
+	// 	} else {
+	// 		obstetricSuccessFlag = new Long(1);
+	// 	}
+
+	// 	/** For Female above 12 and below 16 years.. **/
+	// 	// Save Immunization History
+	// 	if (ancHistoryOBJ != null && ancHistoryOBJ.has("immunizationHistory")
+	// 			&& !ancHistoryOBJ.get("immunizationHistory").isJsonNull()) {
+	// 		WrapperImmunizationHistory wrapperImmunizationHistory = InputMapper.gson()
+	// 				.fromJson(ancHistoryOBJ.get("immunizationHistory"), WrapperImmunizationHistory.class);
+	// 		if (null != wrapperImmunizationHistory) {
+	// 			wrapperImmunizationHistory.setBenVisitID(benVisitID);
+	// 			wrapperImmunizationHistory.setVisitCode(benVisitCode);
+	// 			immunizationSuccessFlag = commonNurseServiceImpl.saveImmunizationHistory(wrapperImmunizationHistory);
+	// 			// immunizationSuccessFlag =
+	// 			// ancNurseServiceImpl.saveANCImmunizationHistory(wrapperImmunizationHistory);
+	// 		} else {
+
+	// 			// ImmunizationList Data not Available
+	// 		}
+
+	// 	} else {
+	// 		immunizationSuccessFlag = new Long(1);
+	// 	}
+
+	// 	// Save Other/Optional Vaccines History
+	// 	if (ancHistoryOBJ != null && ancHistoryOBJ.has("childVaccineDetails")
+	// 			&& !ancHistoryOBJ.get("childVaccineDetails").isJsonNull()) {
+	// 		WrapperChildOptionalVaccineDetail wrapperChildVaccineDetail = InputMapper.gson()
+	// 				.fromJson(ancHistoryOBJ.get("childVaccineDetails"), WrapperChildOptionalVaccineDetail.class);
+	// 		if (null != wrapperChildVaccineDetail) {
+	// 			wrapperChildVaccineDetail.setBenVisitID(benVisitID);
+	// 			wrapperChildVaccineDetail.setVisitCode(benVisitCode);
+	// 			childVaccineSuccessFlag = commonNurseServiceImpl
+	// 					.saveChildOptionalVaccineDetail(wrapperChildVaccineDetail);
+	// 			// childVaccineSuccessFlag =
+	// 			// ancNurseServiceImpl.saveChildOptionalVaccineDetail(wrapperChildVaccineDetail);
+	// 		} else {
+	// 			// Child Optional Vaccine Detail not provided.
+	// 		}
+
+	// 	} else {
+	// 		childVaccineSuccessFlag = new Long(1);
+	// 	}
+
+	// 	Long historySuccessFlag = null;
+
+	// 	if ((null != pastHistorySuccessFlag && pastHistorySuccessFlag > 0)
+	// 			&& (null != comrbidSuccessFlag && comrbidSuccessFlag > 0)
+	// 			&& (null != medicationSuccessFlag && medicationSuccessFlag > 0)
+	// 			&& (null != allergyHistorySuccessFlag && allergyHistorySuccessFlag > 0)
+	// 			&& (null != familyHistorySuccessFlag && familyHistorySuccessFlag > 0)
+	// 			&& (null != obstetricSuccessFlag && obstetricSuccessFlag > 0)
+	// 			&& (null != immunizationSuccessFlag && immunizationSuccessFlag > 0)
+	// 			&& (null != childVaccineSuccessFlag && childVaccineSuccessFlag > 0) && personalHistorySuccessFlag > 0
+	// 			&& menstrualHistorySuccessFlag > 0) {
+	// 		historySuccessFlag = pastHistorySuccessFlag;
+	// 	}
+	// 	return historySuccessFlag;
+	// }
+
 	public Long saveBenANCHistoryDetails(JsonObject ancHistoryOBJ, Long benVisitID, Long benVisitCode)
-			throws Exception {
-		Long pastHistorySuccessFlag = null;
-		Long comrbidSuccessFlag = null;
-		Long medicationSuccessFlag = null;
-		int personalHistorySuccessFlag = 0;
-		Long allergyHistorySuccessFlag = null;
-		Long familyHistorySuccessFlag = null;
-		int menstrualHistorySuccessFlag = 0;
-		Long obstetricSuccessFlag = null;
-		Long immunizationSuccessFlag = null;
-		Long childVaccineSuccessFlag = null;
+        throws Exception {
+    
+    // Initialize all with default success values
+    Long pastHistorySuccessFlag = 1L;
+    Long comrbidSuccessFlag = 1L;
+    Long medicationSuccessFlag = 1L;
+    Integer personalHistorySuccessFlag = 1;
+    Long allergyHistorySuccessFlag = 1L;
+    Long familyHistorySuccessFlag = 1L;
+    Integer menstrualHistorySuccessFlag = 1;
+    Long obstetricSuccessFlag = 1L;
+    Long immunizationSuccessFlag = 1L;
+    Long childVaccineSuccessFlag = 1L;
 
-		// Save Past History
-		if (ancHistoryOBJ != null && ancHistoryOBJ.has("pastHistory")
-				&& !ancHistoryOBJ.get("pastHistory").isJsonNull()) {
-			BenMedHistory benMedHistory = InputMapper.gson().fromJson(ancHistoryOBJ.get("pastHistory"),
-					BenMedHistory.class);
-			if (null != benMedHistory) {
-				benMedHistory.setBenVisitID(benVisitID);
-				benMedHistory.setVisitCode(benVisitCode);
-				pastHistorySuccessFlag = commonNurseServiceImpl.saveBenPastHistory(benMedHistory);
-			}
+    // Save Past History
+    if (ancHistoryOBJ != null && ancHistoryOBJ.has("pastHistory")
+            && !ancHistoryOBJ.get("pastHistory").isJsonNull()) {
+        BenMedHistory benMedHistory = InputMapper.gson().fromJson(ancHistoryOBJ.get("pastHistory"),
+                BenMedHistory.class);
+        if (null != benMedHistory) {
+            benMedHistory.setBenVisitID(benVisitID);
+            benMedHistory.setVisitCode(benVisitCode);
+            Long result = commonNurseServiceImpl.saveBenPastHistory(benMedHistory);
+            if (result != null && result > 0) {
+                pastHistorySuccessFlag = result;
+            } else {
+                pastHistorySuccessFlag = null;
+            }
+        }
+    }
 
-		}
+    // Save Comorbidity/concurrent Conditions
+    if (ancHistoryOBJ != null && ancHistoryOBJ.has("comorbidConditions")
+            && !ancHistoryOBJ.get("comorbidConditions").isJsonNull()) {
+        WrapperComorbidCondDetails wrapperComorbidCondDetails = InputMapper.gson()
+                .fromJson(ancHistoryOBJ.get("comorbidConditions"), WrapperComorbidCondDetails.class);
+        if (null != wrapperComorbidCondDetails) {
+            wrapperComorbidCondDetails.setBenVisitID(benVisitID);
+            wrapperComorbidCondDetails.setVisitCode(benVisitCode);
+            Long result = commonNurseServiceImpl.saveBenComorbidConditions(wrapperComorbidCondDetails);
+            if (result != null && result > 0) {
+                comrbidSuccessFlag = result;
+            } else {
+                comrbidSuccessFlag = null;
+            }
+        }
+    }
 
-		// Save Comorbidity/concurrent Conditions
-		if (ancHistoryOBJ != null && ancHistoryOBJ.has("comorbidConditions")
-				&& !ancHistoryOBJ.get("comorbidConditions").isJsonNull()) {
-			WrapperComorbidCondDetails wrapperComorbidCondDetails = InputMapper.gson()
-					.fromJson(ancHistoryOBJ.get("comorbidConditions"), WrapperComorbidCondDetails.class);
-			if (null != wrapperComorbidCondDetails) {
-				wrapperComorbidCondDetails.setBenVisitID(benVisitID);
-				wrapperComorbidCondDetails.setVisitCode(benVisitCode);
-				comrbidSuccessFlag = commonNurseServiceImpl.saveBenComorbidConditions(wrapperComorbidCondDetails);
-			}
-		}
+    // Save Medication History
+    if (ancHistoryOBJ != null && ancHistoryOBJ.has("medicationHistory")
+            && !ancHistoryOBJ.get("medicationHistory").isJsonNull()) {
+        WrapperMedicationHistory wrapperMedicationHistory = InputMapper.gson()
+                .fromJson(ancHistoryOBJ.get("medicationHistory"), WrapperMedicationHistory.class);
+        if (null != wrapperMedicationHistory) {
+            wrapperMedicationHistory.setBenVisitID(benVisitID);
+            wrapperMedicationHistory.setVisitCode(benVisitCode);
+            Long result = commonNurseServiceImpl.saveBenMedicationHistory(wrapperMedicationHistory);
+            if (result != null && result > 0) {
+                medicationSuccessFlag = result;
+            } else {
+                medicationSuccessFlag = null;
+            }
+        }
+    }
+    
+    // Save Personal History
+    if (ancHistoryOBJ != null && ancHistoryOBJ.has("personalHistory")
+            && !ancHistoryOBJ.get("personalHistory").isJsonNull()) {
+        // Save Ben Personal Habits..
+        BenPersonalHabit personalHabit = InputMapper.gson().fromJson(ancHistoryOBJ.get("personalHistory"),
+                BenPersonalHabit.class);
+        if (null != personalHabit) {
+            personalHabit.setBenVisitID(benVisitID);
+            personalHabit.setVisitCode(benVisitCode);
+            int result = commonNurseServiceImpl.savePersonalHistory(personalHabit);
+            if (result > 0) {
+                personalHistorySuccessFlag = result;
+            } else {
+                personalHistorySuccessFlag = null;
+            }
+        }
 
-		// Save Medication History
-		if (ancHistoryOBJ != null && ancHistoryOBJ.has("medicationHistory")
-				&& !ancHistoryOBJ.get("medicationHistory").isJsonNull()) {
-			WrapperMedicationHistory wrapperMedicationHistory = InputMapper.gson()
-					.fromJson(ancHistoryOBJ.get("medicationHistory"), WrapperMedicationHistory.class);
-			if (null != wrapperMedicationHistory) {
-				wrapperMedicationHistory.setBenVisitID(benVisitID);
-				wrapperMedicationHistory.setVisitCode(benVisitCode);
-				medicationSuccessFlag = commonNurseServiceImpl.saveBenMedicationHistory(wrapperMedicationHistory);
+        BenAllergyHistory benAllergyHistory = InputMapper.gson().fromJson(ancHistoryOBJ.get("personalHistory"),
+                BenAllergyHistory.class);
+        if (null != benAllergyHistory) {
+            benAllergyHistory.setBenVisitID(benVisitID);
+            benAllergyHistory.setVisitCode(benVisitCode);
+            Long result = commonNurseServiceImpl.saveAllergyHistory(benAllergyHistory);
+            if (result != null && result > 0) {
+                allergyHistorySuccessFlag = result;
+            } else {
+                allergyHistorySuccessFlag = null;
+            }
+        }
+    }
 
-				// medicationSuccessFlag =
-				// ancNurseServiceImpl.saveBenANCMedicationHistory(wrapperMedicationHistory);
-			}
+    // Save Family History
+    if (ancHistoryOBJ != null && ancHistoryOBJ.has("familyHistory")
+            && !ancHistoryOBJ.get("familyHistory").isJsonNull()) {
+        BenFamilyHistory benFamilyHistory = InputMapper.gson().fromJson(ancHistoryOBJ.get("familyHistory"),
+                BenFamilyHistory.class);
+        if (null != benFamilyHistory) {
+            benFamilyHistory.setBenVisitID(benVisitID);
+            benFamilyHistory.setVisitCode(benVisitCode);
+            Long result = commonNurseServiceImpl.saveBenFamilyHistory(benFamilyHistory);
+            if (result != null && result > 0) {
+                familyHistorySuccessFlag = result;
+            } else {
+                familyHistorySuccessFlag = null;
+            }
+        }
+    }
 
-		}
-		// Save Personal History
-		if (ancHistoryOBJ != null && ancHistoryOBJ.has("personalHistory")
-				&& !ancHistoryOBJ.get("personalHistory").isJsonNull()) {
-			// Save Ben Personal Habits..
-			BenPersonalHabit personalHabit = InputMapper.gson().fromJson(ancHistoryOBJ.get("personalHistory"),
-					BenPersonalHabit.class);
-			if (null != personalHabit) {
-				personalHabit.setBenVisitID(benVisitID);
-				personalHabit.setVisitCode(benVisitCode);
+    // Save Menstrual History
+    if (ancHistoryOBJ != null && ancHistoryOBJ.has("menstrualHistory")
+            && !ancHistoryOBJ.get("menstrualHistory").isJsonNull()) {
+        BenMenstrualDetails menstrualDetails = InputMapper.gson().fromJson(ancHistoryOBJ.get("menstrualHistory"),
+                BenMenstrualDetails.class);
+        if (null != menstrualDetails) {
+            menstrualDetails.setBenVisitID(benVisitID);
+            menstrualDetails.setVisitCode(benVisitCode);
+            int result = commonNurseServiceImpl.saveBenMenstrualHistory(menstrualDetails);
+            if (result > 0) {
+                menstrualHistorySuccessFlag = result;
+            } else {
+                menstrualHistorySuccessFlag = null;
+            }
+        }
+    }
 
-				personalHistorySuccessFlag = commonNurseServiceImpl.savePersonalHistory(personalHabit);
-				// personalHistorySuccessFlag =
-				// ancNurseServiceImpl.saveANCPersonalHistory(personalHabit);
-			}
+    // Save Past Obstetric History - Already has proper default handling
+    if (ancHistoryOBJ != null && ancHistoryOBJ.has("femaleObstetricHistory")
+            && !ancHistoryOBJ.get("femaleObstetricHistory").isJsonNull()) {
+        WrapperFemaleObstetricHistory wrapperFemaleObstetricHistory = InputMapper.gson()
+                .fromJson(ancHistoryOBJ.get("femaleObstetricHistory"), WrapperFemaleObstetricHistory.class);
 
-			BenAllergyHistory benAllergyHistory = InputMapper.gson().fromJson(ancHistoryOBJ.get("personalHistory"),
-					BenAllergyHistory.class);
-			if (null != benAllergyHistory) {
-				benAllergyHistory.setBenVisitID(benVisitID);
-				benAllergyHistory.setVisitCode(benVisitCode);
+        if (wrapperFemaleObstetricHistory != null) {
+            wrapperFemaleObstetricHistory.setBenVisitID(benVisitID);
+            wrapperFemaleObstetricHistory.setVisitCode(benVisitCode);
+            Long result = commonNurseServiceImpl.saveFemaleObstetricHistory(wrapperFemaleObstetricHistory);
+            if (result != null && result > 0) {
+                obstetricSuccessFlag = result;
+            } else {
+                obstetricSuccessFlag = null;
+            }
+        }
+    }
+    // else obstetricSuccessFlag stays 1L (default)
 
-				allergyHistorySuccessFlag = commonNurseServiceImpl.saveAllergyHistory(benAllergyHistory);
-				// allergyHistorySuccessFlag =
-				// ancNurseServiceImpl.saveANCAllergyHistory(benAllergyHistory);
-			}
+    // Save Immunization History - Already has proper default handling
+    if (ancHistoryOBJ != null && ancHistoryOBJ.has("immunizationHistory")
+            && !ancHistoryOBJ.get("immunizationHistory").isJsonNull()) {
+        WrapperImmunizationHistory wrapperImmunizationHistory = InputMapper.gson()
+                .fromJson(ancHistoryOBJ.get("immunizationHistory"), WrapperImmunizationHistory.class);
+        if (null != wrapperImmunizationHistory) {
+            wrapperImmunizationHistory.setBenVisitID(benVisitID);
+            wrapperImmunizationHistory.setVisitCode(benVisitCode);
+            Long result = commonNurseServiceImpl.saveImmunizationHistory(wrapperImmunizationHistory);
+            if (result != null && result > 0) {
+                immunizationSuccessFlag = result;
+            } else {
+                immunizationSuccessFlag = null;
+            }
+        }
+    }
+    // else immunizationSuccessFlag stays 1L (default)
 
-		}
+    // Save Other/Optional Vaccines History - Already has proper default handling
+    if (ancHistoryOBJ != null && ancHistoryOBJ.has("childVaccineDetails")
+            && !ancHistoryOBJ.get("childVaccineDetails").isJsonNull()) {
+        WrapperChildOptionalVaccineDetail wrapperChildVaccineDetail = InputMapper.gson()
+                .fromJson(ancHistoryOBJ.get("childVaccineDetails"), WrapperChildOptionalVaccineDetail.class);
+        if (null != wrapperChildVaccineDetail) {
+            wrapperChildVaccineDetail.setBenVisitID(benVisitID);
+            wrapperChildVaccineDetail.setVisitCode(benVisitCode);
+            Long result = commonNurseServiceImpl.saveChildOptionalVaccineDetail(wrapperChildVaccineDetail);
+            if (result != null && result > 0) {
+                childVaccineSuccessFlag = result;
+            } else {
+                childVaccineSuccessFlag = null;
+            }
+        }
+    }
+    // else childVaccineSuccessFlag stays 1L (default)
 
-		// Save Family History
-		if (ancHistoryOBJ != null && ancHistoryOBJ.has("familyHistory")
-				&& !ancHistoryOBJ.get("familyHistory").isJsonNull()) {
-			BenFamilyHistory benFamilyHistory = InputMapper.gson().fromJson(ancHistoryOBJ.get("familyHistory"),
-					BenFamilyHistory.class);
-			if (null != benFamilyHistory) {
-				benFamilyHistory.setBenVisitID(benVisitID);
-				benFamilyHistory.setVisitCode(benVisitCode);
-				familyHistorySuccessFlag = commonNurseServiceImpl.saveBenFamilyHistory(benFamilyHistory);
-				// familyHistorySuccessFlag =
-				// ancNurseServiceImpl.saveANCBenFamilyHistory(benFamilyHistory);
-			}
-		}
+    Long historySuccessFlag = null;
 
-		// Save Menstrual History
-		if (ancHistoryOBJ != null && ancHistoryOBJ.has("menstrualHistory")
-				&& !ancHistoryOBJ.get("menstrualHistory").isJsonNull()) {
-			BenMenstrualDetails menstrualDetails = InputMapper.gson().fromJson(ancHistoryOBJ.get("menstrualHistory"),
-					BenMenstrualDetails.class);
-			if (null != menstrualDetails) {
-				menstrualDetails.setBenVisitID(benVisitID);
-				menstrualDetails.setVisitCode(benVisitCode);
-				menstrualHistorySuccessFlag = commonNurseServiceImpl.saveBenMenstrualHistory(menstrualDetails);
-				// menstrualHistorySuccessFlag =
-				// ancNurseServiceImpl.saveBenANCMenstrualHistory(menstrualDetails);
-			}
-
-		}
-
-		// Save Past Obstetric History
-		if (ancHistoryOBJ != null && ancHistoryOBJ.has("femaleObstetricHistory")
-				&& !ancHistoryOBJ.get("femaleObstetricHistory").isJsonNull()) {
-			WrapperFemaleObstetricHistory wrapperFemaleObstetricHistory = InputMapper.gson()
-					.fromJson(ancHistoryOBJ.get("femaleObstetricHistory"), WrapperFemaleObstetricHistory.class);
-
-			if (wrapperFemaleObstetricHistory != null) {
-				wrapperFemaleObstetricHistory.setBenVisitID(benVisitID);
-				wrapperFemaleObstetricHistory.setVisitCode(benVisitCode);
-				obstetricSuccessFlag = commonNurseServiceImpl.saveFemaleObstetricHistory(wrapperFemaleObstetricHistory);
-				// obstetricSuccessFlag =
-				// ancNurseServiceImpl.saveFemaleObstetricHistory(wrapperFemaleObstetricHistory);
-			} else {
-				// Female Obstetric Details not provided.
-			}
-
-		} else {
-			obstetricSuccessFlag = new Long(1);
-		}
-
-		/** For Female above 12 and below 16 years.. **/
-		// Save Immunization History
-		if (ancHistoryOBJ != null && ancHistoryOBJ.has("immunizationHistory")
-				&& !ancHistoryOBJ.get("immunizationHistory").isJsonNull()) {
-			WrapperImmunizationHistory wrapperImmunizationHistory = InputMapper.gson()
-					.fromJson(ancHistoryOBJ.get("immunizationHistory"), WrapperImmunizationHistory.class);
-			if (null != wrapperImmunizationHistory) {
-				wrapperImmunizationHistory.setBenVisitID(benVisitID);
-				wrapperImmunizationHistory.setVisitCode(benVisitCode);
-				immunizationSuccessFlag = commonNurseServiceImpl.saveImmunizationHistory(wrapperImmunizationHistory);
-				// immunizationSuccessFlag =
-				// ancNurseServiceImpl.saveANCImmunizationHistory(wrapperImmunizationHistory);
-			} else {
-
-				// ImmunizationList Data not Available
-			}
-
-		} else {
-			immunizationSuccessFlag = new Long(1);
-		}
-
-		// Save Other/Optional Vaccines History
-		if (ancHistoryOBJ != null && ancHistoryOBJ.has("childVaccineDetails")
-				&& !ancHistoryOBJ.get("childVaccineDetails").isJsonNull()) {
-			WrapperChildOptionalVaccineDetail wrapperChildVaccineDetail = InputMapper.gson()
-					.fromJson(ancHistoryOBJ.get("childVaccineDetails"), WrapperChildOptionalVaccineDetail.class);
-			if (null != wrapperChildVaccineDetail) {
-				wrapperChildVaccineDetail.setBenVisitID(benVisitID);
-				wrapperChildVaccineDetail.setVisitCode(benVisitCode);
-				childVaccineSuccessFlag = commonNurseServiceImpl
-						.saveChildOptionalVaccineDetail(wrapperChildVaccineDetail);
-				// childVaccineSuccessFlag =
-				// ancNurseServiceImpl.saveChildOptionalVaccineDetail(wrapperChildVaccineDetail);
-			} else {
-				// Child Optional Vaccine Detail not provided.
-			}
-
-		} else {
-			childVaccineSuccessFlag = new Long(1);
-		}
-
-		Long historySuccessFlag = null;
-
-		if ((null != pastHistorySuccessFlag && pastHistorySuccessFlag > 0)
-				&& (null != comrbidSuccessFlag && comrbidSuccessFlag > 0)
-				&& (null != medicationSuccessFlag && medicationSuccessFlag > 0)
-				&& (null != allergyHistorySuccessFlag && allergyHistorySuccessFlag > 0)
-				&& (null != familyHistorySuccessFlag && familyHistorySuccessFlag > 0)
-				&& (null != obstetricSuccessFlag && obstetricSuccessFlag > 0)
-				&& (null != immunizationSuccessFlag && immunizationSuccessFlag > 0)
-				&& (null != childVaccineSuccessFlag && childVaccineSuccessFlag > 0) && personalHistorySuccessFlag > 0
-				&& menstrualHistorySuccessFlag > 0) {
-			historySuccessFlag = pastHistorySuccessFlag;
-		}
-		return historySuccessFlag;
-	}
+    if ((pastHistorySuccessFlag != null && pastHistorySuccessFlag > 0)
+            && (comrbidSuccessFlag != null && comrbidSuccessFlag > 0)
+            && (medicationSuccessFlag != null && medicationSuccessFlag > 0)
+            && (allergyHistorySuccessFlag != null && allergyHistorySuccessFlag > 0)
+            && (familyHistorySuccessFlag != null && familyHistorySuccessFlag > 0)
+            && (obstetricSuccessFlag != null && obstetricSuccessFlag > 0)
+            && (immunizationSuccessFlag != null && immunizationSuccessFlag > 0)
+            && (childVaccineSuccessFlag != null && childVaccineSuccessFlag > 0) 
+            && (personalHistorySuccessFlag != null && personalHistorySuccessFlag > 0)
+            && (menstrualHistorySuccessFlag != null && menstrualHistorySuccessFlag > 0)) {
+        historySuccessFlag = pastHistorySuccessFlag;
+    }
+    return historySuccessFlag;
+}
 
 	/**
 	 * 
