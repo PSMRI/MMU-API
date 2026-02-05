@@ -13,9 +13,10 @@ import org.springframework.context.annotation.Bean;
 public class SwaggerSecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        // CSRF is disabled only for the swagger profile to allow anonymous access to API docs and endpoints during testing. This is not used in production.
         http
-            .csrf().disable()
-            .authorizeRequests().anyRequest().permitAll();
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
         return http.build();
     }
 }
