@@ -12,11 +12,12 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 import com.iemr.mmu.utils.exception.CustomAuthenticationEntryPoint;
 import com.iemr.mmu.utils.exception.CustomAccessDeniedHandler;
-
+import org.springframework.context.annotation.Profile;
 
 @Configuration
 @EnableMethodSecurity
 @EnableWebSecurity
+@Profile("!swagger")
 public class SecurityConfig {
 	private final RoleAuthenticationFilter roleAuthenticationFilter;
 	private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
@@ -39,10 +40,7 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
         .csrf(csrf -> csrf.disable())
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers(
-                 "/user/**",
-                "/v3/**"
-            ).permitAll()
+            .requestMatchers("/user/**").permitAll()
             .anyRequest().authenticated()
         )
         .exceptionHandling(ex -> ex
