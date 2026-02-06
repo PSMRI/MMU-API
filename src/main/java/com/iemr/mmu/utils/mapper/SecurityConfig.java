@@ -39,7 +39,10 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
         .csrf(csrf -> csrf.disable())
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/user/**").permitAll()
+            .requestMatchers(
+                "/user/**",
+                "/v3/api-docs/**"
+            ).permitAll()
             .anyRequest().authenticated()
         )
         .exceptionHandling(ex -> ex
