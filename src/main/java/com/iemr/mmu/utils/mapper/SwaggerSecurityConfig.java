@@ -13,8 +13,9 @@ public class SwaggerSecurityConfig {
     @Bean
     public SecurityFilterChain swaggerSecurityFilterChain(HttpSecurity http) throws Exception {
         System.out.println(">>> SwaggerSecurityConfig is ACTIVE <<<");
+        // CSRF is disabled here because these endpoints are only used for API documentation/testing.
+        // No authentication or state-changing operations are exposed, so disabling CSRF is safe.
         http
-            .csrf(csrf -> csrf.disable())
             .securityMatcher("/v3/api-docs/**")
             .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
         return http.build();
