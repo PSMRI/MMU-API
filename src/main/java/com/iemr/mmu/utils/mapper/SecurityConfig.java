@@ -33,9 +33,8 @@ public class SecurityConfig {
 
 @Bean
 public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    CookieCsrfTokenRepository csrfTokenRepository = new CookieCsrfTokenRepository();
-    csrfTokenRepository.setCookieHttpOnly(true);
-    csrfTokenRepository.setCookiePath("/");
+    // CSRF is disabled because this API is stateless and uses JWT tokens in Authorization headers.
+    // Disabling CSRF is safe for REST APIs that do not use cookies for authentication.
     http
         .csrf(csrf -> csrf.disable())
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
