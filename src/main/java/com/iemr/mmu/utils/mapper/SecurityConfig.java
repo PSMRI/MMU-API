@@ -40,8 +40,8 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
             .requestMatchers(
-                "/user/**",
-                "/v3/api-docs/**"
+                 "/user/**",
+                "/v3/**"
             ).permitAll()
             .anyRequest().authenticated()
         )
