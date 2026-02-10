@@ -592,7 +592,11 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
             }
         }
 
-        logger.info("Sync results for table {}: {}", syncTableName, syncResults);
+        logger.info("Sync results summary for {}: total={}, failed={}",
+                syncTableName,
+                syncResults.size(),
+                syncResults.stream().filter(r -> !r.isSuccess()).count());
+
         return overallSuccess;
     }
 
