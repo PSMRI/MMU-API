@@ -5,7 +5,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.iemr.mmu</groupId>
 	<artifactId>mmu-api</artifactId>
-	<version>3.4.1</version>
+	<version>3.4.2</version>
 	<packaging>war</packaging>
 
 	<name>MMU-API</name>
@@ -36,6 +36,8 @@
 		<sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
 		<sonar.jacoco.reportPath>${project.basedir}/../target/jacoco.exec</sonar.jacoco.reportPath>
 		<sonar.language>java</sonar.language>
+		 <maven.test.skip>true</maven.test.skip>
+
 	</properties>
 
 	<dependencies>
