@@ -137,6 +137,10 @@ public class HealthService {
         } catch (TimeoutException e) {
             logger.warn("Redis health check timed out");
             return new HealthCheckResult(false, "Redis health check timed out");
+        } catch (InterruptedException e) {
+            logger.warn("Redis health check was interrupted");
+            Thread.currentThread().interrupt();
+            return new HealthCheckResult(false, "Redis health check was interrupted");
         } catch (Exception e) {
             logger.warn("Redis health check failed: {}", e.getMessage());
             return new HealthCheckResult(false, e.getMessage());
