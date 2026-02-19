@@ -48,7 +48,7 @@ import jakarta.servlet.http.HttpServletRequest;
  */
 @RestController
 @RequestMapping(value = "/dataSync", headers = "Authorization")
-@PreAuthorize("hasRole('DATASYNC') || hasRole('DATA_SYNC') ")
+@PreAuthorize("hasRole('DATASYNC') || hasRole('DATA_SYNC') || hasRole('NURSE') ")
 public class MMUDataSyncVanToServer {
 	private Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 

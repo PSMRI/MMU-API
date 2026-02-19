@@ -48,7 +48,7 @@ import jakarta.servlet.http.HttpServletRequest;
  */
 @RestController
 @RequestMapping(value = "/dataSyncActivity", headers = "Authorization", consumes = "application/json", produces = "application/json")
-@PreAuthorize("hasRole('DATASYNC') || hasRole('DATA_SYNC') ")
+@PreAuthorize("hasRole('DATASYNC') || hasRole('DATA_SYNC') || hasRole('NURSE') ")
 public class StartSyncActivity {
 	private Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 
