@@ -34,6 +34,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
+import jakarta.annotation.PreDestroy;
 import javax.sql.DataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,6 +63,11 @@ public class HealthService {
         this.dataSource = dataSource;
         this.redisTemplate = redisTemplate;
         this.executorService = Executors.newFixedThreadPool(2);
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        executorService.shutdown();
     }
 
     public Map<String, Object> checkHealth() {
@@ -108,7 +114,7 @@ public class HealthService {
             
         } catch (Exception e) {
             logger.warn("MySQL health check failed: {}", e.getMessage());
-            return new HealthCheckResult(false, e.getMessage());
+            return new HealthCheckResult(false, "MySQL connection failed");
         }
     }
 
@@ -143,7 +149,7 @@ public class HealthService {
             return new HealthCheckResult(false, "Redis health check was interrupted");
         } catch (Exception e) {
             logger.warn("Redis health check failed: {}", e.getMessage());
-            return new HealthCheckResult(false, e.getMessage());
+            return new HealthCheckResult(false, "Redis connection failed");
         }
     }
 
