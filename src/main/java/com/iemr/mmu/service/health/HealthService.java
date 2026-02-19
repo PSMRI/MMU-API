@@ -99,19 +99,35 @@ public class HealthService {
     }
 
     private HealthCheckResult checkMySQLHealth() {
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement stmt = connection.prepareStatement("SELECT 1 as health_check")) {
-            
-            stmt.setQueryTimeout((int) MYSQL_TIMEOUT_SECONDS);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return new HealthCheckResult(true, null);
+        CompletableFuture<HealthCheckResult> future = CompletableFuture.supplyAsync(() -> {
+            try (Connection connection = dataSource.getConnection();
+                 PreparedStatement stmt = connection.prepareStatement("SELECT 1 as health_check")) {
+                
+                stmt.setQueryTimeout((int) MYSQL_TIMEOUT_SECONDS);
+                
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        return new HealthCheckResult(true, null);
+                    }
                 }
+                
+                return new HealthCheckResult(false, "No result from health check query");
+                
+            } catch (Exception e) {
+                logger.warn("MySQL health check failed: {}", e.getMessage());
+                return new HealthCheckResult(false, "MySQL connection failed");
             }
-            
-            return new HealthCheckResult(false, "No result from health check query");
-            
+        }, executorService);
+        
+        try {
+            return future.get(MYSQL_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            future.cancel(true);
+            logger.warn("MySQL health check timed out");
+            return new HealthCheckResult(false, "MySQL health check timed out");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return new HealthCheckResult(false, "MySQL health check was interrupted");
         } catch (Exception e) {
             logger.warn("MySQL health check failed: {}", e.getMessage());
             return new HealthCheckResult(false, "MySQL connection failed");
@@ -123,8 +139,9 @@ public class HealthService {
             return new HealthCheckResult(true, null);
         }
         
+        CompletableFuture<String> future = null;
         try {
-            CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> {
+            future = CompletableFuture.supplyAsync(() -> {
                 try {
                     return redisTemplate.execute((org.springframework.data.redis.core.RedisCallback<String>) (connection) -> connection.ping());
                 } catch (Exception e) {
@@ -141,6 +158,9 @@ public class HealthService {
             return new HealthCheckResult(false, "Redis PING failed");
             
         } catch (TimeoutException e) {
+            if (future != null) {
+                future.cancel(true);
+            }
             logger.warn("Redis health check timed out");
             return new HealthCheckResult(false, "Redis health check timed out");
         } catch (InterruptedException e) {
