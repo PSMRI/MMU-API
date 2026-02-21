@@ -135,10 +135,19 @@ public class HealthService {
         
         // Wait for both checks to complete with combined timeout
         long maxTimeout = Math.max(MYSQL_TIMEOUT_SECONDS, REDIS_TIMEOUT_SECONDS) + 1;
+        long deadlineNs = System.nanoTime() + TimeUnit.SECONDS.toNanos(maxTimeout);
+        
         try {
             // Get both futures with timeout - cancel(true) will interrupt the threads
             mysqlFuture.get(maxTimeout, TimeUnit.SECONDS);
-            redisFuture.get(maxTimeout, TimeUnit.SECONDS);
+            
+            // Calculate remaining time from shared deadline
+            long remainingNs = deadlineNs - System.nanoTime();
+            if (remainingNs > 0) {
+                redisFuture.get(remainingNs, TimeUnit.NANOSECONDS);
+            } else {
+                redisFuture.cancel(true);
+            }
         } catch (TimeoutException e) {
             logger.warn("Health check aggregate timeout after {} seconds", maxTimeout);
             mysqlFuture.cancel(true);  // NOW actually interrupts the thread
