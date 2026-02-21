@@ -58,7 +58,7 @@ public class HealthController {
         @ApiResponse(responseCode = "503", description = "One or more critical services are DOWN")
     })
     public ResponseEntity<Map<String, Object>> checkHealth() {
-        logger.info("Health check endpoint called");
+        logger.debug("Health check endpoint called");
         
         try {
             Map<String, Object> healthStatus = healthService.checkHealth();
