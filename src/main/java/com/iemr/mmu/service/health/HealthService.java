@@ -28,9 +28,10 @@ import java.sql.ResultSet;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
@@ -122,23 +123,25 @@ public class HealthService {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("timestamp", Instant.now().toString());
         
-        Map<String, Object> mysqlStatus = new LinkedHashMap<>();
-        Map<String, Object> redisStatus = new LinkedHashMap<>();
+        // Use ConcurrentHashMap to avoid data races during timeout
+        Map<String, Object> mysqlStatus = new ConcurrentHashMap<>();
+        Map<String, Object> redisStatus = new ConcurrentHashMap<>();
         
-        // Submit both checks concurrently
-        CompletableFuture<Void> mysqlFuture = CompletableFuture.runAsync(
-            () -> performHealthCheck("MySQL", mysqlStatus, this::checkMySQLHealthSync), executorService);
-        CompletableFuture<Void> redisFuture = CompletableFuture.runAsync(
-            () -> performHealthCheck("Redis", redisStatus, this::checkRedisHealthSync), executorService);
+        // Submit both checks concurrently using executorService for proper cancellation support
+        Future<?> mysqlFuture = executorService.submit(
+            () -> performHealthCheck("MySQL", mysqlStatus, this::checkMySQLHealthSync));
+        Future<?> redisFuture = executorService.submit(
+            () -> performHealthCheck("Redis", redisStatus, this::checkRedisHealthSync));
         
         // Wait for both checks to complete with combined timeout
         long maxTimeout = Math.max(MYSQL_TIMEOUT_SECONDS, REDIS_TIMEOUT_SECONDS) + 1;
         try {
-            CompletableFuture.allOf(mysqlFuture, redisFuture)
-                .get(maxTimeout, TimeUnit.SECONDS);
+            // Get both futures with timeout - cancel(true) will interrupt the threads
+            mysqlFuture.get(maxTimeout, TimeUnit.SECONDS);
+            redisFuture.get(maxTimeout, TimeUnit.SECONDS);
         } catch (TimeoutException e) {
             logger.warn("Health check aggregate timeout after {} seconds", maxTimeout);
-            mysqlFuture.cancel(true);
+            mysqlFuture.cancel(true);  // NOW actually interrupts the thread
             redisFuture.cancel(true);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -421,11 +424,9 @@ public class HealthService {
                 }
             }
         } catch (java.sql.SQLException e) {
-            // Check if this is a permission error
-            if (e.getMessage() != null && 
-                (e.getMessage().contains("Access denied") || 
-                 e.getMessage().contains("permission"))) {
-                // Disable this check permanently after first permission error
+            // Check if this is a permission error using SQL error codes
+            // 1142 = SELECT command denied; 1227 = SUPER privilege required
+            if (e.getErrorCode() == 1142 || e.getErrorCode() == 1227) {
                 deadlockCheckDisabled = true;
                 logger.warn("Deadlock check disabled: Insufficient privileges");
             } else {
