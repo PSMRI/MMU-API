@@ -29,6 +29,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -96,6 +97,7 @@ public class HealthService {
     private volatile long lastAdvancedCheckTime = 0;
     private volatile AdvancedCheckResult cachedAdvancedCheckResult = null;
     private final ReentrantReadWriteLock advancedCheckLock = new ReentrantReadWriteLock();
+    private final AtomicBoolean advancedCheckInProgress = new AtomicBoolean(false);
     
     // Advanced checks always enabled
     private static final boolean ADVANCED_HEALTH_CHECKS_ENABLED = true;
@@ -380,18 +382,28 @@ public class HealthService {
             advancedCheckLock.writeLock().unlock();
         }
         
-        // Submit task without holding the write lock
-        Future<AdvancedCheckResult> future = advancedCheckExecutor.submit(this::performAdvancedMySQLChecks);
-        AdvancedCheckResult result = handleAdvancedChecksFuture(future);
-        
-        // Re-acquire write lock only to update the cache atomically
-        advancedCheckLock.writeLock().lock();
+        // Only one thread may submit; others fall back to the (stale) cache
+        if (!advancedCheckInProgress.compareAndSet(false, true)) {
+            advancedCheckLock.readLock().lock();
+            try {
+                return cachedAdvancedCheckResult != null && cachedAdvancedCheckResult.isDegraded;
+            } finally {
+                advancedCheckLock.readLock().unlock();
+            }
+        }
         try {
-            lastAdvancedCheckTime = currentTime;
-            cachedAdvancedCheckResult = result;
-            return result.isDegraded;
+            Future<AdvancedCheckResult> future = advancedCheckExecutor.submit(this::performAdvancedMySQLChecks);
+            AdvancedCheckResult result = handleAdvancedChecksFuture(future);
+            advancedCheckLock.writeLock().lock();
+            try {
+                lastAdvancedCheckTime = System.currentTimeMillis();
+                cachedAdvancedCheckResult = result;
+                return result.isDegraded;
+            } finally {
+                advancedCheckLock.writeLock().unlock();
+            }
         } finally {
-            advancedCheckLock.writeLock().unlock();
+            advancedCheckInProgress.set(false);
         }
     }
     
@@ -420,6 +432,7 @@ public class HealthService {
             logger.debug("Advanced MySQL checks failed: {}", ex.getMessage());
             future.cancel(true);
             return new AdvancedCheckResult(true);
+        }
     }
 
     private AdvancedCheckResult performAdvancedMySQLChecks() {
