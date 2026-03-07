@@ -35,7 +35,7 @@ Ensure that the following prerequisites are met before building the MMU service:
 * Redis
 * Spring Boot v2
 * MySQL
-* Node Js
+* Node.js
 
 ### Installation
 
