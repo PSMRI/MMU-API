@@ -444,7 +444,7 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
 
         List<Object> currentRecordValues = new ArrayList<>();
         for (String column : serverColumnsList) {
-            logger.info("Column="+column);
+            logger.debug("Column="+column);
             Object value = cleanRecord.get(column.trim());
             // CRITICAL FIX: Don't convert null to string
             if (value == null) {
