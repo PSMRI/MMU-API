@@ -40,7 +40,9 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
         .csrf(csrf -> csrf.disable())
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/user/**", "/health", "/version").permitAll()
+            .requestMatchers("/user/**").permitAll()
+            .requestMatchers("/health").permitAll()
+            .requestMatchers("/version").permitAll()
             .anyRequest().authenticated()
         )
         .exceptionHandling(ex -> ex
