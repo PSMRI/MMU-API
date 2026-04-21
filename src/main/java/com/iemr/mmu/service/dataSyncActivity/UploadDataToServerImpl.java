@@ -131,17 +131,16 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 
         // fetch group masters
         List<DataSyncGroups> dataSyncGroupList = dataSyncGroupsRepo.findByDeleted(false);
-        logger.debug("Fetched DataSyncGroups: {}",
-                objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(dataSyncGroupList));
+        // logger.debug("Fetched DataSyncGroups: {}",
+        //         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(dataSyncGroupList));
 
         for (DataSyncGroups dataSyncGroups : dataSyncGroupList) {
             int groupId = dataSyncGroups.getSyncTableGroupID();
             String groupName = dataSyncGroups.getSyncTableGroupName();
 
             List<SyncUtilityClass> syncUtilityClassList = getVanAndServerColumns(groupId);
-            logger.debug("Fetched SyncUtilityClass for groupId {}: {}", groupId,
-                    objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(syncUtilityClassList));
 
+           logger.info("[startDataSync] groupId={}, tableCount={}", groupId, syncUtilityClassList.size());
             // Track table-level results for this group
             List<Map<String, Object>> tableDetailsList = new ArrayList<>();
             boolean groupHasFailures = false;
@@ -154,8 +153,8 @@ public class UploadDataToServerImpl implements UploadDataToServer {
                 // get data from DB to sync to server
                 List<Map<String, Object>> syncData = getDataToSync(obj.getSchemaName(), obj.getTableName(),
                         obj.getVanColumnName());
-                logger.info("Fetched syncData for schema {} and table {}: {}", obj.getSchemaName(), obj.getTableName(),
-                        objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(syncData));
+                // logger.info("Fetched syncData for schema {} and table {}: {}", obj.getSchemaName(), obj.getTableName(),
+                //         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(syncData));
 
                 if (syncData != null && syncData.size() > 0) {
                     int dataSize = syncData.size();
@@ -424,7 +423,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
         List<Map<String, Object>> resultSetList = dataSyncRepository.getDataForGivenSchemaAndTable(schemaName,
                 tableName, columnNames);
         if (resultSetList != null) {
-            logger.debug("Fetched {} records for schema '{}', table '{}'", resultSetList.size(), schemaName, tableName);
+            // logger.debug("Fetched {} records for schema '{}', table '{}'", resultSetList.size(), schemaName, tableName);
             if (!resultSetList.isEmpty()) {
                 logger.debug("Sample record: {}", resultSetList.get(0));
             }
