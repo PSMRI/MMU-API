@@ -46,7 +46,7 @@ logger.info("token: {}", jwtToken);
 
     if(authorization != null && !authorization.isEmpty() && jwtToken.equalsIgnoreCase("datasync"))
     {
-        headers.add(HttpHeaders.AUTHORIZATION, authorization);
+        headers.add("Jwttoken", authorization);
     }
 
 	 if (jwtToken == null || jwtToken.isEmpty()) {
