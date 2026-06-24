@@ -370,7 +370,8 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
         String vanID = String.valueOf(cleanRecord.get("VanID"));
         int syncFacilityID = 0;
 
-        cleanRecord.put("SyncedBy", syncUploadDataDigester.getSyncedBy());
+        Object createdBy = cleanRecord.get("CreatedBy");
+        cleanRecord.put("SyncedBy", createdBy != null ? createdBy : syncUploadDataDigester.getSyncedBy());
         cleanRecord.put("SyncedDate", String.valueOf(LocalDateTime.now()));
 
         if (facilityIDFromDigester != null) {
