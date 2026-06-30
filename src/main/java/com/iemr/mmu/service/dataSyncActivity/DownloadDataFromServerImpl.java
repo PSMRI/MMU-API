@@ -348,7 +348,12 @@ import com.iemr.mmu.utils.mapper.InputMapper;
 			JSONObject obj = new JSONObject(response.getBody());
 			if (obj != null && obj.has("data") && obj.has("statusCode") && obj.getInt("statusCode") == 200) {
 				// Consume the response from API and call local identity api to save data
-				String localImportPayload = obj.get("data").toString();
+				// Inject vanID into each element since central response doesn't include it
+				org.json.JSONArray dataArray = obj.getJSONArray("data");
+				for (int k = 0; k < dataArray.length(); k++) {
+					dataArray.getJSONObject(k).put("vanID", vanID);
+				}
+				String localImportPayload = dataArray.toString();
 
 		logger.info("Authorization: " + Authorization);
 		logger.info("ServerAuthorization: " + ServerAuthorization);
