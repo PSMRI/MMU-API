@@ -53,18 +53,15 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
 
 			String jwtToken = jwtFromCookie != null ? jwtFromCookie : jwtFromHeader;
 			if(null == jwtToken || jwtToken.trim().isEmpty()) {
-				filterChain.doFilter(request, response);
 				return;
 			}
 			Claims extractAllClaims = jwtUtil.extractAllClaims(jwtToken);
 			if(null == extractAllClaims) {
-				filterChain.doFilter(request, response);
 				return;
 			}
 			Object userIdObj = extractAllClaims.get("userId");
 			String userId = userIdObj != null ? userIdObj.toString() : null;
 			if (null == userId || userId.trim().isEmpty()) {
-				filterChain.doFilter(request, response);
 				return;
 			}
 			Long userIdLong;
@@ -72,7 +69,6 @@ public class RoleAuthenticationFilter extends OncePerRequestFilter {
 				userIdLong=Long.valueOf(userId);
 			}catch (NumberFormatException ex) {
 				logger.warn("Invalid userId format: {}",userId);
-				filterChain.doFilter(request, response);
 				return;
 			}
 			authRoles = redisService.getUserRoleFromCache(userIdLong);
