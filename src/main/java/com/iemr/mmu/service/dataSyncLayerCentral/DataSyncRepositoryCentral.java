@@ -73,7 +73,9 @@ public class DataSyncRepositoryCentral {
             "t_cancervitals", "t_cancersignandsymptoms", "t_cancerlymphnode", "t_canceroralexamination",
             "t_cancerbreastexamination", "t_cancerabdominalexamination", "t_cancergynecologicalexamination",
             "t_cancerdiagnosis", "t_cancerimageannotation", "i_beneficiaryimage", "t_stockadjustment",
-            "t_stocktransfer", "t_patientreturn", "t_indent", "t_indentissue", "t_indentorder", "t_saitemmapping");
+            "t_stocktransfer", "t_patientreturn", "t_indent", "t_indentissue", "t_indentorder", "t_saitemmapping",
+            "tb_screening", "tb_suspected", "tb_confirmed_cases", "tb_stoptb_diagnostics",
+            "tb_stoptb_general_examination", "tb_stoptb_general_opd", "tb_stoptb_visit", "i_householddetails");
 
     private boolean isValidDatabaseIdentifierCharacter(String identifier) {
         return identifier != null && identifier.matches("^[a-zA-Z_][a-zA-Z0-9_]*$");

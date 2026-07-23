@@ -28,7 +28,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.connection.RedisStringCommands.SetOption;
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
+import org.springframework.data.redis.core.types.Expiration;
 import org.springframework.stereotype.Service;
 
 import com.google.gson.Gson;
@@ -43,6 +49,11 @@ import com.iemr.mmu.repo.login.VanServicepointMappingRepo;
 
 @Service
 public class IemrMmuLoginServiceImpl implements IemrMmuLoginService {
+
+	private static final Logger logger = LoggerFactory.getLogger(IemrMmuLoginServiceImpl.class);
+
+	@Autowired
+	private LettuceConnectionFactory redisConnectionFactory;
 
 	private UserParkingplaceMappingRepo userParkingplaceMappingRepo;
 	private MasterVanRepo masterVanRepo;
@@ -186,6 +197,24 @@ public class IemrMmuLoginServiceImpl implements IemrMmuLoginService {
 			parkingPlaceLocationMap.put("blockName", obj1[6]);
 		}
 		resMap.put("UserLocDetails", parkingPlaceLocationMap);
+
+		// Store camp vanID in Redis — FLW-API and TM-API read this to stamp vanID on records
+		try {
+			if (objList.size() > 0 && parkingPlaceList.size() > 0) {
+				Integer campVanID = (Integer) objList.get(0)[1];           // vanID is at index 1
+				Integer campParkingPlaceID = (Integer) parkingPlaceList.get(0)[0]; // parkingPlaceID at index 0
+				RedisConnection conn = redisConnectionFactory.getConnection();
+				conn.set("camp:vanID".getBytes(), String.valueOf(campVanID).getBytes(),
+						Expiration.seconds(30L * 24 * 3600), SetOption.UPSERT);
+				conn.set("camp:parkingPlaceID".getBytes(), String.valueOf(campParkingPlaceID).getBytes(),
+						Expiration.seconds(30L * 24 * 3600), SetOption.UPSERT);
+				conn.close();
+				logger.info("Camp config stored in Redis: vanID={}, parkingPlaceID={}", campVanID, campParkingPlaceID);
+			}
+		} catch (Exception e) {
+			logger.warn("Failed to store camp config in Redis: " + e.getMessage());
+		}
+
 		// 1.1
 		return new Gson().toJson(resMap);
 	}
