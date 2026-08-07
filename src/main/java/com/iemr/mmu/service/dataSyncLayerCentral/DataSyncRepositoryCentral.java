@@ -85,7 +85,14 @@ public class DataSyncRepositoryCentral {
             "tb_diagnostic_order", "tb_diagnostic_result", "tb_diagnostic_document",
             // Also missing despite being registered van-side for Stop TB — same silent-reject
             // gap as above, found during the full Stop TB sync gap analysis.
-            "i_beneficiarydetails_rmnch", "i_bornbirthdeatils");
+            "i_beneficiarydetails_rmnch", "i_bornbirthdeatils",
+            // Dynamic Form module (Counselling / contact-tracing forms) — the response tables
+            // hold actual per-beneficiary submitted answers and need to sync; the 7 form-
+            // definition/structure tables (t_dynamic_form, t_form_version, t_form_section,
+            // t_question_option, t_question_validation, t_option_condition, t_section_question)
+            // are seeded once at startup and deliberately NOT registered here — they're
+            // reference data, not per-van transactional records.
+            "t_form_response", "t_section_response", "t_question_response");
 
     private boolean isValidDatabaseIdentifierCharacter(String identifier) {
         return identifier != null && identifier.matches("^[a-zA-Z_][a-zA-Z0-9_]*$");
