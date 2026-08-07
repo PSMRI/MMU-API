@@ -75,7 +75,17 @@ public class DataSyncRepositoryCentral {
             "t_cancerdiagnosis", "t_cancerimageannotation", "i_beneficiaryimage", "t_stockadjustment",
             "t_stocktransfer", "t_patientreturn", "t_indent", "t_indentissue", "t_indentorder", "t_saitemmapping",
             "tb_screening", "tb_suspected", "tb_confirmed_cases", "tb_stoptb_diagnostics",
-            "tb_stoptb_general_examination", "tb_stoptb_general_opd", "tb_stoptb_visit", "i_householddetails");
+            "tb_stoptb_general_examination", "tb_stoptb_general_opd", "tb_stoptb_visit", "i_householddetails",
+            // Diagnostic-device integration (X-ray/TrueNat orders + results + attachments) —
+            // added to FLW-API after this allowlist was last updated, so syncing these was
+            // silently rejected by isValidTableName() even though FLW-API now correctly
+            // stamps VanID/VanSerialNo on all three (see DiagnosticOrder/DiagnosticResult/
+            // DiagnosticDocument). tb_diagnostic_provider_token deliberately excluded — it's
+            // local EMRLite auth/session state, not beneficiary data, and shouldn't sync.
+            "tb_diagnostic_order", "tb_diagnostic_result", "tb_diagnostic_document",
+            // Also missing despite being registered van-side for Stop TB — same silent-reject
+            // gap as above, found during the full Stop TB sync gap analysis.
+            "i_beneficiarydetails_rmnch", "i_bornbirthdeatils");
 
     private boolean isValidDatabaseIdentifierCharacter(String identifier) {
         return identifier != null && identifier.matches("^[a-zA-Z_][a-zA-Z0-9_]*$");
