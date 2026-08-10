@@ -30,10 +30,10 @@ This microservice is developed using Java and the Spring Boot framework, with My
 
 Ensure that the following prerequisites are met before building the MMU service:
 
-* JDK 1.8
+* JDK 17
 * Maven
 * Redis
-* Spring Boot v2
+* Spring Boot v3
 * MySQL
 
 ### Installation
@@ -47,7 +47,7 @@ To install the MMU module, please follow these steps:
 4. Run the development server:
    - Start the Redis server.
    - Run the command `mvn spring-boot:run -DENV_VAR=local`.
-5. Open your browser and access `http://localhost:8080/swagger-ui.html#!/` to view the Swagger API documentation.
+5. Open your browser and access `http://localhost:8087/swagger-ui/index.html` to view the Swagger API documentation.
 
 ## Setting Up Commit Hooks
 
