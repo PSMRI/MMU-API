@@ -27,7 +27,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.function.Consumer;
 
 import javax.sql.DataSource;
@@ -61,23 +60,20 @@ public class NikshayExportRepository {
 	}
 
 	/** One camp beneficiary's raw, unmapped source data — Nikshay-vocabulary
-	 * mapping/validation happens in the service layer, not here. benRegId/diagnosticsId
-	 * are AMRIT-internal bookkeeping (for export-batch row tracking), not CSV output. */
-	public record NikshayRawRow(Long benRegId, Long diagnosticsId, String firstName, String middleLastName,
-			Integer age, String gender, String phone, String address, String stateName, String districtName,
-			String healthFacility, String village, String pincode, String maritalStatus, String caste,
-			String occupation, String socioeconomicStatus, String chiefComplaint, String hivStatus,
-			Boolean isHivPos) {
+	 * mapping/validation happens in the service layer, not here. benRegId is
+	 * carried into the CSV itself (as a pass-through column the Nikshay ID
+	 * Generator app never touches) so results can be matched back to a
+	 * beneficiary on import without needing any AMRIT-side row tracking. */
+	public record NikshayRawRow(Long benRegId, String firstName, String middleLastName, Integer age, String gender,
+			String phone, String address, String stateName, String districtName, String healthFacility,
+			String village, String pincode, String maritalStatus, String caste, String occupation,
+			String socioeconomicStatus, String chiefComplaint, String hivStatus, Boolean isHivPos) {
 	}
 
-	// Placeholders in order: [1] vanID, [2] parkingPlaceID (both for the diagnosticsId
-	// lookup), [3] parkingPlaceID (facility-name join), [4] vanID, [5] parkingPlaceID
-	// (visit filter), [6] fromDate (inclusive), [7] toDate-exclusive-upper-bound.
+	// Placeholders in order: [1] parkingPlaceID (facility-name join), [2] vanID,
+	// [3] parkingPlaceID (visit filter), [4] fromDate (inclusive), [5] toDate-exclusive-upper-bound.
 	private static final String BASE_SELECT = "SELECT "
 			+ "  b.BeneficiaryRegID AS benRegId, "
-			+ "  (SELECT diag2.id FROM tb_stoptb_diagnostics diag2 WHERE diag2.ben_reg_id = b.BeneficiaryRegID "
-			+ "     AND diag2.vanID = ? AND diag2.parkingPlaceID = ? AND diag2.deleted = 0 "
-			+ "     ORDER BY diag2.id DESC LIMIT 1) AS diagnosticsId, "
 			+ "  b.FirstName AS firstName, "
 			+ "  TRIM(CONCAT(COALESCE(b.MiddleName,''),' ',COALESCE(b.LastName,''))) AS middleLastName, "
 			+ "  TIMESTAMPDIFF(YEAR, b.DOB, CURDATE()) AS age, "
@@ -142,20 +138,17 @@ public class NikshayExportRepository {
 	private PreparedStatementSetter pss(Integer vanID, Integer servicePointID, LocalDate fromDate,
 			LocalDate toDate) {
 		return (PreparedStatement ps) -> {
-			ps.setInt(1, vanID);
-			ps.setInt(2, servicePointID);
+			ps.setInt(1, servicePointID);
+			ps.setInt(2, vanID);
 			ps.setInt(3, servicePointID);
-			ps.setInt(4, vanID);
-			ps.setInt(5, servicePointID);
-			ps.setTimestamp(6, Timestamp.valueOf(fromDate.atStartOfDay()));
-			ps.setTimestamp(7, Timestamp.valueOf(toDate.plusDays(1).atStartOfDay()));
+			ps.setTimestamp(4, Timestamp.valueOf(fromDate.atStartOfDay()));
+			ps.setTimestamp(5, Timestamp.valueOf(toDate.plusDays(1).atStartOfDay()));
 		};
 	}
 
 	private NikshayRawRow mapRow(ResultSet rs) throws SQLException {
 		return new NikshayRawRow(
 				rs.getObject("benRegId", Long.class),
-				rs.getObject("diagnosticsId", Long.class),
 				rs.getString("firstName"),
 				rs.getString("middleLastName"),
 				rs.getObject("age", Integer.class),
@@ -176,63 +169,15 @@ public class NikshayExportRepository {
 				rs.getObject("isHivPos", Boolean.class));
 	}
 
-	/** Camp/date-range parameters an export batch was created for — needed on the
-	 * import side to create a diagnostics row for a beneficiary that didn't have one yet. */
-	public record ExportBatch(Integer vanID, Integer servicePointID, LocalDate fromDate, LocalDate toDate) {
-	}
-
-	/** One tracked CSV row: which beneficiary/diagnostics row it corresponds to. */
-	public record ExportBatchRow(int rowIndex, Long benRegId, Long diagnosticsId) {
-	}
-
-	/** Creates the batch header row up front (before streaming starts) so its ID can
-	 * go out as a response header immediately, ahead of the streamed CSV body. */
-	public Long createExportBatch(Integer vanID, Integer servicePointID, LocalDate fromDate, LocalDate toDate,
-			String createdBy) {
-		String sql = "INSERT INTO tb_stoptb_nikshay_export_batch "
-				+ "(vanID, parkingPlaceID, from_date, to_date, created_by) VALUES (?, ?, ?, ?, ?)";
-		KeyHolder keyHolder = new GeneratedKeyHolder();
-		getJdbcTemplate().update(connection -> {
-			PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-			ps.setInt(1, vanID);
-			ps.setInt(2, servicePointID);
-			ps.setDate(3, java.sql.Date.valueOf(fromDate));
-			ps.setDate(4, java.sql.Date.valueOf(toDate));
-			ps.setString(5, createdBy);
-			return ps;
-		}, keyHolder);
-		return keyHolder.getKey().longValue();
-	}
-
-	/** Records one CSV row's beneficiary/diagnostics identity against the batch,
-	 * called as each row is streamed out. */
-	public void addBatchRow(Long batchId, int rowIndex, Long benRegId, Long diagnosticsId) {
-		String sql = "INSERT INTO tb_stoptb_nikshay_export_batch_row "
-				+ "(batch_id, row_index, ben_reg_id, diagnostics_id) VALUES (?, ?, ?, ?)";
-		getJdbcTemplate().update(sql, batchId, rowIndex, benRegId, diagnosticsId);
-	}
-
-	public void finalizeBatchRowCount(Long batchId, int rowCount) {
-		getJdbcTemplate().update("UPDATE tb_stoptb_nikshay_export_batch SET row_count = ? WHERE id = ?", rowCount,
-				batchId);
-	}
-
-	public ExportBatch getBatch(Long batchId) {
-		String sql = "SELECT vanID, parkingPlaceID, from_date, to_date FROM tb_stoptb_nikshay_export_batch WHERE id = ?";
-		return getJdbcTemplate().query(sql, (ResultSet rs) -> rs.next()
-				? new ExportBatch(rs.getInt("vanID"), rs.getInt("parkingPlaceID"), rs.getDate("from_date").toLocalDate(),
-						rs.getDate("to_date").toLocalDate())
-				: null, batchId);
-	}
-
-	/** All tracked rows for a batch, in the same order they were streamed into the CSV. */
-	public List<ExportBatchRow> getBatchRows(Long batchId) {
-		String sql = "SELECT row_index, ben_reg_id, diagnostics_id FROM tb_stoptb_nikshay_export_batch_row "
-				+ "WHERE batch_id = ? ORDER BY row_index ASC";
-		return getJdbcTemplate().query(sql,
-				(rs, rowNum) -> new ExportBatchRow(rs.getInt("row_index"), rs.getLong("ben_reg_id"),
-						rs.getObject("diagnostics_id", Long.class)),
-				batchId);
+	/** The most recent tb_stoptb_diagnostics row for this beneficiary at this
+	 * van/service point, if any — looked up live at import time (no export-time
+	 * snapshot needed, since the beneficiary is identified directly from the
+	 * results CSV's own benRegId column). Null if none exists yet. */
+	public Long findLatestDiagnosticsId(Long benRegId, Integer vanID, Integer servicePointID) {
+		String sql = "SELECT id FROM tb_stoptb_diagnostics WHERE ben_reg_id = ? AND vanID = ? "
+				+ "AND parkingPlaceID = ? AND deleted = 0 ORDER BY id DESC LIMIT 1";
+		return getJdbcTemplate().query(sql, (ResultSet rs) -> rs.next() ? rs.getLong("id") : null, benRegId, vanID,
+				servicePointID);
 	}
 
 	public void updateNikshayId(Long diagnosticsId, String nikshayId, String modifiedBy) {
@@ -241,8 +186,8 @@ public class NikshayExportRepository {
 		getJdbcTemplate().update(sql, nikshayId, modifiedBy, diagnosticsId);
 	}
 
-	/** Called when a beneficiary had no tb_stoptb_diagnostics row for this camp visit yet
-	 * at export time — creates one to hold the Nikshay ID the portal generated. */
+	/** Called when a beneficiary had no tb_stoptb_diagnostics row for this camp
+	 * visit yet — creates one to hold the Nikshay ID the portal generated. */
 	public Long insertDiagnosticsWithNikshayId(Long benRegId, Integer vanID, Integer servicePointID,
 			LocalDate visitDate, String nikshayId, String createdBy) {
 		String sql = "INSERT INTO tb_stoptb_diagnostics "

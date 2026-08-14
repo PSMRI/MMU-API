@@ -102,13 +102,8 @@ public class NikshayExportController {
 		}
 
 		int excludedCount;
-		Long batchId;
 		try {
 			excludedCount = nikshayExportService.countAlreadyGenerated(vanID, servicePointID, fromDate, toDate);
-			// Created synchronously, ahead of streaming, so its ID can go out as a
-			// response header — headers can't change once the streamed body starts.
-			batchId = nikshayExportService.createExportBatch(vanID, servicePointID, fromDate, toDate,
-					currentUsername(request));
 		} catch (Exception e) {
 			logger.error("Error preparing Nikshay beneficiary export", e);
 			return ResponseEntity.status(500).body("Could not prepare the export");
@@ -116,8 +111,7 @@ public class NikshayExportController {
 
 		StreamingResponseBody body = outputStream -> {
 			try {
-				nikshayExportService.streamBeneficiariesCsv(vanID, servicePointID, fromDate, toDate, outputStream,
-						batchId);
+				nikshayExportService.streamBeneficiariesCsv(vanID, servicePointID, fromDate, toDate, outputStream);
 			} catch (Exception e) {
 				// The HTTP status/headers are already committed by the time streaming
 				// starts, so a mid-stream failure can only be logged, not surfaced
@@ -129,26 +123,33 @@ public class NikshayExportController {
 		String filename = "nikshay-beneficiaries-" + fromDate + "-to-" + toDate + ".csv";
 		return ResponseEntity.ok().contentType(MediaType.parseMediaType("text/csv"))
 				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-				.header("X-Excluded-Existing-Nikshay-Id-Count", String.valueOf(excludedCount))
-				.header("X-Nikshay-Export-Batch-Id", String.valueOf(batchId)).body(body);
+				.header("X-Excluded-Existing-Nikshay-Id-Count", String.valueOf(excludedCount)).body(body);
 	}
 
 	@Operation(summary = "Upload the Nikshay ID Generator app's results CSV to write generated Nikshay IDs "
-			+ "back onto the beneficiaries from a prior export (identified by batchId)")
+			+ "back onto the beneficiaries — each row is matched by its own benRegId column, "
+			+ "a pass-through field the export added that the ID Generator app never touches")
 	@PostMapping(value = "/importResultsCsv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	public ResponseEntity<?> importResultsCsv(@RequestParam("batchId") Long batchId,
+	public ResponseEntity<?> importResultsCsv(@RequestParam("vanID") Integer vanID,
+			@RequestParam("servicePointID") Integer servicePointID, @RequestParam("visitDate") String visitDateStr,
 			@RequestParam("file") MultipartFile file, HttpServletRequest request) {
 		if (file == null || file.isEmpty()) {
 			return ResponseEntity.badRequest().body("A results CSV file is required");
 		}
+		LocalDate visitDate;
 		try {
-			ImportSummary summary = nikshayImportService.importResults(batchId, file.getInputStream(),
-					currentUsername(request));
+			visitDate = LocalDate.parse(visitDateStr, DATE_FMT);
+		} catch (DateTimeParseException e) {
+			return ResponseEntity.badRequest().body("visitDate must be in YYYY-MM-DD format");
+		}
+		try {
+			ImportSummary summary = nikshayImportService.importResults(vanID, servicePointID, visitDate,
+					file.getInputStream(), currentUsername(request));
 			return ResponseEntity.ok(summary);
 		} catch (IllegalArgumentException e) {
 			return ResponseEntity.badRequest().body(e.getMessage());
 		} catch (Exception e) {
-			logger.error("Error importing Nikshay results CSV for batchId {}", batchId, e);
+			logger.error("Error importing Nikshay results CSV", e);
 			return ResponseEntity.status(500).body("Could not import the results file");
 		}
 	}

@@ -69,9 +69,13 @@ import com.iemr.mmu.repo.stoptb.NikshayExportRepository.NikshayRawRow;
 @Service
 public class NikshayExportService {
 
-	private static final String[] CSV_HEADER = { "typeOfCaseFinding", "caste", "firstName", "middleLastName", "age",
-			"gender", "primaryPhone", "address", "state", "district", "tu", "healthFacility", "village", "pincode",
-			"area", "maritalStatus", "occupation", "socioeconomicStatus", "symptoms", "hivStatus" };
+	// benRegId is a pass-through column, not one of Nikshay's own template fields — the ID
+	// Generator app never reads or displays it, but carries it straight through to the
+	// results file, which is how an uploaded results CSV gets matched back to a beneficiary.
+	private static final String[] CSV_HEADER = { "benRegId", "typeOfCaseFinding", "caste", "firstName",
+			"middleLastName", "age", "gender", "primaryPhone", "address", "state", "district", "tu", "healthFacility",
+			"village", "pincode", "area", "maritalStatus", "occupation", "socioeconomicStatus", "symptoms",
+			"hivStatus" };
 
 	private static final Set<String> GENDER_VALUES = setOf("Male", "Female", "Transgender");
 	private static final Set<String> CASTE_VALUES = setOf("SC", "ST", "Other");
@@ -107,40 +111,25 @@ public class NikshayExportService {
 		return nikshayExportRepository.countAlreadyGenerated(vanID, servicePointID, fromDate, toDate);
 	}
 
-	/** Creates the export batch header row up front, before the CSV starts streaming,
-	 * so its ID is available for a response header the caller can hand back on import. */
-	public Long createExportBatch(Integer vanID, Integer servicePointID, LocalDate fromDate, LocalDate toDate,
-			String createdBy) {
-		return nikshayExportRepository.createExportBatch(vanID, servicePointID, fromDate, toDate, createdBy);
-	}
-
 	/** Writes the CSV (header + one row per pending beneficiary) directly to
 	 * {@code outputStream} as rows arrive from the database — never buffers
-	 * the whole file in memory. Caller owns closing {@code outputStream}.
-	 *
-	 * Also records each row's beneficiary/diagnostics identity against
-	 * {@code batchId}, in CSV row order — the only way to match a beneficiary
-	 * back up once the Nikshay ID Generator app's results file comes back,
-	 * since that app strips any column not in its own fixed template. */
+	 * the whole file in memory. Caller owns closing {@code outputStream}. */
 	public void streamBeneficiariesCsv(Integer vanID, Integer servicePointID, LocalDate fromDate, LocalDate toDate,
-			OutputStream outputStream, Long batchId) {
+			OutputStream outputStream) {
 		Writer writer = new BufferedWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8));
 		try {
 			writer.write(String.join(",", CSV_HEADER));
 			writer.write("\r\n");
 
-			int[] rowIndex = { 0 };
 			nikshayExportRepository.streamPendingBeneficiaries(vanID, servicePointID, fromDate, toDate, row -> {
 				try {
 					writer.write(toCsvLine(row));
 					writer.write("\r\n");
-					nikshayExportRepository.addBatchRow(batchId, rowIndex[0]++, row.benRegId(), row.diagnosticsId());
 				} catch (Exception e) {
 					throw new RuntimeException(e);
 				}
 			});
 			writer.flush();
-			nikshayExportRepository.finalizeBatchRowCount(batchId, rowIndex[0]);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
@@ -148,6 +137,7 @@ public class NikshayExportService {
 
 	private String toCsvLine(NikshayRawRow row) {
 		String[] values = {
+				String.valueOf(row.benRegId()),
 				"Passive", // typeOfCaseFinding - no Active/Passive signal in AMRIT yet; matches the portal's own default
 				matchOrDefault(row.caste(), CASTE_VALUES, "Other"),
 				nullToEmpty(row.firstName()),

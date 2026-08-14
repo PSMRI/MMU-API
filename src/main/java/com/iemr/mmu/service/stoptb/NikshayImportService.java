@@ -24,6 +24,7 @@ package com.iemr.mmu.service.stoptb;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -35,22 +36,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.iemr.mmu.repo.stoptb.NikshayExportRepository;
-import com.iemr.mmu.repo.stoptb.NikshayExportRepository.ExportBatch;
-import com.iemr.mmu.repo.stoptb.NikshayExportRepository.ExportBatchRow;
 
 /**
  * Imports the Nikshay ID Generator desktop app's results CSV, writing the
- * portal-generated Nikshay IDs back onto the beneficiaries a prior export
- * (identified by {@code batchId}) streamed out.
+ * portal-generated Nikshay IDs back onto the right beneficiaries.
  *
- * Matching is purely by row position: results file row i corresponds to
- * export batch row i. That app's own CSV template has no room for an
- * AMRIT-internal identifier — reading strips any column outside its fixed
- * 20-column list — but it does guarantee it never reorders or drops rows
- * between the input it read and the results it writes (confirmed from its
- * own source: output is built as {@code rows.map((r, i) => ...)}), which is
- * what makes position-based matching safe as long as the row count matches
- * the original export exactly.
+ * Each row is identified by its own {@code benRegId} column — a pass-through
+ * field the exported CSV carries that isn't one of Nikshay's own template
+ * columns, so the ID Generator app never touches it but does carry it
+ * straight through to the results file (see NikshayExportService's
+ * CSV_HEADER, and the corresponding change in the Nikshaya app itself).
+ * That means no AMRIT-side row/order tracking is needed: each result row is
+ * self-identifying, and the beneficiary's tb_stoptb_diagnostics row (if any)
+ * is resolved live at import time.
  *
  * Row status handling:
  * - "success": generatedId is the new Nikshay ID — written as-is.
@@ -63,28 +61,22 @@ import com.iemr.mmu.repo.stoptb.NikshayExportRepository.ExportBatchRow;
 @Service
 public class NikshayImportService {
 
-	private static final List<String> REQUIRED_COLUMNS = List.of("firstName", "middleLastName", "generatedId",
-			"status");
+	private static final List<String> REQUIRED_COLUMNS = List.of("benRegId", "firstName", "middleLastName",
+			"generatedId", "status");
 
 	public record ImportRowResult(int rowIndex, Long benRegId, String firstName, String middleLastName,
 			String status, String generatedId, String note) {
 	}
 
-	public record ImportSummary(int csvRowCount, int batchRowCount, int updated, int failed, int needsReview,
+	public record ImportSummary(int csvRowCount, int updated, int failed, int needsReview,
 			List<ImportRowResult> needsReviewRows, List<ImportRowResult> failedRows) {
 	}
 
 	@Autowired
 	private NikshayExportRepository nikshayExportRepository;
 
-	public ImportSummary importResults(Long batchId, InputStream csvInputStream, String modifiedBy)
-			throws Exception {
-		ExportBatch batch = nikshayExportRepository.getBatch(batchId);
-		if (batch == null) {
-			throw new IllegalArgumentException("Unknown batchId: " + batchId);
-		}
-		List<ExportBatchRow> batchRows = nikshayExportRepository.getBatchRows(batchId);
-
+	public ImportSummary importResults(Integer vanID, Integer servicePointID, LocalDate visitDate,
+			InputStream csvInputStream, String modifiedBy) throws Exception {
 		List<CSVRecord> records;
 		boolean hasErrorColumn;
 		CSVFormat format = CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true).setTrim(true).build();
@@ -100,53 +92,66 @@ public class NikshayImportService {
 			records = parser.getRecords();
 		}
 
-		if (records.size() != batchRows.size()) {
-			throw new IllegalArgumentException("Results CSV has " + records.size() + " row(s) but export batch "
-					+ batchId + " has " + batchRows.size()
-					+ " — this file doesn't match that export (wrong file, or rows were added/removed).");
-		}
-
 		int updated = 0;
 		List<ImportRowResult> needsReview = new ArrayList<>();
 		List<ImportRowResult> failedRows = new ArrayList<>();
 
 		for (int i = 0; i < records.size(); i++) {
 			CSVRecord record = records.get(i);
-			ExportBatchRow batchRow = batchRows.get(i);
-
-			String status = record.get("status").trim();
-			String generatedId = record.get("generatedId").trim();
 			String firstName = record.get("firstName");
 			String middleLastName = record.get("middleLastName");
+			String status = record.get("status").trim();
+			String generatedId = record.get("generatedId").trim();
+
+			Long benRegId = parseBenRegId(record.get("benRegId"));
+			if (benRegId == null) {
+				failedRows.add(new ImportRowResult(i, null, firstName, middleLastName, status, generatedId,
+						"Row has a missing/invalid benRegId — was this file exported by AMRIT?"));
+				continue;
+			}
 
 			if ("success".equalsIgnoreCase(status) || "skipped".equalsIgnoreCase(status)) {
 				String[] tokens = generatedId.isEmpty() ? new String[0] : generatedId.split("\\s+");
 				if (tokens.length == 1) {
-					writeNikshayId(batch, batchRow, tokens[0], modifiedBy);
+					writeNikshayId(vanID, servicePointID, visitDate, benRegId, tokens[0], modifiedBy);
 					updated++;
 				} else {
 					String note = tokens.length == 0 ? "Row marked " + status + " but has no generatedId."
-							: "Multiple possible existing Nikshay IDs (" + generatedId + ") — needs manual confirmation.";
-					needsReview.add(new ImportRowResult(i, batchRow.benRegId(), firstName, middleLastName, status,
-							generatedId, note));
+							: "Multiple possible existing Nikshay IDs (" + generatedId
+									+ ") — needs manual confirmation.";
+					needsReview.add(
+							new ImportRowResult(i, benRegId, firstName, middleLastName, status, generatedId, note));
 				}
 			} else {
 				String error = hasErrorColumn ? record.get("error") : "";
-				failedRows.add(new ImportRowResult(i, batchRow.benRegId(), firstName, middleLastName, status,
-						generatedId, error));
+				failedRows.add(
+						new ImportRowResult(i, benRegId, firstName, middleLastName, status, generatedId, error));
 			}
 		}
 
-		return new ImportSummary(records.size(), batchRows.size(), updated, failedRows.size(), needsReview.size(),
-				needsReview, failedRows);
+		return new ImportSummary(records.size(), updated, failedRows.size(), needsReview.size(), needsReview,
+				failedRows);
 	}
 
-	private void writeNikshayId(ExportBatch batch, ExportBatchRow batchRow, String nikshayId, String modifiedBy) {
-		if (batchRow.diagnosticsId() != null) {
-			nikshayExportRepository.updateNikshayId(batchRow.diagnosticsId(), nikshayId, modifiedBy);
+	private static Long parseBenRegId(String raw) {
+		if (raw == null || raw.isBlank()) {
+			return null;
+		}
+		try {
+			return Long.valueOf(raw.trim());
+		} catch (NumberFormatException e) {
+			return null;
+		}
+	}
+
+	private void writeNikshayId(Integer vanID, Integer servicePointID, LocalDate visitDate, Long benRegId,
+			String nikshayId, String modifiedBy) {
+		Long diagnosticsId = nikshayExportRepository.findLatestDiagnosticsId(benRegId, vanID, servicePointID);
+		if (diagnosticsId != null) {
+			nikshayExportRepository.updateNikshayId(diagnosticsId, nikshayId, modifiedBy);
 		} else {
-			nikshayExportRepository.insertDiagnosticsWithNikshayId(batchRow.benRegId(), batch.vanID(),
-					batch.servicePointID(), batch.fromDate(), nikshayId, modifiedBy);
+			nikshayExportRepository.insertDiagnosticsWithNikshayId(benRegId, vanID, servicePointID, visitDate,
+					nikshayId, modifiedBy);
 		}
 	}
 }
