@@ -428,6 +428,65 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
             syncFacilityID = ((Number) cleanRecord.get("SyncFacilityID")).intValue();
         }
 
+        // FK remap: tb_diagnostic_result/tb_diagnostic_document store diagnostic_order_id as
+        // the parent order's LOCAL id. Local and central have independent auto-increment
+        // counters, so that local id will not generally match the parent's row on central —
+        // inserting it as-is trips the fk_diagnostic_*_order constraint. Look up the parent's
+        // real central id via VanID+VanSerialNo (the one identity guaranteed to match on both
+        // sides) and substitute it before this record is built for insert/update.
+        if (("tb_diagnostic_result".equalsIgnoreCase(syncTableName)
+                || "tb_diagnostic_document".equalsIgnoreCase(syncTableName))
+                && cleanRecord.get("diagnostic_order_id") != null) {
+            String localOrderId = String.valueOf(cleanRecord.get("diagnostic_order_id"));
+            Long centralOrderId = dataSyncRepositoryCentral.lookupCentralIdByVanSerialNo(
+                    schemaName, "tb_diagnostic_order", "id", vanID, localOrderId);
+            if (centralOrderId == null) {
+                logger.warn("Skipping {} VanSerialNo={} — parent tb_diagnostic_order (VanID={}, VanSerialNo={}) "
+                        + "not found on central yet", syncTableName, vanSerialNo, vanID, localOrderId);
+                syncResults.add(new SyncResult(schemaName, syncTableName, vanSerialNo,
+                        syncUploadDataDigester.getSyncedBy(), false,
+                        "Parent order not yet synced to central (VanSerialNo=" + localOrderId + ")"));
+                overallSuccess = false;
+                continue;
+            }
+            cleanRecord.put("diagnostic_order_id", centralOrderId);
+        }
+
+        // Same FK remap, for the Dynamic Form response chain: t_section_response.responseId
+        // points to its parent t_form_response's LOCAL id, and t_question_response
+        // .sectionResponseId points to its parent t_section_response's LOCAL id. Same fix —
+        // look up the parent's real central id via VanID+VanSerialNo before insert/update.
+        if ("t_section_response".equalsIgnoreCase(syncTableName) && cleanRecord.get("responseId") != null) {
+            String localResponseId = String.valueOf(cleanRecord.get("responseId"));
+            Long centralResponseId = dataSyncRepositoryCentral.lookupCentralIdByVanSerialNo(
+                    schemaName, "t_form_response", "responseId", vanID, localResponseId);
+            if (centralResponseId == null) {
+                logger.warn("Skipping {} VanSerialNo={} — parent t_form_response (VanID={}, VanSerialNo={}) "
+                        + "not found on central yet", syncTableName, vanSerialNo, vanID, localResponseId);
+                syncResults.add(new SyncResult(schemaName, syncTableName, vanSerialNo,
+                        syncUploadDataDigester.getSyncedBy(), false,
+                        "Parent form response not yet synced to central (VanSerialNo=" + localResponseId + ")"));
+                overallSuccess = false;
+                continue;
+            }
+            cleanRecord.put("responseId", centralResponseId);
+        }
+        if ("t_question_response".equalsIgnoreCase(syncTableName) && cleanRecord.get("sectionResponseId") != null) {
+            String localSectionResponseId = String.valueOf(cleanRecord.get("sectionResponseId"));
+            Long centralSectionResponseId = dataSyncRepositoryCentral.lookupCentralIdByVanSerialNo(
+                    schemaName, "t_section_response", "sectionResponseId", vanID, localSectionResponseId);
+            if (centralSectionResponseId == null) {
+                logger.warn("Skipping {} VanSerialNo={} — parent t_section_response (VanID={}, VanSerialNo={}) "
+                        + "not found on central yet", syncTableName, vanSerialNo, vanID, localSectionResponseId);
+                syncResults.add(new SyncResult(schemaName, syncTableName, vanSerialNo,
+                        syncUploadDataDigester.getSyncedBy(), false,
+                        "Parent section response not yet synced to central (VanSerialNo=" + localSectionResponseId + ")"));
+                overallSuccess = false;
+                continue;
+            }
+            cleanRecord.put("sectionResponseId", centralSectionResponseId);
+        }
+
         int recordCheck;
         try {
             recordCheck = dataSyncRepositoryCentral.checkRecordIsAlreadyPresentOrNot(

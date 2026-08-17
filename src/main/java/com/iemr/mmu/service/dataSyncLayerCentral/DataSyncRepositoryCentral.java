@@ -173,6 +173,49 @@ public class DataSyncRepositoryCentral {
         }
     }
 
+    /**
+     * Looks up the CENTRAL-assigned primary key for a row, given its portable identity
+     * (VanID + VanSerialNo). Local and central have independent auto-increment counters,
+     * so a row's local `id` and its central `id` are not guaranteed to match — VanSerialNo
+     * (set to the row's own local id at creation) is the only value guaranteed to be the
+     * same on both sides. Used to correctly remap FK columns like
+     * tb_diagnostic_result/tb_diagnostic_document.diagnostic_order_id, which are stored
+     * locally as the parent's local id but must reference the parent's *central* id once
+     * synced here — otherwise the FK constraint on central rejects the insert.
+     *
+     * @return the central row's primary key, or null if no matching row exists yet on central
+     *         (e.g. the parent hasn't synced yet, or itself failed to sync).
+     */
+    public Long lookupCentralIdByVanSerialNo(String schemaName, String tableName, String idColumnName,
+            String vanID, String vanSerialNo) {
+        jdbcTemplate = getJdbcTemplate();
+
+        if (!isValidSchemaName(schemaName) || !isValidTableName(tableName)
+                || !isValidDatabaseIdentifierCharacter(idColumnName)) {
+            logger.error("Invalid identifiers for central id lookup: schema={}, table={}, column={}",
+                    schemaName, tableName, idColumnName);
+            throw new IllegalArgumentException("Invalid identifiers provided.");
+        }
+
+        String query = "SELECT " + idColumnName + " FROM " + schemaName + "." + tableName
+                + " WHERE VanID = ? AND VanSerialNo = ?";
+
+        try {
+            List<Map<String, Object>> resultSet = jdbcTemplate.queryForList(query, vanID, vanSerialNo);
+            if (resultSet == null || resultSet.isEmpty()) {
+                logger.warn("No central row found for {}.{} VanID={} VanSerialNo={} — parent likely not synced yet",
+                        schemaName, tableName, vanID, vanSerialNo);
+                return null;
+            }
+            Object idValue = resultSet.get(0).get(idColumnName);
+            return idValue == null ? null : Long.valueOf(idValue.toString());
+        } catch (Exception e) {
+            logger.error("Error looking up central id for {}.{} VanID={} VanSerialNo={}: {}",
+                    schemaName, tableName, vanID, vanSerialNo, e.getMessage(), e);
+            throw new RuntimeException("Failed to look up central id: " + e.getMessage(), e);
+        }
+    }
+
     public int[] syncDataToCentralDB(String schema, String tableName, String serverColumns, String query,
             List<Object[]> syncDataList) {
         jdbcTemplate = getJdbcTemplate();
