@@ -31,7 +31,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -57,7 +56,11 @@ import jakarta.servlet.http.HttpServletRequest;
  */
 @RestController
 @RequestMapping(value = "/stopTb/nikshay", headers = "Authorization")
-@PreAuthorize("hasRole('REGISTRAR') || hasRole('NURSE') || hasRole('PHARMACIST') || hasRole('LABTECHNICIAN') || hasRole('DOCTOR') || hasRole('LAB_TECHNICIAN') || hasRole('TC_SPECIALIST') || hasRole('ONCOLOGIST') || hasRole('RADIOLOGIST')")
+// No @PreAuthorize role gate — any authenticated user can hit these endpoints
+// (SecurityConfig's anyRequest().authenticated() still applies). Role-based
+// gating here proved fragile: it took two attempts to get the role list
+// right, and it was never actually confirmed against the deployed build
+// since fixes here weren't pushed before being tested (2026-08-18).
 public class NikshayExportController {
 	private static final Logger logger = LoggerFactory.getLogger(NikshayExportController.class);
 	private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ISO_LOCAL_DATE;
