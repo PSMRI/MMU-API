@@ -89,7 +89,7 @@ public class NikshayExportController {
 
 	@Operation(summary = "Download Stop TB beneficiaries for a date range as a CSV formatted for the Nikshay ID Generator")
 	@GetMapping(value = "/exportBeneficiariesCsv")
-	public ResponseEntity<?> exportBeneficiariesCsv(@RequestParam("fromDate") String fromDateStr,
+	public ResponseEntity<StreamingResponseBody> exportBeneficiariesCsv(@RequestParam("fromDate") String fromDateStr,
 			@RequestParam("toDate") String toDateStr) {
 
 		LocalDate fromDate;
@@ -98,10 +98,10 @@ public class NikshayExportController {
 			fromDate = LocalDate.parse(fromDateStr, DATE_FMT);
 			toDate = LocalDate.parse(toDateStr, DATE_FMT);
 		} catch (DateTimeParseException e) {
-			return ResponseEntity.badRequest().body("fromDate/toDate must be in YYYY-MM-DD format");
+			return ResponseEntity.badRequest().body(errorBody("fromDate/toDate must be in YYYY-MM-DD format"));
 		}
 		if (toDate.isBefore(fromDate)) {
-			return ResponseEntity.badRequest().body("toDate must be on or after fromDate");
+			return ResponseEntity.badRequest().body(errorBody("toDate must be on or after fromDate"));
 		}
 
 		int excludedAlreadyGenerated;
@@ -111,7 +111,7 @@ public class NikshayExportController {
 			excludedNotReadyToExport = nikshayExportService.countNotReadyToExport(fromDate, toDate);
 		} catch (Exception e) {
 			logger.error("Error preparing Nikshay beneficiary export", e);
-			return ResponseEntity.status(500).body("Could not prepare the export");
+			return ResponseEntity.status(500).body(errorBody("Could not prepare the export"));
 		}
 
 		StreamingResponseBody body = outputStream -> {
@@ -131,6 +131,19 @@ public class NikshayExportController {
 				.header("X-Excluded-Existing-Nikshay-Id-Count", String.valueOf(excludedAlreadyGenerated))
 				.header("X-Excluded-Not-Ready-Count", String.valueOf(excludedNotReadyToExport))
 				.body(body);
+	}
+
+	/** Wraps a plain error message as a StreamingResponseBody so every return
+	 * path of exportBeneficiariesCsv shares one concrete generic type
+	 * (ResponseEntity&lt;StreamingResponseBody&gt;). A wildcard/Object-typed
+	 * ResponseEntity here breaks Spring's StreamingResponseBodyReturnValueHandler
+	 * — it decides whether to stream based on the method's *declared* generic
+	 * return type, not the runtime object, so a wildcard falls back to normal
+	 * HttpMessageConverters, which can't write a raw StreamingResponseBody
+	 * lambda and throw "No converter for [...Lambda...]" (confirmed in
+	 * production logs, 2026-08-18). */
+	private StreamingResponseBody errorBody(String message) {
+		return outputStream -> outputStream.write(message.getBytes(java.nio.charset.StandardCharsets.UTF_8));
 	}
 
 	@Operation(summary = "Upload the Nikshay ID Generator app's results CSV to write generated Nikshay IDs "
