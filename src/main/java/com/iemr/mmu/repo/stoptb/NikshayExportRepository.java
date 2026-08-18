@@ -27,6 +27,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.function.Consumer;
 
 import javax.sql.DataSource;
@@ -60,6 +61,10 @@ import org.springframework.stereotype.Repository;
  * recorded, or their village not resolving all the way up to a state. Both
  * are counted so callers can report totals, but there is deliberately no
  * separate report of *who* was skipped or why.
+ *
+ * The Nikshay ID itself lives on tb_suspected.nikshay_id — not
+ * tb_stoptb_diagnostics, which also has a nikshay_id column but is not the
+ * table this feature writes to.
  */
 @Repository
 public class NikshayExportRepository {
@@ -107,8 +112,8 @@ public class NikshayExportRepository {
 			+ "  (SELECT ge.hiv_status FROM tb_stoptb_general_examination ge WHERE ge.beneficiary_reg_id = b.BeneficiaryRegID "
 			+ "     AND ge.deleted = 0 ORDER BY ge.id DESC LIMIT 1) AS hivStatus, "
 			+ "  b.IsHIVPos AS isHivPos, "
-			+ "  (SELECT diag.nikshay_id FROM tb_stoptb_diagnostics diag WHERE diag.ben_reg_id = b.BeneficiaryRegID "
-			+ "     AND diag.nikshay_id IS NOT NULL AND diag.deleted = 0 ORDER BY diag.id DESC LIMIT 1) AS existingNikshayId "
+			+ "  (SELECT s.nikshay_id FROM tb_suspected s WHERE s.benRegID = b.BeneficiaryRegID "
+			+ "     AND s.nikshay_id IS NOT NULL ORDER BY s.id DESC LIMIT 1) AS existingNikshayId "
 			+ "FROM i_beneficiary b "
 			+ "LEFT JOIN I_bendemographics d ON d.BeneficiaryRegID = b.BeneficiaryRegID "
 			+ "LEFT JOIN m_gender g ON g.GenderID = b.GenderID "
@@ -190,28 +195,43 @@ public class NikshayExportRepository {
 				rs.getObject("isHivPos", Boolean.class));
 	}
 
-	/** The most recent tb_stoptb_diagnostics row for this beneficiary, if any —
-	 * looked up live at import time (no export-time snapshot needed, since the
+	/** Finds beneficiaries matching a results-file row by content, since the
+	 * real Nikshay ID Generator app's results CSV carries no beneficiary ID of
+	 * any kind back — only phone/name/age survive the round trip. Matches on
+	 * normalized 10-digit phone plus a case-insensitive first-name match;
+	 * callers must treat anything other than exactly one result as ambiguous
+	 * (e.g. a shared family phone number) rather than guessing. */
+	public List<Long> findMatchingBeneficiaryIds(String phoneDigits, String firstName) {
+		String sql = "SELECT DISTINCT b.BeneficiaryRegID FROM i_beneficiary b "
+				+ "JOIN i_benphonemap p ON p.BenificiaryRegID = b.BeneficiaryRegID AND p.Deleted = 0 "
+				+ "WHERE b.Deleted = 0 AND p.PhoneNo = ? AND LOWER(TRIM(b.FirstName)) = LOWER(TRIM(?))";
+		return getJdbcTemplate().query(sql, (rs, rowNum) -> rs.getLong("BeneficiaryRegID"), phoneDigits, firstName);
+	}
+
+	/** The most recent tb_suspected row for this beneficiary, if any — looked
+	 * up live at import time (no export-time snapshot needed, since the
 	 * beneficiary is identified directly from the results CSV's own benRegId
-	 * column). Null if none exists yet. */
-	public Long findLatestDiagnosticsId(Long benRegId) {
-		String sql = "SELECT id FROM tb_stoptb_diagnostics WHERE ben_reg_id = ? AND deleted = 0 "
-				+ "ORDER BY id DESC LIMIT 1";
+	 * column). Null if none exists yet. Note: tb_suspected has no `deleted`
+	 * column, unlike most other AMRIT tables. */
+	public Long findLatestSuspectedId(Long benRegId) {
+		String sql = "SELECT id FROM tb_suspected WHERE benRegID = ? ORDER BY id DESC LIMIT 1";
 		return getJdbcTemplate().query(sql, (ResultSet rs) -> rs.next() ? rs.getLong("id") : null, benRegId);
 	}
 
-	public void updateNikshayId(Long diagnosticsId, String nikshayId, String modifiedBy) {
-		String sql = "UPDATE tb_stoptb_diagnostics SET nikshay_id = ?, modified_by = ?, "
+	public void updateNikshayId(Long suspectedId, String nikshayId, String modifiedBy) {
+		String sql = "UPDATE tb_suspected SET nikshay_id = ?, modified_by = ?, "
 				+ "last_mod_date = CURRENT_TIMESTAMP WHERE id = ?";
-		getJdbcTemplate().update(sql, nikshayId, modifiedBy, diagnosticsId);
+		getJdbcTemplate().update(sql, nikshayId, modifiedBy, suspectedId);
 	}
 
-	/** Called when a beneficiary had no tb_stoptb_diagnostics row yet — creates
-	 * one to hold the Nikshay ID the portal generated. */
-	public Long insertDiagnosticsWithNikshayId(Long benRegId, LocalDate visitDate, String nikshayId,
+	/** Called when a beneficiary had no tb_suspected row yet — creates one to
+	 * hold the Nikshay ID the portal generated. created_date is set explicitly
+	 * because, unlike created_date on most other AMRIT tables, tb_suspected's
+	 * has no DB-side default. */
+	public Long insertSuspectedWithNikshayId(Long benRegId, LocalDate visitDate, String nikshayId,
 			String createdBy) {
-		String sql = "INSERT INTO tb_stoptb_diagnostics (ben_reg_id, visit_date, nikshay_id, created_by) "
-				+ "VALUES (?, ?, ?, ?)";
+		String sql = "INSERT INTO tb_suspected (benRegID, visit_date, nikshay_id, created_by, created_date) "
+				+ "VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)";
 		KeyHolder keyHolder = new GeneratedKeyHolder();
 		getJdbcTemplate().update(connection -> {
 			PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
