@@ -57,7 +57,7 @@ import jakarta.servlet.http.HttpServletRequest;
  */
 @RestController
 @RequestMapping(value = "/stopTb/nikshay", headers = "Authorization")
-@PreAuthorize("hasRole('NURSE') || hasRole('PHARMACIST') || hasRole('LABTECHNICIAN') || hasRole('DOCTOR') || hasRole('LAB_TECHNICIAN') || hasRole('TC_SPECIALIST') || hasRole('ONCOLOGIST') || hasRole('RADIOLOGIST')")
+@PreAuthorize("hasRole('REGISTRAR') || hasRole('NURSE') || hasRole('PHARMACIST') || hasRole('LABTECHNICIAN') || hasRole('DOCTOR') || hasRole('LAB_TECHNICIAN') || hasRole('TC_SPECIALIST') || hasRole('ONCOLOGIST') || hasRole('RADIOLOGIST')")
 public class NikshayExportController {
 	private static final Logger logger = LoggerFactory.getLogger(NikshayExportController.class);
 	private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ISO_LOCAL_DATE;
