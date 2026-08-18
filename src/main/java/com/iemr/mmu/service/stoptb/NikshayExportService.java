@@ -113,8 +113,8 @@ public class NikshayExportService {
 		return nikshayExportRepository.countAlreadyGenerated(fromDate, toDate);
 	}
 
-	public int countUnresolvedLocation(LocalDate fromDate, LocalDate toDate) {
-		return nikshayExportRepository.countUnresolvedLocation(fromDate, toDate);
+	public int countNotReadyToExport(LocalDate fromDate, LocalDate toDate) {
+		return nikshayExportRepository.countNotReadyToExport(fromDate, toDate);
 	}
 
 	/** Writes the CSV (header + one row per pending beneficiary) directly to

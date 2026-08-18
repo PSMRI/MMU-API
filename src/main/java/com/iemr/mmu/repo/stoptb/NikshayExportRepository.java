@@ -42,27 +42,54 @@ import org.springframework.stereotype.Repository;
 /**
  * Reads Stop TB beneficiaries for the Nikshay ID Generator CSV export.
  *
- * MMU runs one local database per van, so a beneficiary visible here already
- * belongs to the current van/service point by construction — there is
- * deliberately no vanID/servicePointID filter, only a visit-date range.
+ * All table/column names here are verified against real data on a live
+ * server (2026-08-18), not assumed from convention — an earlier version of
+ * this class used i_beneficiary/I_bendemographics/tb_stoptb_visit, which
+ * turned out not to exist at all. The real picture:
+ *
+ * - Visit filter: db_iemr.t_benvisitdetail (VisitCategory = 'Stop TB'),
+ *   NOT tb_stoptb_visit — confirmed 511 real rows on the reference server,
+ *   vs. zero for the table this used to query.
+ * - Beneficiary identity: MMU's single datasource only connects to db_iemr,
+ *   but the actual beneficiary/demographic tables live in db_identity, on
+ *   the same physical MySQL server — reached here via fully-qualified
+ *   cross-schema table names. The chain is
+ *   db_identity.i_beneficiarymapping (BenRegId, unique) -> BenDetailsId ->
+ *   db_identity.i_beneficiarydetails (name/DOB/gender/caste/occupation/
+ *   income/HIV — already denormalized to readable strings, no separate
+ *   master-table joins needed) and BenAddressId ->
+ *   db_identity.i_beneficiaryaddress (address/village/pincode), plus
+ *   BenContactsId -> db_identity.i_beneficiarycontacts (phone).
+ * - Confirmed real gap, not a bug: many beneficiaries registered through
+ *   the van-local registrar flow (i_beneficiarymapping.CreatedBy =
+ *   'reglocal') have a mapping row but their BenDetailsId/BenAddressId
+ *   never synced to db_identity — sometimes for many days. Rows with no
+ *   synced identity are silently left out (see streamPendingBeneficiaries)
+ *   the same way an unresolved location is — there's nothing to put in a
+ *   CSV row for someone whose name/address was never actually synced.
  *
  * Location columns (village/healthFacility/tu/district/state) are resolved
  * against Nikshay's own, isolated location hierarchy — m_nikshay_village →
- * m_nikshay_facility → m_nikshay_tu → m_nikshay_district → m_nikshay_state —
- * not AMRIT's standard masters. A Stop TB beneficiary's own
- * I_bendemographics.DistrictBranchID holds their Nikshay Village ID (the same
- * overload Common-API's NikshayAddressResolver relies on for the
- * beneficiary-detail API), so every other location field is derived by
- * walking up that one chain rather than trusting separately-stored
- * block/district fields.
+ * m_nikshay_facility → m_nikshay_tu → m_nikshay_district → m_nikshay_state.
+ * This walk currently starts from the beneficiary's own personal
+ * i_beneficiaryaddress.CurrVillageId — confirmed on real data that this is
+ * AMRIT's own village ID, not Nikshay's (same numeric ID resolves to a
+ * different real place in each hierarchy), so this is a best-effort,
+ * unconfirmed mapping: it only produces a row when that AMRIT village ID
+ * happens to also be a valid Nikshay village ID, which will under-match.
+ * Whether Nikshay location should instead come from the camp/facility
+ * (via the logged-in worker's own assigned NikshayTUID/NikshayFacilityID
+ * on m_userservicerolemapping) rather than the beneficiary's personal
+ * address is still an open question — not yet resolved.
  *
  * Beneficiaries are silently left out of the streamed rows (see
- * streamPendingBeneficiaries) in two cases — already having a Nikshay ID
- * recorded, or their village not resolving all the way up to a state. Both
- * are counted so callers can report totals, but there is deliberately no
- * separate report of *who* was skipped or why.
+ * streamPendingBeneficiaries) in three cases — already having a Nikshay ID
+ * recorded, their identity never having synced to db_identity, or their
+ * village not resolving all the way up to a state. All three are counted so
+ * callers can report totals, but there is deliberately no separate report
+ * of *who* was skipped or why.
  *
- * The Nikshay ID itself lives on tb_suspected.nikshay_id — not
+ * The Nikshay ID itself lives on db_iemr.tb_suspected.nikshay_id — not
  * tb_stoptb_diagnostics, which also has a nikshay_id column but is not the
  * table this feature writes to.
  */
@@ -89,49 +116,46 @@ public class NikshayExportRepository {
 
 	// Placeholders in order: [1] fromDate (inclusive), [2] toDate-exclusive-upper-bound.
 	private static final String BASE_SELECT = "SELECT "
-			+ "  b.BeneficiaryRegID AS benRegId, "
-			+ "  b.FirstName AS firstName, "
-			+ "  TRIM(CONCAT(COALESCE(b.MiddleName,''),' ',COALESCE(b.LastName,''))) AS middleLastName, "
-			+ "  TIMESTAMPDIFF(YEAR, b.DOB, CURDATE()) AS age, "
-			+ "  g.GenderName AS gender, "
-			+ "  (SELECT p.PhoneNo FROM i_benphonemap p WHERE p.BenificiaryRegID = b.BeneficiaryRegID "
-			+ "     AND p.Deleted = 0 ORDER BY p.BenPhMapID ASC LIMIT 1) AS phone, "
-			+ "  TRIM(CONCAT_WS(', ', d.AddressLine1, d.AddressLine2, d.AddressLine3, d.AddressLine4, d.AddressLine5)) AS address, "
+			+ "  m.BenRegId AS benRegId, "
+			+ "  d.FirstName AS firstName, "
+			+ "  TRIM(CONCAT(COALESCE(d.MiddleName,''),' ',COALESCE(d.LastName,''))) AS middleLastName, "
+			+ "  TIMESTAMPDIFF(YEAR, d.DOB, CURDATE()) AS age, "
+			+ "  d.Gender AS gender, "
+			+ "  c.PhoneNum1 AS phone, "
+			+ "  COALESCE(d.address, a.CurrAddressValue) AS address, "
 			+ "  ns.StateName AS stateName, "
 			+ "  nd.DistrictName AS districtName, "
 			+ "  ntu.TUName AS tu, "
 			+ "  nf.FacilityName AS healthFacility, "
 			+ "  nv.VillageName AS village, "
-			+ "  d.PinCode AS pincode, "
-			+ "  ms.Status AS maritalStatus, "
-			+ "  c.CommunityType AS caste, "
-			+ "  occ.OccupationType AS occupation, "
-			+ "  inc.IncomeStatus AS socioeconomicStatus, "
-			+ "  (SELECT o.chief_complaint FROM tb_stoptb_general_opd o WHERE o.ben_reg_id = b.BeneficiaryRegID "
+			+ "  a.CurrPinCode AS pincode, "
+			+ "  d.MaritalStatus AS maritalStatus, "
+			+ "  d.community AS caste, "
+			+ "  d.occupation AS occupation, "
+			+ "  d.incomeStatus AS socioeconomicStatus, "
+			+ "  (SELECT o.chief_complaint FROM tb_stoptb_general_opd o WHERE o.ben_reg_id = m.BenRegId "
 			+ "     AND o.deleted = 0 ORDER BY o.id DESC LIMIT 1) AS chiefComplaint, "
-			+ "  (SELECT ge.hiv_status FROM tb_stoptb_general_examination ge WHERE ge.beneficiary_reg_id = b.BeneficiaryRegID "
+			+ "  (SELECT ge.hiv_status FROM tb_stoptb_general_examination ge WHERE ge.beneficiary_reg_id = m.BenRegId "
 			+ "     AND ge.deleted = 0 ORDER BY ge.id DESC LIMIT 1) AS hivStatus, "
-			+ "  b.IsHIVPos AS isHivPos, "
-			+ "  (SELECT s.nikshay_id FROM tb_suspected s WHERE s.benRegID = b.BeneficiaryRegID "
+			+ "  d.IsHIVPositive AS isHivPos, "
+			+ "  (SELECT s.nikshay_id FROM tb_suspected s WHERE s.benRegID = m.BenRegId "
 			+ "     AND s.nikshay_id IS NOT NULL ORDER BY s.id DESC LIMIT 1) AS existingNikshayId "
-			+ "FROM i_beneficiary b "
-			+ "LEFT JOIN I_bendemographics d ON d.BeneficiaryRegID = b.BeneficiaryRegID "
-			+ "LEFT JOIN m_gender g ON g.GenderID = b.GenderID "
-			+ "LEFT JOIN m_maritalstatus ms ON ms.MaritalStatusID = b.MaritalStatusID "
-			+ "LEFT JOIN m_community c ON c.CommunityID = d.CommunityID "
-			+ "LEFT JOIN m_beneficiaryincomestatus inc ON inc.IncomeStatusID = d.IncomeStatusID "
-			+ "LEFT JOIN m_beneficiaryoccupation occ ON occ.OccupationID = d.OccupationID "
-			// Stop TB's DistrictBranchID is overloaded to hold the Nikshay Village ID
-			// (see class Javadoc) — walk Nikshay's own hierarchy up from there.
-			+ "LEFT JOIN m_nikshay_village nv ON nv.NikshayVillageID = d.DistrictBranchID AND nv.Deleted = 0 "
+			+ "FROM db_identity.i_beneficiarymapping m "
+			+ "LEFT JOIN db_identity.i_beneficiarydetails d ON d.BeneficiaryDetailsId = m.BenDetailsId AND d.Deleted = 0 "
+			+ "LEFT JOIN db_identity.i_beneficiaryaddress a ON a.BenAddressID = m.BenAddressId "
+			+ "LEFT JOIN db_identity.i_beneficiarycontacts c ON c.BenContactsId = m.BenContactsId "
+			// a.CurrVillageId is the beneficiary's own AMRIT village ID, not confirmed
+			// to be a Nikshay Village ID — see class Javadoc "still an open question".
+			+ "LEFT JOIN m_nikshay_village nv ON nv.NikshayVillageID = a.CurrVillageId AND nv.Deleted = 0 "
 			+ "LEFT JOIN m_nikshay_facility nf ON nf.NikshayFacilityID = nv.NikshayFacilityID AND nf.Deleted = 0 "
 			+ "LEFT JOIN m_nikshay_tu ntu ON ntu.NikshayTUID = nf.NikshayTUID AND ntu.Deleted = 0 "
 			+ "LEFT JOIN m_nikshay_district nd ON nd.NikshayDistrictID = ntu.NikshayDistrictID AND nd.Deleted = 0 "
 			+ "LEFT JOIN m_nikshay_state ns ON ns.NikshayStateID = nd.NikshayStateID AND ns.Deleted = 0 "
-			+ "WHERE b.Deleted = 0 "
-			+ "  AND b.BeneficiaryRegID IN ( "
-			+ "    SELECT DISTINCT v.beneficiary_reg_id FROM tb_stoptb_visit v "
-			+ "    WHERE v.visit_date >= ? AND v.visit_date < ? "
+			+ "WHERE m.Deleted = 0 "
+			+ "  AND m.BenRegId IN ( "
+			+ "    SELECT DISTINCT v.BeneficiaryRegID FROM t_benvisitdetail v "
+			+ "    WHERE v.VisitCategory = 'Stop TB' AND v.Deleted = 0 "
+			+ "      AND v.VisitDateTime >= ? AND v.VisitDateTime < ? "
 			+ "  )";
 
 	public int countAlreadyGenerated(LocalDate fromDate, LocalDate toDate) {
@@ -140,9 +164,15 @@ public class NikshayExportRepository {
 		return count == null ? 0 : count;
 	}
 
-	public int countUnresolvedLocation(LocalDate fromDate, LocalDate toDate) {
+	/** Counts beneficiaries skipped because their identity never synced to
+	 * db_identity (no FirstName resolved at all) OR their location doesn't
+	 * resolve through the Nikshay hierarchy — reported as one combined "not
+	 * ready to export" count, since both are data-completeness gaps rather
+	 * than a beneficiary genuinely not needing a Nikshay ID. */
+	public int countNotReadyToExport(LocalDate fromDate, LocalDate toDate) {
 		String sql = "SELECT COUNT(*) FROM (" + BASE_SELECT + ") t WHERE t.existingNikshayId IS NULL "
-				+ "AND (t.village IS NULL OR t.healthFacility IS NULL OR t.tu IS NULL "
+				+ "AND (t.firstName IS NULL "
+				+ "OR t.village IS NULL OR t.healthFacility IS NULL OR t.tu IS NULL "
 				+ "OR t.districtName IS NULL OR t.stateName IS NULL)";
 		Integer count = getJdbcTemplate().query(sql, pss(fromDate, toDate), rs -> rs.next() ? rs.getInt(1) : 0);
 		return count == null ? 0 : count;
@@ -151,10 +181,11 @@ public class NikshayExportRepository {
 	/** Streams every not-yet-Nikshay-ID'd beneficiary in the date range to
 	 * {@code rowConsumer} one row at a time, without materializing the full
 	 * result set in memory — safe for large date ranges. Silently skips any
-	 * beneficiary whose Nikshay village doesn't resolve all the way up to a
-	 * state (see class Javadoc). */
+	 * beneficiary whose identity never synced or whose Nikshay village
+	 * doesn't resolve all the way up to a state (see class Javadoc). */
 	public void streamPendingBeneficiaries(LocalDate fromDate, LocalDate toDate, Consumer<NikshayRawRow> rowConsumer) {
 		String sql = "SELECT * FROM (" + BASE_SELECT + ") t WHERE t.existingNikshayId IS NULL "
+				+ "AND t.firstName IS NOT NULL "
 				+ "AND t.village IS NOT NULL AND t.healthFacility IS NOT NULL AND t.tu IS NOT NULL "
 				+ "AND t.districtName IS NOT NULL AND t.stateName IS NOT NULL";
 		JdbcTemplate jdbcTemplate = getJdbcTemplate();
@@ -202,10 +233,11 @@ public class NikshayExportRepository {
 	 * callers must treat anything other than exactly one result as ambiguous
 	 * (e.g. a shared family phone number) rather than guessing. */
 	public List<Long> findMatchingBeneficiaryIds(String phoneDigits, String firstName) {
-		String sql = "SELECT DISTINCT b.BeneficiaryRegID FROM i_beneficiary b "
-				+ "JOIN i_benphonemap p ON p.BenificiaryRegID = b.BeneficiaryRegID AND p.Deleted = 0 "
-				+ "WHERE b.Deleted = 0 AND p.PhoneNo = ? AND LOWER(TRIM(b.FirstName)) = LOWER(TRIM(?))";
-		return getJdbcTemplate().query(sql, (rs, rowNum) -> rs.getLong("BeneficiaryRegID"), phoneDigits, firstName);
+		String sql = "SELECT DISTINCT m.BenRegId FROM db_identity.i_beneficiarymapping m "
+				+ "JOIN db_identity.i_beneficiarydetails d ON d.BeneficiaryDetailsId = m.BenDetailsId AND d.Deleted = 0 "
+				+ "JOIN db_identity.i_beneficiarycontacts c ON c.BenContactsId = m.BenContactsId "
+				+ "WHERE m.Deleted = 0 AND c.PhoneNum1 = ? AND LOWER(TRIM(d.FirstName)) = LOWER(TRIM(?))";
+		return getJdbcTemplate().query(sql, (rs, rowNum) -> rs.getLong("BenRegId"), phoneDigits, firstName);
 	}
 
 	/** The most recent tb_suspected row for this beneficiary, if any — looked

@@ -105,10 +105,10 @@ public class NikshayExportController {
 		}
 
 		int excludedAlreadyGenerated;
-		int excludedUnresolvedLocation;
+		int excludedNotReadyToExport;
 		try {
 			excludedAlreadyGenerated = nikshayExportService.countAlreadyGenerated(fromDate, toDate);
-			excludedUnresolvedLocation = nikshayExportService.countUnresolvedLocation(fromDate, toDate);
+			excludedNotReadyToExport = nikshayExportService.countNotReadyToExport(fromDate, toDate);
 		} catch (Exception e) {
 			logger.error("Error preparing Nikshay beneficiary export", e);
 			return ResponseEntity.status(500).body("Could not prepare the export");
@@ -129,7 +129,7 @@ public class NikshayExportController {
 		return ResponseEntity.ok().contentType(MediaType.parseMediaType("text/csv"))
 				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
 				.header("X-Excluded-Existing-Nikshay-Id-Count", String.valueOf(excludedAlreadyGenerated))
-				.header("X-Excluded-Unresolved-Location-Count", String.valueOf(excludedUnresolvedLocation))
+				.header("X-Excluded-Not-Ready-Count", String.valueOf(excludedNotReadyToExport))
 				.body(body);
 	}
 
