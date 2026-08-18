@@ -37,7 +37,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import com.iemr.mmu.service.stoptb.NikshayExportService;
 import com.iemr.mmu.service.stoptb.NikshayImportService;
@@ -46,6 +45,7 @@ import com.iemr.mmu.utils.JwtUtil;
 
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Downloads/uploads the Stop TB Nikshay ID Generator CSV.
@@ -90,10 +90,21 @@ public class NikshayExportController {
 		}
 	}
 
+	/** Writes the CSV directly and synchronously onto the servlet response,
+	 * instead of returning a StreamingResponseBody. StreamingResponseBody
+	 * makes Spring process the body on a Servlet-async re-dispatch — Spring
+	 * Security's filter chain re-runs on that async dispatch, and the
+	 * SecurityContext doesn't reliably carry over to it, so the global
+	 * anyRequest().authenticated() rule was denying the *second* pass even
+	 * though the initial request authenticated fine (confirmed in production
+	 * logs, 2026-08-18: two AccessDeniedExceptions for the same request, the
+	 * second one through ApplicationDispatcher/AsyncContextImpl). Writing
+	 * synchronously avoids async dispatch entirely, so there's no second
+	 * security pass to fail. */
 	@Operation(summary = "Download Stop TB beneficiaries for a date range as a CSV formatted for the Nikshay ID Generator")
 	@GetMapping(value = "/exportBeneficiariesCsv")
-	public ResponseEntity<StreamingResponseBody> exportBeneficiariesCsv(@RequestParam("fromDate") String fromDateStr,
-			@RequestParam("toDate") String toDateStr) {
+	public void exportBeneficiariesCsv(@RequestParam("fromDate") String fromDateStr,
+			@RequestParam("toDate") String toDateStr, HttpServletResponse response) throws java.io.IOException {
 
 		LocalDate fromDate;
 		LocalDate toDate;
@@ -101,10 +112,12 @@ public class NikshayExportController {
 			fromDate = LocalDate.parse(fromDateStr, DATE_FMT);
 			toDate = LocalDate.parse(toDateStr, DATE_FMT);
 		} catch (DateTimeParseException e) {
-			return ResponseEntity.badRequest().body(errorBody("fromDate/toDate must be in YYYY-MM-DD format"));
+			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "fromDate/toDate must be in YYYY-MM-DD format");
+			return;
 		}
 		if (toDate.isBefore(fromDate)) {
-			return ResponseEntity.badRequest().body(errorBody("toDate must be on or after fromDate"));
+			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "toDate must be on or after fromDate");
+			return;
 		}
 
 		int excludedAlreadyGenerated;
@@ -114,39 +127,24 @@ public class NikshayExportController {
 			excludedNotReadyToExport = nikshayExportService.countNotReadyToExport(fromDate, toDate);
 		} catch (Exception e) {
 			logger.error("Error preparing Nikshay beneficiary export", e);
-			return ResponseEntity.status(500).body(errorBody("Could not prepare the export"));
+			response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Could not prepare the export");
+			return;
 		}
 
-		StreamingResponseBody body = outputStream -> {
-			try {
-				nikshayExportService.streamBeneficiariesCsv(fromDate, toDate, outputStream);
-			} catch (Exception e) {
-				// The HTTP status/headers are already committed by the time streaming
-				// starts, so a mid-stream failure can only be logged, not surfaced
-				// as a clean error response.
-				logger.error("Error streaming Nikshay beneficiary CSV", e);
-			}
-		};
-
 		String filename = "nikshay-beneficiaries-" + fromDate + "-to-" + toDate + ".csv";
-		return ResponseEntity.ok().contentType(MediaType.parseMediaType("text/csv"))
-				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-				.header("X-Excluded-Existing-Nikshay-Id-Count", String.valueOf(excludedAlreadyGenerated))
-				.header("X-Excluded-Not-Ready-Count", String.valueOf(excludedNotReadyToExport))
-				.body(body);
-	}
+		response.setContentType("text/csv");
+		response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
+		response.setHeader("X-Excluded-Existing-Nikshay-Id-Count", String.valueOf(excludedAlreadyGenerated));
+		response.setHeader("X-Excluded-Not-Ready-Count", String.valueOf(excludedNotReadyToExport));
 
-	/** Wraps a plain error message as a StreamingResponseBody so every return
-	 * path of exportBeneficiariesCsv shares one concrete generic type
-	 * (ResponseEntity&lt;StreamingResponseBody&gt;). A wildcard/Object-typed
-	 * ResponseEntity here breaks Spring's StreamingResponseBodyReturnValueHandler
-	 * — it decides whether to stream based on the method's *declared* generic
-	 * return type, not the runtime object, so a wildcard falls back to normal
-	 * HttpMessageConverters, which can't write a raw StreamingResponseBody
-	 * lambda and throw "No converter for [...Lambda...]" (confirmed in
-	 * production logs, 2026-08-18). */
-	private StreamingResponseBody errorBody(String message) {
-		return outputStream -> outputStream.write(message.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+		try {
+			nikshayExportService.streamBeneficiariesCsv(fromDate, toDate, response.getOutputStream());
+		} catch (Exception e) {
+			// Headers are already committed by the time streaming starts, so a
+			// mid-stream failure can only be logged, not surfaced as a clean
+			// error response.
+			logger.error("Error streaming Nikshay beneficiary CSV", e);
+		}
 	}
 
 	@Operation(summary = "Upload the Nikshay ID Generator app's results CSV to write generated Nikshay IDs "
