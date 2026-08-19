@@ -241,10 +241,16 @@ public class NikshayExportRepository {
 	 * callers must treat anything other than exactly one result as ambiguous
 	 * (e.g. a shared family phone number) rather than guessing. */
 	public List<Long> findMatchingBeneficiaryIds(String phoneDigits, String firstName) {
+		// Same column-order fix as the export's phone selection: PhoneNum1 is
+		// usually empty on real data, PreferredPhoneNum is what's actually
+		// populated (confirmed: two real beneficiaries with PhoneNum1 IS NULL
+		// but PreferredPhoneNum populated failed to match here before this fix).
 		String sql = "SELECT DISTINCT m.BenRegId FROM db_identity.i_beneficiarymapping m "
 				+ "JOIN db_identity.i_beneficiarydetails d ON d.BeneficiaryDetailsId = m.BenDetailsId AND d.Deleted = 0 "
 				+ "JOIN db_identity.i_beneficiarycontacts c ON c.BenContactsId = m.BenContactsId "
-				+ "WHERE m.Deleted = 0 AND c.PhoneNum1 = ? AND LOWER(TRIM(d.FirstName)) = LOWER(TRIM(?))";
+				+ "WHERE m.Deleted = 0 "
+				+ "  AND ? IN (c.PreferredPhoneNum, c.PhoneNum1, c.PhoneNum2) "
+				+ "  AND LOWER(TRIM(d.FirstName)) = LOWER(TRIM(?))";
 		return getJdbcTemplate().query(sql, (rs, rowNum) -> rs.getLong("BenRegId"), phoneDigits, firstName);
 	}
 
