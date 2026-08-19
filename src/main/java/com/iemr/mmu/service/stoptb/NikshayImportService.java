@@ -49,12 +49,15 @@ import com.iemr.mmu.repo.stoptb.NikshayExportRepository;
  * uploaded file's row order either (unconfirmed, and a single
  * reordered/dropped row would silently corrupt every row after it if wrong).
  *
- * Instead, each row is matched back to a beneficiary by content —
- * normalized 10-digit primaryPhone plus a case-insensitive firstName match
- * (see NikshayExportRepository.findMatchingBeneficiaryIds). This is a
- * heuristic, not an exact key: anything other than exactly one match (zero,
- * or more than one — e.g. a shared family phone number) is left for manual
- * review rather than guessed.
+ * If a row happens to carry a benRegId column with a parseable value (e.g. a
+ * manually-rebuilt test file, or some future ID Generator version that keeps
+ * it) it's used directly — exact, no ambiguity possible. Otherwise, each row
+ * is matched back to a beneficiary by content — normalized 10-digit
+ * primaryPhone plus a case-insensitive firstName match (see
+ * NikshayExportRepository.findMatchingBeneficiaryIds). This is a heuristic,
+ * not an exact key: anything other than exactly one match (zero, or more
+ * than one — e.g. a shared family phone number) is left for manual review
+ * rather than guessed.
  *
  * Row status handling:
  * - "success": generatedId is the new Nikshay ID — written as-is.
@@ -85,6 +88,7 @@ public class NikshayImportService {
 			throws Exception {
 		List<CSVRecord> records;
 		boolean hasErrorColumn;
+		boolean hasBenRegIdColumn;
 		CSVFormat format = CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true).setTrim(true).build();
 		try (CSVParser parser = new CSVParser(new InputStreamReader(csvInputStream, StandardCharsets.UTF_8),
 				format)) {
@@ -95,6 +99,7 @@ public class NikshayImportService {
 				}
 			}
 			hasErrorColumn = header.containsKey("error");
+			hasBenRegIdColumn = header.containsKey("benRegId");
 			records = parser.getRecords();
 		}
 
@@ -109,23 +114,29 @@ public class NikshayImportService {
 			String status = record.get("status").trim();
 			String generatedId = record.get("generatedId").trim();
 
-			String phoneDigits = normalizePhone(record.get("primaryPhone"));
-			if (phoneDigits == null) {
-				failedRows.add(new ImportRowResult(i, null, firstName, middleLastName, status, generatedId,
-						"Row has a missing/invalid primaryPhone — cannot match it back to a beneficiary."));
-				continue;
-			}
+			Long benRegId = hasBenRegIdColumn ? parseBenRegId(record.get("benRegId")) : null;
+			if (benRegId == null) {
+				// No usable benRegId on this row — fall back to phone+name matching,
+				// the only option against a genuine Nikshay portal results file.
+				String phoneDigits = normalizePhone(record.get("primaryPhone"));
+				if (phoneDigits == null) {
+					failedRows.add(new ImportRowResult(i, null, firstName, middleLastName, status, generatedId,
+							"Row has a missing/invalid primaryPhone — cannot match it back to a beneficiary."));
+					continue;
+				}
 
-			List<Long> candidates = nikshayExportRepository.findMatchingBeneficiaryIds(phoneDigits, firstName);
-			if (candidates.size() != 1) {
-				String note = candidates.isEmpty()
-						? "No beneficiary found matching this phone number and first name."
-						: "More than one beneficiary matches this phone number and first name (e.g. a shared "
-								+ "family phone) — needs manual confirmation.";
-				needsReview.add(new ImportRowResult(i, null, firstName, middleLastName, status, generatedId, note));
-				continue;
+				List<Long> candidates = nikshayExportRepository.findMatchingBeneficiaryIds(phoneDigits, firstName);
+				if (candidates.size() != 1) {
+					String note = candidates.isEmpty()
+							? "No beneficiary found matching this phone number and first name."
+							: "More than one beneficiary matches this phone number and first name (e.g. a shared "
+									+ "family phone) — needs manual confirmation.";
+					needsReview
+							.add(new ImportRowResult(i, null, firstName, middleLastName, status, generatedId, note));
+					continue;
+				}
+				benRegId = candidates.get(0);
 			}
-			Long benRegId = candidates.get(0);
 
 			if ("success".equalsIgnoreCase(status) || "skipped".equalsIgnoreCase(status)) {
 				String[] tokens = generatedId.isEmpty() ? new String[0] : generatedId.split("\\s+");
@@ -148,6 +159,17 @@ public class NikshayImportService {
 
 		return new ImportSummary(records.size(), updated, failedRows.size(), needsReview.size(), needsReview,
 				failedRows);
+	}
+
+	private static Long parseBenRegId(String raw) {
+		if (raw == null || raw.isBlank()) {
+			return null;
+		}
+		try {
+			return Long.valueOf(raw.trim());
+		} catch (NumberFormatException e) {
+			return null;
+		}
 	}
 
 	/** Same normalization as the export's validPhoneOrBlank, so a phone number
