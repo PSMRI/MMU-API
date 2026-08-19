@@ -121,8 +121,16 @@ public class NikshayExportRepository {
 			+ "  TRIM(CONCAT(COALESCE(d.MiddleName,''),' ',COALESCE(d.LastName,''))) AS middleLastName, "
 			+ "  TIMESTAMPDIFF(YEAR, d.DOB, CURDATE()) AS age, "
 			+ "  d.Gender AS gender, "
-			+ "  c.PhoneNum1 AS phone, "
-			+ "  COALESCE(d.address, a.CurrAddressValue) AS address, "
+			// PhoneNum1 is usually empty on real data — PreferredPhoneNum is the
+			// one actually populated at registration; fall back through the rest.
+			+ "  COALESCE(NULLIF(c.PreferredPhoneNum,''), NULLIF(c.PhoneNum1,''), NULLIF(c.PhoneNum2,'')) AS phone, "
+			// CurrAddressValue is usually empty on real data too — build from the
+			// actual line fields instead, same as CurrAddrLine1 etc. being populated.
+			+ "  COALESCE(NULLIF(d.address,''), NULLIF(a.CurrAddressValue,''), "
+			// CONCAT_WS skips NULLs but not empty strings, so each part needs its
+			// own NULLIF first or blank line fields leave stray ", ," artifacts.
+			+ "     NULLIF(TRIM(CONCAT_WS(', ', NULLIF(a.CurrAddrLine1,''), NULLIF(a.CurrAddrLine2,''), "
+			+ "        NULLIF(a.CurrAddrLine3,''), NULLIF(a.CurrHabitation,''))),'')) AS address, "
 			+ "  ns.StateName AS stateName, "
 			+ "  nd.DistrictName AS districtName, "
 			+ "  ntu.TUName AS tu, "
