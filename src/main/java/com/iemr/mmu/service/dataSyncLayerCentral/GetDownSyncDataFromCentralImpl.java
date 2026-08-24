@@ -63,12 +63,28 @@ public class GetDownSyncDataFromCentralImpl implements GetDownSyncDataFromCentra
 		List<Map<String, Object>> resultSetList = dataSyncRepositoryCentralDownload.getDownSyncDataFromTable(
 				downSyncDataDigester.getSchemaName(), downSyncDataDigester.getTableName(),
 				downSyncDataDigester.getServerColumnName(), downSyncDataDigester.getTableType(),
-				downSyncDataDigester.getVanID());
+				downSyncDataDigester.getVanID(), resolveLastModColumn(downSyncDataDigester.getTableName()));
 
 		return downSyncGson().toJson(resultSetList);
 	}
 
-	
+	private String resolveLastModColumn(String tableName) throws Exception {
+		String lastModColumn = "LastModDate";
+
+		if (tableName != null) {
+			ArrayList<DownSyncTableDetail> tableDetails = downSyncTableDetailRepo
+					.getActiveDownSyncTableByName(tableName.trim());
+			if (tableDetails != null && !tableDetails.isEmpty())
+				lastModColumn = tableDetails.get(0).getLastModColumnName();
+		}
+
+		if (lastModColumn == null || !lastModColumn.matches("^[a-zA-Z_][a-zA-Z0-9_]*$"))
+			throw new Exception(
+					"The down-sync configuration of " + tableName + " holds an invalid modification-time column name");
+
+		return lastModColumn;
+	}
+
 	private Gson downSyncGson() {
 		GsonBuilder gsonBuilder = new GsonBuilder();
 		gsonBuilder.serializeNulls();
@@ -98,8 +114,8 @@ public class GetDownSyncDataFromCentralImpl implements GetDownSyncDataFromCentra
 				downSyncDataDigester.getTableName(), pkColumnName.trim(), downSyncDataDigester.getRecords());
 	}
 
-	
-	public int resetDownSyncFlagPostUpSync(String schemaName, String tableName, List<Object[]> vanSerialNoAndVanID) {
+	@Override
+	public int markDownSyncedPostUpSync(String schemaName, String tableName, List<Object[]> vanSerialNoAndVanID) {
 		if (schemaName == null || tableName == null || vanSerialNoAndVanID == null || vanSerialNoAndVanID.isEmpty())
 			return 0;
 
@@ -114,10 +130,10 @@ public class GetDownSyncDataFromCentralImpl implements GetDownSyncDataFromCentra
 			if (!downSyncEnabled)
 				return 0;
 
-			return dataSyncRepositoryCentralDownload.resetDownSyncFlagPostUpSync(schemaName, tableName,
+			return dataSyncRepositoryCentralDownload.markDownSyncedPostUpSync(schemaName, tableName,
 					vanSerialNoAndVanID);
 		} catch (Exception e) {
-			logger.warn("Could not reset the DownSynced flag for {}.{} post up-sync : {}", schemaName, tableName,
+			logger.warn("Could not mark the DownSynced flag for {}.{} post up-sync : {}", schemaName, tableName,
 					e.getMessage());
 			return 0;
 		}
