@@ -69,6 +69,9 @@ public class DownSyncTableDetail {
 	@Expose
 	@Column(name = "TableType")
 	private String tableType;
+
+	@Column(name = "LastModColumnName")
+	private String lastModColumnName;
 	/** lower number syncs first - enforces the FK dependency chain */
 	@Expose
 	@Column(name = "SyncOrder")
@@ -133,6 +136,15 @@ public class DownSyncTableDetail {
 
 	public void setVanColumnName(String vanColumnName) {
 		this.vanColumnName = vanColumnName;
+	}
+
+	public String getLastModColumnName() {
+		return (lastModColumnName == null || lastModColumnName.trim().isEmpty()) ? "LastModDate"
+				: lastModColumnName.trim();
+	}
+
+	public void setLastModColumnName(String lastModColumnName) {
+		this.lastModColumnName = lastModColumnName;
 	}
 
 	public String getVanAutoIncColumnName() {
