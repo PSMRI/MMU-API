@@ -51,12 +51,12 @@ public class DownSyncDataDigester {
 	public DownSyncDataDigester() {
 	}
 
-	public static DownSyncDataDigester forDownload(DownSyncTableDetail tableDetail, Integer vanID,
-			Integer providerServiceMapID) {
+	public static DownSyncDataDigester forDownload(DownSyncTableDetail tableDetail, String serverColumnName,
+			Integer vanID, Integer providerServiceMapID) {
 		DownSyncDataDigester digester = new DownSyncDataDigester();
 		digester.schemaName = tableDetail.getSchemaName();
 		digester.tableName = tableDetail.getTableName();
-		digester.serverColumnName = tableDetail.getServerColumnName();
+		digester.serverColumnName = serverColumnName;
 		digester.vanAutoIncColumnName = tableDetail.getVanAutoIncColumnName();
 		digester.tableType = tableDetail.getTableType();
 		digester.vanID = vanID;
