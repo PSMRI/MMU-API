@@ -28,6 +28,8 @@ import java.util.Map;
 
 import javax.sql.DataSource;
 
+import com.iemr.mmu.data.syncActivity_syncLayer.DownSyncRecordAck;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,6 +55,8 @@ public class DataSyncRepositoryCentralDownload {
 	}
 	
 	private Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
+
+	private static final String DOWN_SYNC_TRANSACTIONAL = "TRANSACTIONAL";
 
 	// Data Upload Repository
 	public int checkRecordIsAlreadyPresentOrNot(String schemaName, String tableName, String vanSerialNo, String vanID,
@@ -205,4 +209,114 @@ public class DataSyncRepositoryCentralDownload {
 	}
 
 	// End of Data Download Repository
+
+	// ---------------------------------- Down-Sync Repository (central -> local)
+
+	 public List<Map<String, Object>> getDownSyncDataFromTable(String schema, String table, String columnNames,
+			String tableType, Integer vanID, String lastModColumn) throws Exception {
+		jdbcTemplate = getJdbcTemplate();
+
+		if (schema == null || table == null)
+			throw new Exception("Invalid down-sync request. Schema/table info is missing");
+
+		String columns = (columnNames == null || columnNames.trim().isEmpty()) ? " * " : columnNames;
+		List<Map<String, Object>> resultSetList;
+
+		if (DOWN_SYNC_TRANSACTIONAL.equalsIgnoreCase(tableType)) {
+			if (vanID == null)
+				throw new Exception("Invalid down-sync request. VanID is mandatory for transactional table " + table);
+
+			String query = " SELECT " + columns + " FROM " + schema + "." + table
+					+ " WHERE VanID = ? AND ( DownSynced IS NULL OR DownSynced IN ('N', 'U') "
+					+ " OR ( DownSynced = 'P' AND DownSyncDate IS NOT NULL AND " + lastModColumn
+					+ " > DownSyncDate ) ) ";
+			logger.info("Down-sync select query for {}.{} : {}", schema, table, query);
+			resultSetList = jdbcTemplate.queryForList(query, vanID);
+		} else {
+			String query = " SELECT " + columns + " FROM " + schema + "." + table;
+			logger.info("Down-sync select query for {}.{} : {}", schema, table, query);
+			resultSetList = jdbcTemplate.queryForList(query);
+		}
+
+		logger.info("Down-sync record count for {}.{} : {}", schema, table, resultSetList.size());
+		return resultSetList;
+	}
+
+	public int updateDownSyncFlagPostDownload(String schema, String table, String pkColumnName,
+			List<DownSyncRecordAck> records) throws Exception {
+		jdbcTemplate = getJdbcTemplate();
+
+		if (schema == null || table == null || pkColumnName == null)
+			throw new Exception("Invalid request. Schema/table/primary key info is missing");
+		if (records == null || records.isEmpty())
+			return 0;
+
+		List<Object[]> successWithSerialNo = new ArrayList<>();
+		List<Object[]> successWithoutSerialNo = new ArrayList<>();
+		List<Object[]> failed = new ArrayList<>();
+
+		for (DownSyncRecordAck record : records) {
+			if (record == null || record.getCentralID() == null)
+				continue;
+
+			if (record.isSuccess()) {
+				if (record.getVanSerialNo() != null)
+					successWithSerialNo.add(new Object[] { record.getVanSerialNo(), record.getCentralID() });
+				else
+					successWithoutSerialNo.add(new Object[] { record.getCentralID() });
+			} else {
+				failed.add(new Object[] { record.getFailureReason(), record.getCentralID() });
+			}
+		}
+
+		int updatedRows = 0;
+
+		if (!successWithSerialNo.isEmpty()) {
+			String query = " UPDATE " + schema + "." + table
+					+ " SET DownSynced = 'P', DownSyncDate = now(), DownSyncFailureReason = NULL, VanSerialNo = ? "
+					+ " WHERE " + pkColumnName + " = ? ";
+			updatedRows += countUpdatedRows(jdbcTemplate.batchUpdate(query, successWithSerialNo));
+		}
+
+		if (!successWithoutSerialNo.isEmpty()) {
+			String query = " UPDATE " + schema + "." + table
+					+ " SET DownSynced = 'P', DownSyncDate = now(), DownSyncFailureReason = NULL " + " WHERE "
+					+ pkColumnName + " = ? ";
+			updatedRows += countUpdatedRows(jdbcTemplate.batchUpdate(query, successWithoutSerialNo));
+		}
+
+		if (!failed.isEmpty()) {
+			String query = " UPDATE " + schema + "." + table
+					+ " SET DownSynced = 'F', DownSyncFailureReason = ? " + " WHERE " + pkColumnName + " = ? ";
+			updatedRows += countUpdatedRows(jdbcTemplate.batchUpdate(query, failed));
+		}
+
+		logger.info("Down-sync flag updated for {}.{}. Records : {}, rows : {}", schema, table, records.size(),
+				updatedRows);
+		return updatedRows;
+	}
+
+	public int markDownSyncedPostUpSync(String schema, String table, List<Object[]> vanSerialNoAndVanID) {
+		if (schema == null || table == null || vanSerialNoAndVanID == null || vanSerialNoAndVanID.isEmpty())
+			return 0;
+
+		jdbcTemplate = getJdbcTemplate();
+		String query = " UPDATE " + schema + "." + table
+				+ " SET DownSynced = 'P', DownSyncDate = now(), DownSyncFailureReason = NULL "
+				+ " WHERE VanSerialNo = ? AND VanID = ? ";
+		return countUpdatedRows(jdbcTemplate.batchUpdate(query, vanSerialNoAndVanID));
+	}
+
+	private int countUpdatedRows(int[] batchResult) {
+		int count = 0;
+		if (batchResult != null) {
+			for (int rows : batchResult) {
+				if (rows > 0)
+					count += rows;
+			}
+		}
+		return count;
+	}
+
+	// End of Down-Sync Repository
 }

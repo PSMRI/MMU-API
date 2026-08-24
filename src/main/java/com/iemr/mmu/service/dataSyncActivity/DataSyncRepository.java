@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import java.sql.PreparedStatement;
+
 import javax.sql.DataSource;
 
 import org.slf4j.Logger;
@@ -33,6 +35,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Service;
 
 import com.iemr.mmu.repo.syncActivity_syncLayer.SyncUtilityClassRepo;
@@ -136,5 +140,66 @@ public class DataSyncRepository {
 	}
 
 	// ---------------------------------- End of Download Repository
+
+	// ---------------------------------- Down-Sync Repository (central -> local)
+
+	public List<String> getDownSyncColumns(String schema, String table) {
+		jdbcTemplate = getJdbcTemplate();
+
+		String query = " SELECT COLUMN_NAME FROM information_schema.COLUMNS "
+				+ " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? "
+				+ " AND COLUMN_NAME NOT IN ('DownSynced', 'DownSyncDate', 'DownSyncFailureReason', "
+				+ " 'LastDownSyncDate') " + " ORDER BY COLUMN_NAME ";
+
+		return jdbcTemplate.queryForList(query, String.class, schema, table);
+	}
+
+	public Map<String, Object> getLocalRecordForDownSync(String schema, String table, String autoIncColumnName,
+			Object vanSerialNo, Object vanID, String lastModColumn) {
+		if (vanSerialNo == null)
+			return null;
+
+		jdbcTemplate = getJdbcTemplate();
+		String query = " SELECT " + autoIncColumnName + ", Processed, " + lastModColumn
+				+ " AS LastModDate, LastDownSyncDate FROM " + schema + "." + table
+				+ " WHERE " + autoIncColumnName + " = ? AND VanID = ? ";
+
+		List<Map<String, Object>> resultSet = jdbcTemplate.queryForList(query, vanSerialNo, vanID);
+		if (resultSet == null || resultSet.isEmpty())
+			return null;
+
+		return resultSet.get(0);
+	}
+
+	public Long insertDownSyncRecordInLocal(final String query, final Object[] params) {
+		jdbcTemplate = getJdbcTemplate();
+		KeyHolder keyHolder = new GeneratedKeyHolder();
+
+		jdbcTemplate.update(connection -> {
+			PreparedStatement ps = connection.prepareStatement(query, PreparedStatement.RETURN_GENERATED_KEYS);
+			for (int i = 0; i < params.length; i++) {
+				ps.setObject(i + 1, params[i]);
+			}
+			return ps;
+		}, keyHolder);
+
+		Number key = keyHolder.getKey();
+		return key != null ? key.longValue() : null;
+	}
+
+	public int updateDownSyncRecordInLocal(String query, Object[] params) {
+		jdbcTemplate = getJdbcTemplate();
+		return jdbcTemplate.update(query, params);
+	}
+
+	public int markDownSyncConflictInLocal(String schema, String table, String autoIncColumnName, Object localID) {
+		jdbcTemplate = getJdbcTemplate();
+		String query = " UPDATE " + schema + "." + table
+				+ " SET Processed = 'F', SyncFailureReason = 'CONFLICT' WHERE " + autoIncColumnName + " = ? ";
+		return jdbcTemplate.update(query, localID);
+	}
+
+	// End of Down-Sync Repository
+
 
 }
