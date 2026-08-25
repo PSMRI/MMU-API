@@ -41,6 +41,7 @@ public class DownSyncTableDetail {
 
 	public static final String TABLE_TYPE_MASTER = "MASTER";
 	public static final String TABLE_TYPE_TRANSACTIONAL = "TRANSACTIONAL";
+	public static final String LAST_MOD_COLUMN = "LastModDate";
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.AUTO)
@@ -70,8 +71,6 @@ public class DownSyncTableDetail {
 	@Column(name = "TableType")
 	private String tableType;
 
-	@Column(name = "LastModColumnName")
-	private String lastModColumnName;
 	/** lower number syncs first - enforces the FK dependency chain */
 	@Expose
 	@Column(name = "SyncOrder")
@@ -139,12 +138,7 @@ public class DownSyncTableDetail {
 	}
 
 	public String getLastModColumnName() {
-		return (lastModColumnName == null || lastModColumnName.trim().isEmpty()) ? "LastModDate"
-				: lastModColumnName.trim();
-	}
-
-	public void setLastModColumnName(String lastModColumnName) {
-		this.lastModColumnName = lastModColumnName;
+		return LAST_MOD_COLUMN;
 	}
 
 	public String getVanAutoIncColumnName() {
