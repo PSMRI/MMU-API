@@ -63,24 +63,22 @@ public class GetDownSyncDataFromCentralImpl implements GetDownSyncDataFromCentra
 		List<Map<String, Object>> resultSetList = dataSyncRepositoryCentralDownload.getDownSyncDataFromTable(
 				downSyncDataDigester.getSchemaName(), downSyncDataDigester.getTableName(),
 				downSyncDataDigester.getServerColumnName(), downSyncDataDigester.getTableType(),
-				downSyncDataDigester.getVanID(), resolveLastModColumn(downSyncDataDigester.getTableName()));
+				downSyncDataDigester.getVanID(),
+				resolveLastModColumn(downSyncDataDigester.getSchemaName(), downSyncDataDigester.getTableName()));
 
 		return downSyncGson().toJson(resultSetList);
 	}
 
-	private String resolveLastModColumn(String tableName) throws Exception {
-		String lastModColumn = "LastModDate";
+	private String resolveLastModColumn(String schemaName, String tableName) throws Exception {
+		String lastModColumn = dataSyncRepositoryCentralDownload.resolveLastModColumn(schemaName, tableName);
 
-		if (tableName != null) {
-			ArrayList<DownSyncTableDetail> tableDetails = downSyncTableDetailRepo
-					.getActiveDownSyncTableByName(tableName.trim());
-			if (tableDetails != null && !tableDetails.isEmpty())
-				lastModColumn = tableDetails.get(0).getLastModColumnName();
-		}
+		if (lastModColumn == null)
+			throw new Exception(schemaName + "." + tableName
+					+ " has neither LastModDate nor last_mod_date, so the down-sync cannot tell when a record was"
+					+ " last changed");
 
-		if (lastModColumn == null || !lastModColumn.matches("^[a-zA-Z_][a-zA-Z0-9_]*$"))
-			throw new Exception(
-					"The down-sync configuration of " + tableName + " holds an invalid modification-time column name");
+		if (!lastModColumn.matches("^[a-zA-Z_][a-zA-Z0-9_]*$"))
+			throw new Exception(schemaName + "." + tableName + " holds an invalid modification-time column name");
 
 		return lastModColumn;
 	}
