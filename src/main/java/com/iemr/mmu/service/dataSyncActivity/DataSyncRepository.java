@@ -23,6 +23,7 @@ package com.iemr.mmu.service.dataSyncActivity;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -143,13 +144,33 @@ public class DataSyncRepository {
 
 	// ---------------------------------- Down-Sync Repository (central -> local)
 
+	public Map<String, String> getSyncGroupNamesByTable() {
+		jdbcTemplate = getJdbcTemplate();
+
+		String query = " SELECT LOWER(TRIM(s.TableName)) AS TableName, g.SyncTableGroupName "
+				+ " FROM db_iemr.m_synctabledetail s "
+				+ " JOIN db_iemr.m_synctablegroup g ON g.SyncTableGroupID = s.SyncTableGroupID "
+				+ " WHERE IFNULL(s.Deleted, b'0') = b'0' AND IFNULL(g.Deleted, b'0') = b'0' "
+				+ " AND s.TableName IS NOT NULL ";
+
+		Map<String, String> groups = new LinkedHashMap<>();
+		for (Map<String, Object> row : jdbcTemplate.queryForList(query)) {
+			Object table = row.get("TableName");
+			Object group = row.get("SyncTableGroupName");
+			if (table != null && group != null)
+				groups.putIfAbsent(String.valueOf(table), String.valueOf(group));
+		}
+		return groups;
+	}
+
 	public List<String> getDownSyncColumns(String schema, String table) {
 		jdbcTemplate = getJdbcTemplate();
 
 		String query = " SELECT COLUMN_NAME FROM information_schema.COLUMNS "
 				+ " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? "
 				+ " AND COLUMN_NAME NOT IN ('DownSynced', 'DownSyncDate', 'DownSyncFailureReason', "
-				+ " 'LastDownSyncDate') " + " ORDER BY COLUMN_NAME ";
+				+ " 'LastDownSyncDate', 'Processed', 'SyncFailureReason', 'SyncedBy', 'SyncedDate') "
+				+ " ORDER BY COLUMN_NAME ";
 
 		return jdbcTemplate.queryForList(query, String.class, schema, table);
 	}

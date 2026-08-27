@@ -25,6 +25,7 @@ import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -51,6 +52,7 @@ import com.google.gson.reflect.TypeToken;
 import com.iemr.mmu.data.syncActivity_syncLayer.DownSyncDataDigester;
 import com.iemr.mmu.data.syncActivity_syncLayer.DownSyncRecordAck;
 import com.iemr.mmu.data.syncActivity_syncLayer.DownSyncTableDetail;
+import com.iemr.mmu.data.syncActivity_syncLayer.DownSyncTableResult;
 import com.iemr.mmu.repo.syncActivity_syncLayer.DownSyncTableDetailRepo;
 import com.iemr.mmu.utils.RestTemplateUtil;
 
@@ -64,6 +66,7 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 	private static final String VAN_SERIAL_NO = "VanSerialNo";
 	private static final String VAN_ID = "VanID";
 	private static final String LAST_MOD_DATE = "LastModDate";
+	private static final String DATA_SYNC_CALL = "datasync";
 	private static final String LAST_DOWN_SYNC_DATE = "LastDownSyncDate";
 	private static final String DOWN_SYNCED = "DownSynced";
 	private static final String DOWN_SYNC_DATE = "DownSyncDate";
@@ -90,8 +93,12 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 	private static int updatedCounter = 0;
 	private static int conflictCounter = 0;
 	private static int skippedCounter = 0;
-	private static int failedCounter = 0;
+	private static int failedTableCounter = 0;
+	private static int failedRecordCounter = 0;
 	private static StringBuilder failedTables = new StringBuilder();
+	private static final List<DownSyncTableResult> tableResults =
+			Collections.synchronizedList(new ArrayList<>());
+	private static DownSyncTableResult currentResult;
 	private static String currentTable = "";
 
 	public String startDownSync(String serverAuthorization, String jwtToken, Integer vanID,
@@ -113,9 +120,14 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 		updatedCounter = 0;
 		conflictCounter = 0;
 		skippedCounter = 0;
-		failedCounter = 0;
+		failedTableCounter = 0;
+		failedRecordCounter = 0;
 		failedTables = new StringBuilder();
+		tableResults.clear();
+		currentResult = null;
 		currentTable = "";
+
+		final Map<String, String> syncGroups = dataSyncRepository.getSyncGroupNamesByTable();
 
 		final ExecutorService threadPool = Executors.newSingleThreadExecutor();
 		try {
@@ -123,11 +135,20 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 				try {
 					for (DownSyncTableDetail tableDetail : downSyncTables) {
 						currentTable = tableDetail.getSchemaName() + "." + tableDetail.getTableName();
+
+						String groupName = syncGroups.getOrDefault(
+								tableDetail.getTableName().toLowerCase(),
+								tableDetail.isMasterTable() ? "Masters" : "Other");
+						currentResult = new DownSyncTableResult(groupName, tableDetail.getSchemaName(),
+								tableDetail.getTableName());
+						tableResults.add(currentResult);
+
 						try {
 							downSyncTable(tableDetail, vanID, providerServiceMapID, serverAuthorization, jwtToken);
 						} catch (Exception e) {
-							failedCounter++;
+							failedTableCounter++;
 							failedTables.append(tableDetail.getTableName()).append(" | ");
+							currentResult.tableFailed(shorten(e.getMessage()));
 							logger.error("Down-sync failed for " + currentTable + ". Exception : " + e.getMessage(), e);
 						}
 						progressCounter++;
@@ -151,8 +172,13 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 		resultMap.put("currentTable", currentTable);
 		resultMap.put("totalTables", totalCounter);
 		resultMap.put("completedTables", progressCounter);
-		resultMap.put("failedTableCount", failedCounter);
+		resultMap.put("successTableCount", progressCounter - failedTableCounter);
+		resultMap.put("failedTableCount", failedTableCounter);
+		resultMap.put("failedRecordCount", failedRecordCounter);
 		resultMap.put("failedTables", failedTables.toString());
+		synchronized (tableResults) {
+			resultMap.put("tableResults", new ArrayList<>(tableResults));
+		}
 		resultMap.put("recordsInserted", insertedCounter);
 		resultMap.put("recordsUpdated", updatedCounter);
 		resultMap.put("recordsSkipped", skippedCounter);
@@ -215,7 +241,8 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 				providerServiceMapID);
 
 		RestTemplate restTemplate = new RestTemplate();
-		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(digester, serverAuthorization, jwtToken);
+		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(digester, serverAuthorization,
+				DATA_SYNC_CALL);
 		ResponseEntity<String> response = restTemplate.exchange(downSyncDataUrl, HttpMethod.POST, request, String.class);
 
 		if (response == null || !response.hasBody())
@@ -300,6 +327,8 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 				if (localRecord == null) {
 					Long localID = insertRecord(tableDetail, serverColumns, vanColumns, pkColumn, record);
 					insertedCounter++;
+					if (currentResult != null)
+						currentResult.addInserted();
 					acks.add(DownSyncRecordAck.success(centralID, localID));
 					continue;
 				}
@@ -308,6 +337,8 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 
 				if (!isCentralCopyNewer(record, localRecord, tableDetail.getLastModColumnName())) {
 					skippedCounter++;
+					if (currentResult != null)
+						currentResult.addSkipped();
 					acks.add(DownSyncRecordAck.success(centralID, localID));
 					continue;
 				}
@@ -316,6 +347,8 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 					dataSyncRepository.markDownSyncConflictInLocal(tableDetail.getSchemaName(),
 							tableDetail.getTableName(), pkColumn, localID);
 					conflictCounter++;
+					if (currentResult != null)
+						currentResult.addConflict();
 					acks.add(DownSyncRecordAck.failure(centralID, localID, DownSyncRecordAck.CONFLICT));
 					logger.warn("Down-sync conflict for {}.{}, local id {}", tableDetail.getSchemaName(),
 							tableDetail.getTableName(), localID);
@@ -324,13 +357,15 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 
 				updateRecord(tableDetail, serverColumns, vanColumns, pkColumn, record, localID);
 				updatedCounter++;
+				if (currentResult != null)
+					currentResult.addUpdated();
 				acks.add(DownSyncRecordAck.success(centralID, localID));
 
 			} catch (Exception e) {
-				failedCounter++;
-				String reason = e.getMessage() != null && e.getMessage().length() > 250
-						? e.getMessage().substring(0, 250)
-						: e.getMessage();
+				failedRecordCounter++;
+				String reason = shorten(e.getMessage());
+				if (currentResult != null)
+					currentResult.recordFailed(reason);
 				acks.add(DownSyncRecordAck.failure(centralID, toLong(vanSerialNo), reason));
 				logger.error("Down-sync failed for record " + centralID + " of " + tableDetail.getTableName() + " : "
 						+ e.getMessage(), e);
@@ -381,6 +416,10 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 		values.add(null);
 		columns.add(LAST_DOWN_SYNC_DATE);
 		values.add(Timestamp.valueOf(LocalDateTime.now()));
+		columns.add(DOWN_SYNCED);
+		values.add(DownSyncRecordAck.STATUS_PROCESSED);
+		columns.add(DOWN_SYNC_DATE);
+		values.add(Timestamp.valueOf(LocalDateTime.now()));
 
 		StringBuilder placeHolders = new StringBuilder();
 		for (int i = 0; i < columns.size(); i++) {
@@ -413,7 +452,9 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 		}
 
 		setClause.append(setClause.length() > 0 ? ", " : "").append(PROCESSED).append(" = 'P', ")
-				.append(SYNC_FAILURE_REASON).append(" = NULL, ").append(LAST_DOWN_SYNC_DATE).append(" = ? ");
+				.append(SYNC_FAILURE_REASON).append(" = NULL, ").append(LAST_DOWN_SYNC_DATE).append(" = ?, ")
+				.append(DOWN_SYNCED).append(" = 'P', ").append(DOWN_SYNC_DATE).append(" = ? ");
+		values.add(Timestamp.valueOf(LocalDateTime.now()));
 		values.add(Timestamp.valueOf(LocalDateTime.now()));
 		values.add(localID);
 
@@ -421,6 +462,13 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 				+ " WHERE " + pkColumn + " = ? ";
 
 		dataSyncRepository.updateDownSyncRecordInLocal(query, values.toArray());
+	}
+
+	private static String shorten(String message) {
+		if (message == null || message.trim().isEmpty())
+			return "Unknown error";
+		String trimmed = message.trim();
+		return trimmed.length() > 250 ? trimmed.substring(0, 250) : trimmed;
 	}
 
 	private void requireIdentifier(String value, String what, DownSyncTableDetail tableDetail) throws Exception {
@@ -444,7 +492,8 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 		DownSyncDataDigester digester = DownSyncDataDigester.forAck(tableDetail, vanID, acks);
 
 		RestTemplate restTemplate = new RestTemplate();
-		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(digester, serverAuthorization, jwtToken);
+		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(digester, serverAuthorization,
+				DATA_SYNC_CALL);
 		ResponseEntity<String> response = restTemplate.exchange(downSyncFlagUpdateUrl, HttpMethod.POST, request,
 				String.class);
 

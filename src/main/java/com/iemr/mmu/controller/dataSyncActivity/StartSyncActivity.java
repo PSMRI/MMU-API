@@ -238,6 +238,14 @@ public class StartSyncActivity {
 		try {
 			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
 
+			if (serverAuthorization == null || serverAuthorization.trim().isEmpty()) {
+				logger.error("Down-sync : ServerAuthorization is empty - do the data sync server login first");
+				response.setError(5000,
+						"Server authorization is missing. Kindly do the data sync server login and try again.");
+				return response.toString();
+			}
+			logger.info("Down-sync : ServerAuthorization received, length {}", serverAuthorization.trim().length());
+
 			JSONObject obj = new JSONObject(requestOBJ);
 			if (obj.has("vanID") && obj.get("vanID") != null) {
 				Integer providerServiceMapID = obj.has(PROVIDER_SERVICE_MAP_ID) && !obj.isNull(PROVIDER_SERVICE_MAP_ID)
