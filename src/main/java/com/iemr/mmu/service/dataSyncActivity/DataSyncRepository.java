@@ -163,6 +163,18 @@ public class DataSyncRepository {
 		return groups;
 	}
 
+	public String resolveLastModColumn(String schema, String table) {
+		jdbcTemplate = getJdbcTemplate();
+
+		String query = " SELECT COLUMN_NAME FROM information_schema.COLUMNS "
+				+ " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? "
+				+ " AND COLUMN_NAME IN ('LastModDate', 'last_mod_date') "
+				+ " ORDER BY FIELD(COLUMN_NAME, 'LastModDate', 'last_mod_date') ";
+
+		List<String> found = jdbcTemplate.queryForList(query, String.class, schema, table);
+		return (found == null || found.isEmpty()) ? null : found.get(0);
+	}
+
 	public List<String> getDownSyncColumns(String schema, String table) {
 		jdbcTemplate = getJdbcTemplate();
 
