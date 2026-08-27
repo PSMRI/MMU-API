@@ -305,7 +305,13 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 		pkColumn = pkColumn.trim();
 
 		requireIdentifier(pkColumn, "VanAutoIncColumnName", tableDetail);
-		requireIdentifier(tableDetail.getLastModColumnName(), "LastModColumnName", tableDetail);
+
+		String lastModColumn = dataSyncRepository.resolveLastModColumn(tableDetail.getSchemaName(),
+				tableDetail.getTableName());
+		if (lastModColumn == null)
+			throw new Exception(tableDetail.getSchemaName() + "." + tableDetail.getTableName()
+					+ " has neither LastModDate nor last_mod_date, so a change cannot be dated");
+		requireIdentifier(lastModColumn, "modification-time column", tableDetail);
 
 		List<DownSyncRecordAck> acks = new ArrayList<>();
 
@@ -316,7 +322,7 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 			try {
 				Map<String, Object> localRecord = dataSyncRepository.getLocalRecordForDownSync(
 						tableDetail.getSchemaName(), tableDetail.getTableName(), pkColumn, vanSerialNo, vanID,
-						tableDetail.getLastModColumnName());
+						lastModColumn);
 
 				if (localRecord == null) {
 					Long localID = insertRecord(tableDetail, serverColumns, vanColumns, pkColumn, record);
@@ -329,7 +335,7 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 
 				Long localID = toLong(localRecord.get(pkColumn));
 
-				if (!isCentralCopyNewer(record, localRecord, tableDetail.getLastModColumnName())) {
+				if (!isCentralCopyNewer(record, localRecord, lastModColumn)) {
 					skippedCounter++;
 					if (currentResult != null)
 						currentResult.addSkipped();
