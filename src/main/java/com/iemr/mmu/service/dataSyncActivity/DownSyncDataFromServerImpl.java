@@ -30,8 +30,6 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.json.JSONObject;
@@ -129,40 +127,36 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 
 		final Map<String, String> syncGroups = dataSyncRepository.getSyncGroupNamesByTable();
 
-		final ExecutorService threadPool = Executors.newSingleThreadExecutor();
 		try {
-			threadPool.submit(() -> {
+			for (DownSyncTableDetail tableDetail : downSyncTables) {
+				currentTable = tableDetail.getSchemaName() + "." + tableDetail.getTableName();
+
+				String groupName = syncGroups.getOrDefault(tableDetail.getTableName().toLowerCase(),
+						tableDetail.isMasterTable() ? "Masters" : "Other");
+				currentResult = new DownSyncTableResult(groupName, tableDetail.getSchemaName(),
+						tableDetail.getTableName());
+				tableResults.add(currentResult);
+
 				try {
-					for (DownSyncTableDetail tableDetail : downSyncTables) {
-						currentTable = tableDetail.getSchemaName() + "." + tableDetail.getTableName();
-
-						String groupName = syncGroups.getOrDefault(
-								tableDetail.getTableName().toLowerCase(),
-								tableDetail.isMasterTable() ? "Masters" : "Other");
-						currentResult = new DownSyncTableResult(groupName, tableDetail.getSchemaName(),
-								tableDetail.getTableName());
-						tableResults.add(currentResult);
-
-						try {
-							downSyncTable(tableDetail, vanID, providerServiceMapID, serverAuthorization, jwtToken);
-						} catch (Exception e) {
-							failedTableCounter++;
-							failedTables.append(tableDetail.getTableName()).append(" | ");
-							currentResult.tableFailed(shorten(e.getMessage()));
-							logger.error("Down-sync failed for " + currentTable + ". Exception : " + e.getMessage(), e);
-						}
-						progressCounter++;
-					}
-				} finally {
-					IN_PROGRESS.set(false);
+					downSyncTable(tableDetail, vanID, providerServiceMapID, serverAuthorization, jwtToken);
+				} catch (Exception e) {
+					failedTableCounter++;
+					failedTables.append(tableDetail.getTableName()).append(" | ");
+					currentResult.tableFailed(shorten(e.getMessage()));
+					logger.error("Down-sync failed for " + currentTable + ". Exception : " + e.getMessage(), e);
 				}
-				return "Down-sync completed";
-			});
+				progressCounter++;
+			}
 		} finally {
-			threadPool.shutdown();
+			IN_PROGRESS.set(false);
+			currentTable = "";
 		}
 
-		return " Down-sync started ";
+		logger.info("Down-sync finished : {} of {} tables succeeded, {} inserted, {} updated, {} skipped, "
+				+ "{} conflicts, {} failed records", progressCounter - failedTableCounter, totalCounter,
+				insertedCounter, updatedCounter, skippedCounter, conflictCounter, failedRecordCounter);
+
+		return "Down-sync completed";
 	}
 
 	public Map<String, Object> getDownSyncStatus() {

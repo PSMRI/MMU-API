@@ -255,10 +255,11 @@ public class StartSyncActivity {
 				String s = downSyncDataFromServerImpl.startDownSync(serverAuthorization, jwtToken, obj.getInt("vanID"),
 						providerServiceMapID);
 
-				if (s != null && s.equalsIgnoreCase("inProgress"))
+				if (s != null && s.equalsIgnoreCase("inProgress")) {
 					response.setError(5000, "Down-sync is already in progress, kindly wait for it to finish");
-				else
-					response.setResponse(s);
+				} else {
+					response.setResponse(new Gson().toJson(downSyncDataFromServerImpl.getDownSyncStatus()));
+				}
 			} else {
 				response.setError(5000, "vanID is missing, Kindly contact the administrator.");
 			}
