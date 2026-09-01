@@ -74,6 +74,10 @@ public class DownSyncTableDetail {
 	@Expose
 	@Column(name = "FkColumnMapping")
 	private String fkColumnMapping;
+	
+	@Expose
+	@Column(name = "PreserveCentralPK")
+	private Boolean preserveCentralPK;
 
 	
 	@Expose
@@ -151,6 +155,14 @@ public class DownSyncTableDetail {
 
 	public void setVanAutoIncColumnName(String vanAutoIncColumnName) {
 		this.vanAutoIncColumnName = vanAutoIncColumnName;
+	}
+
+	public boolean isPreserveCentralPK() {
+		return Boolean.TRUE.equals(preserveCentralPK);
+	}
+
+	public void setPreserveCentralPK(Boolean preserveCentralPK) {
+		this.preserveCentralPK = preserveCentralPK;
 	}
 
 	public String getFkColumnMapping() {
