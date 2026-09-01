@@ -47,12 +47,14 @@ public class DownSyncDataDigester {
 	/** populated only on the acknowledgement call */
 	@Expose
 	private List<DownSyncRecordAck> records;
+	private Long lastFetchedID;
+	private Integer batchSize;
 
 	public DownSyncDataDigester() {
 	}
 
 	public static DownSyncDataDigester forDownload(DownSyncTableDetail tableDetail, String serverColumnName,
-			Integer vanID, Integer providerServiceMapID) {
+			Integer vanID, Integer providerServiceMapID, Long lastFetchedID, Integer batchSize) {
 		DownSyncDataDigester digester = new DownSyncDataDigester();
 		digester.schemaName = tableDetail.getSchemaName();
 		digester.tableName = tableDetail.getTableName();
@@ -61,6 +63,8 @@ public class DownSyncDataDigester {
 		digester.tableType = tableDetail.getTableType();
 		digester.vanID = vanID;
 		digester.providerServiceMapID = providerServiceMapID;
+		digester.lastFetchedID = lastFetchedID;
+		digester.batchSize = batchSize;
 		return digester;
 	}
 
@@ -130,6 +134,22 @@ public class DownSyncDataDigester {
 
 	public void setProviderServiceMapID(Integer providerServiceMapID) {
 		this.providerServiceMapID = providerServiceMapID;
+	}
+
+	public Long getLastFetchedID() {
+		return lastFetchedID;
+	}
+
+	public void setLastFetchedID(Long lastFetchedID) {
+		this.lastFetchedID = lastFetchedID;
+	}
+
+	public Integer getBatchSize() {
+		return batchSize;
+	}
+
+	public void setBatchSize(Integer batchSize) {
+		this.batchSize = batchSize;
 	}
 
 	public List<DownSyncRecordAck> getRecords() {

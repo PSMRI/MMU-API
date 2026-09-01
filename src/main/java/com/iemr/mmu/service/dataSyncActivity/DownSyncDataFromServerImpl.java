@@ -74,6 +74,8 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 	private static final String CENTRAL_ID = "CentralID";
 	
 	private static final int ACK_BATCH_SIZE = 500;
+	
+	private static final int FETCH_BATCH_SIZE = 1000;
 
 	@Value("${downSyncDataUrl}")
 	private String downSyncDataUrl;
@@ -213,29 +215,75 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 					+ tableDetail.getTableName() + " (" + serverColumns.size() + " vs " + vanColumns.size()
 					+ "). Central and local must expose the same number of columns, in the same order.");
 
-		List<Map<String, Object>> dataFromCentral = fetchDataFromCentral(tableDetail, String.join(",", serverColumns),
-				vanID, providerServiceMapID, serverAuthorization, jwtToken);
+		String columnList = String.join(",", serverColumns);
 
-		if (dataFromCentral.isEmpty()) {
-			logger.info("Nothing to down-sync for {}.{}", tableDetail.getSchemaName(), tableDetail.getTableName());
+		if (tableDetail.isMasterTable()) {
+			// masters are a full pull with no primary key to page on, and are small
+			List<Map<String, Object>> dataFromCentral = fetchDataFromCentral(tableDetail, columnList, vanID,
+					providerServiceMapID, serverAuthorization, jwtToken, null, null);
+
+			if (dataFromCentral.isEmpty()) {
+				logger.info("Nothing to down-sync for {}.{}", tableDetail.getSchemaName(),
+						tableDetail.getTableName());
+				return;
+			}
+			upsertMasterData(tableDetail, serverColumns, vanColumns, dataFromCentral);
 			return;
 		}
 
-		if (tableDetail.isMasterTable()) {
-			upsertMasterData(tableDetail, serverColumns, vanColumns, dataFromCentral);
-		} else {
+	String pkColumn = tableDetail.getVanAutoIncColumnName();
+		requireIdentifier(pkColumn == null ? null : pkColumn.trim(), "VanAutoIncColumnName", tableDetail);
+
+		Long lastFetchedID = null;
+		int page = 0;
+		int totalFetched = 0;
+
+		while (true) {
+			List<Map<String, Object>> dataFromCentral = fetchDataFromCentral(tableDetail, columnList, vanID,
+					providerServiceMapID, serverAuthorization, jwtToken, lastFetchedID, FETCH_BATCH_SIZE);
+
+			if (dataFromCentral.isEmpty())
+				break;
+
+			page++;
+			totalFetched += dataFromCentral.size();
+
 			List<DownSyncRecordAck> acks = saveTransactionalData(tableDetail, serverColumns, vanColumns,
 					dataFromCentral, vanID);
 			acknowledgeToCentral(tableDetail, vanID, acks, serverAuthorization, jwtToken);
+
+			Long highestID = highestCentralID(dataFromCentral, pkColumn.trim());
+			if (highestID == null || (lastFetchedID != null && highestID <= lastFetchedID))
+				break;
+			lastFetchedID = highestID;
+
+			if (dataFromCentral.size() < FETCH_BATCH_SIZE)
+				break;
 		}
+
+		if (totalFetched == 0)
+			logger.info("Nothing to down-sync for {}.{}", tableDetail.getSchemaName(), tableDetail.getTableName());
+		else
+			logger.info("Down-synced {} records of {}.{} in {} page(s)", totalFetched, tableDetail.getSchemaName(),
+					tableDetail.getTableName(), page);
+	}
+
+	private Long highestCentralID(List<Map<String, Object>> records, String pkColumn) {
+		Long highest = null;
+		for (Map<String, Object> record : records) {
+			Long id = toLong(record.get(resolveKeyIgnoringCase(record, pkColumn)));
+			if (id != null && (highest == null || id > highest))
+				highest = id;
+		}
+		return highest;
 	}
 
 	private List<Map<String, Object>> fetchDataFromCentral(DownSyncTableDetail tableDetail, String serverColumnName,
-			Integer vanID, Integer providerServiceMapID, String serverAuthorization, String jwtToken)
-			throws Exception {
+			Integer vanID, Integer providerServiceMapID, String serverAuthorization, String jwtToken,
+			Long lastFetchedID, Integer batchSize) throws Exception {
 
 		DownSyncDataDigester digester = DownSyncDataDigester.forDownload(tableDetail, serverColumnName, vanID,
-				providerServiceMapID);
+				providerServiceMapID, lastFetchedID, batchSize);
 
 		RestTemplate restTemplate = new RestTemplate();
 		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(digester, serverAuthorization,

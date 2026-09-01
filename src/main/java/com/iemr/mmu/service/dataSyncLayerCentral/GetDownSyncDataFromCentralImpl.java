@@ -64,7 +64,9 @@ public class GetDownSyncDataFromCentralImpl implements GetDownSyncDataFromCentra
 				downSyncDataDigester.getSchemaName(), downSyncDataDigester.getTableName(),
 				downSyncDataDigester.getServerColumnName(), downSyncDataDigester.getTableType(),
 				downSyncDataDigester.getVanID(),
-				resolveLastModColumn(downSyncDataDigester.getSchemaName(), downSyncDataDigester.getTableName()));
+				resolveLastModColumn(downSyncDataDigester.getSchemaName(), downSyncDataDigester.getTableName()),
+				downSyncDataDigester.getVanAutoIncColumnName(), downSyncDataDigester.getLastFetchedID(),
+				downSyncDataDigester.getBatchSize());
 
 		return downSyncGson().toJson(resultSetList);
 	}
