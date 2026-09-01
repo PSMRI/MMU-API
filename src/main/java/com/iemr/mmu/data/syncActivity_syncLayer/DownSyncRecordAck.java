@@ -27,6 +27,7 @@ public class DownSyncRecordAck {
 
 	public static final String STATUS_PROCESSED = "P";
 	public static final String STATUS_FAILED = "F";
+	public static final String STATUS_RETRY = "U";
 	public static final String CONFLICT = "CONFLICT";
 
 	@Expose
@@ -54,6 +55,15 @@ public class DownSyncRecordAck {
 
 	public static DownSyncRecordAck failure(Long centralID, Long vanSerialNo, String failureReason) {
 		return new DownSyncRecordAck(centralID, vanSerialNo, STATUS_FAILED, failureReason);
+	}
+
+	
+	public static DownSyncRecordAck retryable(Long centralID, Long vanSerialNo, String failureReason) {
+		return new DownSyncRecordAck(centralID, vanSerialNo, STATUS_RETRY, failureReason);
+	}
+
+	public boolean isRetryable() {
+		return STATUS_RETRY.equalsIgnoreCase(status);
 	}
 
 	public boolean isSuccess() {

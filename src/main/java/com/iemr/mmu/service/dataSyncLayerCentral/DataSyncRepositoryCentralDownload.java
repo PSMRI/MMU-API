@@ -283,6 +283,7 @@ public class DataSyncRepositoryCentralDownload {
 		List<Object[]> successWithSerialNo = new ArrayList<>();
 		List<Object[]> successWithoutSerialNo = new ArrayList<>();
 		List<Object[]> failed = new ArrayList<>();
+		List<Object[]> retryable = new ArrayList<>();
 
 		for (DownSyncRecordAck record : records) {
 			if (record == null || record.getCentralID() == null)
@@ -293,6 +294,8 @@ public class DataSyncRepositoryCentralDownload {
 					successWithSerialNo.add(new Object[] { record.getVanSerialNo(), record.getCentralID() });
 				else
 					successWithoutSerialNo.add(new Object[] { record.getCentralID() });
+			} else if (record.isRetryable()) {
+				retryable.add(new Object[] { record.getFailureReason(), record.getCentralID() });
 			} else {
 				failed.add(new Object[] { record.getFailureReason(), record.getCentralID() });
 			}
@@ -312,6 +315,12 @@ public class DataSyncRepositoryCentralDownload {
 					+ " SET DownSynced = 'P', DownSyncDate = now(), DownSyncFailureReason = NULL " + " WHERE "
 					+ pkColumnName + " = ? ";
 			updatedRows += countUpdatedRows(jdbcTemplate.batchUpdate(query, successWithoutSerialNo));
+		}
+
+		if (!retryable.isEmpty()) {
+			String query = " UPDATE " + schema + "." + table
+					+ " SET DownSynced = 'U', DownSyncFailureReason = ? " + " WHERE " + pkColumnName + " = ? ";
+			updatedRows += countUpdatedRows(jdbcTemplate.batchUpdate(query, retryable));
 		}
 
 		if (!failed.isEmpty()) {
