@@ -231,6 +231,33 @@ public class DataSyncRepository {
 		return jdbcTemplate.update(query, localID, localID);
 	}
 
+	
+	public Long resolveLocalIdForCentralValue(String schema, String table, String pkColumn, Object centralValue,
+			Object vanID) {
+		if (centralValue == null)
+			return null;
+
+		jdbcTemplate = getJdbcTemplate();
+		String from = " FROM " + schema + "." + table + " WHERE ";
+
+		Long resolved = queryForFirstLong(" SELECT " + pkColumn + from + " CentralID = ? AND VanID = ? ", centralValue,
+				vanID);
+		if (resolved != null)
+			return resolved;
+
+		resolved = queryForFirstLong(" SELECT " + pkColumn + from + " VanSerialNo = ? AND VanID = ? ", centralValue,
+				vanID);
+		if (resolved != null)
+			return resolved;
+
+		return queryForFirstLong(" SELECT " + pkColumn + from + pkColumn + " = ? AND VanID = ? ", centralValue, vanID);
+	}
+
+	private Long queryForFirstLong(String query, Object... params) {
+		List<Long> found = jdbcTemplate.queryForList(query, Long.class, params);
+		return (found == null || found.isEmpty()) ? null : found.get(0);
+	}
+
 	public int markDownSyncConflictInLocal(String schema, String table, String autoIncColumnName, Object localID) {
 		jdbcTemplate = getJdbcTemplate();
 		String query = " UPDATE " + schema + "." + table

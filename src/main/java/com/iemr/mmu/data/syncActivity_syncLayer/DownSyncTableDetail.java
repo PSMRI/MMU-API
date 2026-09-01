@@ -70,8 +70,12 @@ public class DownSyncTableDetail {
 	@Expose
 	@Column(name = "TableType")
 	private String tableType;
+	
+	@Expose
+	@Column(name = "FkColumnMapping")
+	private String fkColumnMapping;
 
-	/** lower number syncs first - enforces the FK dependency chain */
+	
 	@Expose
 	@Column(name = "SyncOrder")
 	private Integer syncOrder;
@@ -147,6 +151,14 @@ public class DownSyncTableDetail {
 
 	public void setVanAutoIncColumnName(String vanAutoIncColumnName) {
 		this.vanAutoIncColumnName = vanAutoIncColumnName;
+	}
+
+	public String getFkColumnMapping() {
+		return fkColumnMapping;
+	}
+
+	public void setFkColumnMapping(String fkColumnMapping) {
+		this.fkColumnMapping = fkColumnMapping;
 	}
 
 	public String getTableType() {

@@ -72,6 +72,8 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 	private static final String PROCESSED = "Processed";
 	private static final String SYNC_FAILURE_REASON = "SyncFailureReason";
 	private static final String CENTRAL_ID = "CentralID";
+	
+	private static final int ACK_BATCH_SIZE = 500;
 
 	@Value("${downSyncDataUrl}")
 	private String downSyncDataUrl;
@@ -314,18 +316,41 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 					+ " has neither LastModDate nor last_mod_date, so a change cannot be dated");
 		requireIdentifier(lastModColumn, "modification-time column", tableDetail);
 
+		Map<String, String> fkMapping = parseFkColumnMapping(tableDetail);
+		Map<String, Long> fkCache = new LinkedHashMap<>();
+
 		List<DownSyncRecordAck> acks = new ArrayList<>();
 
-		for (Map<String, Object> record : dataFromCentral) {
-			Long centralID = toLong(record.get(pkColumn));
+		for (Map<String, Object> incoming : dataFromCentral) {
+			Map<String, Object> record = incoming;
+			// Resolved ignoring case : column names differ in case between tables
+			// (BenConsentID vs BenConsentId, vanSerialNo vs VanSerialNo) and a map
+			// lookup is case-sensitive, so taking the configured spelling literally
+			// yields null and every record then looks new on every run.
+			Long centralID = toLong(record.get(resolveKeyIgnoringCase(record, pkColumn)));
 
 			try {
+				if (centralID == null)
+					throw new Exception("Central sent no value for the primary key '" + pkColumn
+							+ "'. Check VanAutoIncColumnName in m_downsynctabledetail against the real column of "
+							+ tableDetail.getTableName() + " - writing the record without it inserts a duplicate on"
+							+ " every later run.");
+
 				Map<String, Object> localRecord = dataSyncRepository.getLocalRecordForDownSync(
 						tableDetail.getSchemaName(), tableDetail.getTableName(), pkColumn, centralID, vanID,
 						lastModColumn);
 
+				// a pointer at another table's primary key means a different number here
+				// than at central, so it is rewritten before the row is written
+				StringBuilder unresolved = new StringBuilder();
+				Map<String, Object> mapped = translateForeignKeys(fkMapping, record, vanID, fkCache, unresolved);
+
 				if (localRecord == null) {
-					Long localID = insertRecord(tableDetail, serverColumns, vanColumns, pkColumn, record, centralID);
+					if (mapped == null)
+						throw new Exception("Cannot place this record : " + shorten(unresolved.toString())
+								+ " Its parent row has not reached this van yet.");
+
+					Long localID = insertRecord(tableDetail, serverColumns, vanColumns, pkColumn, mapped, centralID);
 					insertedCounter++;
 					if (currentResult != null)
 						currentResult.addInserted();
@@ -355,7 +380,10 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 					continue;
 				}
 
-				updateRecord(tableDetail, serverColumns, vanColumns, pkColumn, record, localID);
+				// on an update an unresolvable pointer is left at its current local value
+				// rather than being overwritten with an id that means nothing here
+				updateRecord(tableDetail, serverColumns, vanColumns, pkColumn, mapped != null ? mapped : record,
+						localID, mapped == null ? fkMapping.keySet() : null);
 				updatedCounter++;
 				if (currentResult != null)
 					currentResult.addUpdated();
@@ -443,7 +471,7 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 	}
 
 	private void updateRecord(DownSyncTableDetail tableDetail, List<String> serverColumns, List<String> vanColumns,
-			String pkColumn, Map<String, Object> record, Long localID) {
+			String pkColumn, Map<String, Object> record, Long localID, java.util.Set<String> columnsToLeaveAlone) {
 
 		StringBuilder setClause = new StringBuilder();
 		List<Object> values = new ArrayList<>();
@@ -451,6 +479,8 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 		for (int i = 0; i < vanColumns.size(); i++) {
 			String vanColumn = vanColumns.get(i);
 			if (vanColumn.equalsIgnoreCase(pkColumn) || isDownSyncManagedColumn(vanColumn))
+				continue;
+			if (columnsToLeaveAlone != null && containsIgnoringCase(columnsToLeaveAlone, vanColumn))
 				continue;
 
 			if (setClause.length() > 0)
@@ -470,6 +500,121 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 				+ " WHERE " + pkColumn + " = ? ";
 
 		dataSyncRepository.updateDownSyncRecordInLocal(query, values.toArray());
+	}
+
+	/***
+	 * Parses FkColumnMapping - "childColumn:schema.parentTable", several separated
+	 * by ';' - into an ordered map. Blank config gives an empty map, which is the
+	 * "nothing to translate" case for almost every table.
+	 */
+	private Map<String, String> parseFkColumnMapping(DownSyncTableDetail tableDetail) throws Exception {
+		Map<String, String> mapping = new LinkedHashMap<>();
+		String config = tableDetail.getFkColumnMapping();
+		if (config == null || config.trim().isEmpty())
+			return mapping;
+
+		for (String entry : config.split(";")) {
+			if (entry == null || entry.trim().isEmpty())
+				continue;
+
+			String[] parts = entry.trim().split(":");
+			if (parts.length != 2 || parts[1].trim().split("\\.").length != 2)
+				throw new Exception("FkColumnMapping of " + tableDetail.getTableName() + " holds '" + entry.trim()
+						+ "', which is not of the form childColumn:schema.parentTable");
+
+			requireIdentifier(parts[0].trim(), "FkColumnMapping child column", tableDetail);
+			mapping.put(parts[0].trim(), parts[1].trim());
+		}
+		return mapping;
+	}
+
+	
+	private Map<String, Object> translateForeignKeys(Map<String, String> fkMapping, Map<String, Object> record,
+			Integer vanID, Map<String, Long> cache, StringBuilder unresolved) {
+
+		if (fkMapping.isEmpty())
+			return record;
+
+		Map<String, Object> translated = new LinkedHashMap<>(record);
+
+		for (Map.Entry<String, String> fk : fkMapping.entrySet()) {
+			String childColumn = resolveKeyIgnoringCase(record, fk.getKey());
+			if (childColumn == null)
+				continue;
+
+			Long centralValue = toLong(record.get(childColumn));
+			if (centralValue == null)
+				continue;
+
+			String parent = fk.getValue();
+			String cacheKey = parent + "#" + centralValue;
+			Long localValue = cache.get(cacheKey);
+
+			if (localValue == null) {
+				String parentSchema = parent.substring(0, parent.indexOf('.'));
+				String parentTable = parent.substring(parent.indexOf('.') + 1);
+				String parentPK = parentPrimaryKey(parentSchema, parentTable);
+
+				if (parentPK == null) {
+					unresolved.append(fk.getKey()).append(" -> ").append(parent)
+							.append(" (no VanAutoIncColumnName configured for the parent); ");
+					continue;
+				}
+
+				localValue = dataSyncRepository.resolveLocalIdForCentralValue(parentSchema, parentTable, parentPK,
+						centralValue, vanID);
+				if (localValue != null)
+					cache.put(cacheKey, localValue);
+			}
+
+			if (localValue == null) {
+				unresolved.append(fk.getKey()).append('=').append(centralValue).append(" not found in ").append(parent)
+						.append("; ");
+				continue;
+			}
+
+			translated.put(childColumn, localValue);
+		}
+
+		return unresolved.length() > 0 ? null : translated;
+	}
+
+	/***
+	 * The parent's local primary key, taken from its own down-sync configuration.
+	 */
+	private String parentPrimaryKey(String parentSchema, String parentTable) {
+		ArrayList<DownSyncTableDetail> parents = downSyncTableDetailRepo.getActiveDownSyncTableByName(parentTable);
+		for (DownSyncTableDetail parent : parents) {
+			if (parentSchema.equalsIgnoreCase(parent.getSchemaName()) && parent.getVanAutoIncColumnName() != null
+					&& parent.getVanAutoIncColumnName().trim().matches("^[a-zA-Z_][a-zA-Z0-9_]*$"))
+				return parent.getVanAutoIncColumnName().trim();
+		}
+		return null;
+	}
+
+	/***
+	 * Column names differ in case between the tables (vanSerialNo vs VanSerialNo),
+	 * and a map lookup is case-sensitive - so never index a result row by a
+	 * hard-coded name without this.
+	 */
+	private String resolveKeyIgnoringCase(Map<String, Object> record, String column) {
+		if (record == null || column == null)
+			return null;
+		if (record.containsKey(column))
+			return column;
+		for (String key : record.keySet()) {
+			if (key.equalsIgnoreCase(column))
+				return key;
+		}
+		return null;
+	}
+
+	private boolean containsIgnoringCase(java.util.Set<String> columns, String column) {
+		for (String candidate : columns) {
+			if (candidate.equalsIgnoreCase(column))
+				return true;
+		}
+		return false;
 	}
 
 	private static String shorten(String message) {
@@ -498,23 +643,41 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 		if (acks == null || acks.isEmpty())
 			return;
 
-		DownSyncDataDigester digester = DownSyncDataDigester.forAck(tableDetail, vanID, acks);
-
 		RestTemplate restTemplate = new RestTemplate();
-		HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(digester, serverAuthorization,
-				DATA_SYNC_CALL);
-		ResponseEntity<String> response = restTemplate.exchange(downSyncFlagUpdateUrl, HttpMethod.POST, request,
-				String.class);
+		int acknowledged = 0;
 
-		if (response == null || !response.hasBody())
-			throw new Exception("Empty response while updating the down-sync flag for " + tableDetail.getTableName());
+		for (int from = 0; from < acks.size(); from += ACK_BATCH_SIZE) {
+			List<DownSyncRecordAck> batch = acks.subList(from, Math.min(from + ACK_BATCH_SIZE, acks.size()));
 
-		JSONObject responseObj = new JSONObject(response.getBody());
-		if (!responseObj.has("statusCode") || responseObj.getInt("statusCode") != 200)
-			throw new Exception("Could not update the down-sync flag at central for " + tableDetail.getTableName()
-					+ " : " + responseObj.optString("errorMessage"));
+			DownSyncDataDigester digester = DownSyncDataDigester.forAck(tableDetail, vanID, batch);
+			HttpEntity<Object> request = RestTemplateUtil.createRequestEntity(digester, serverAuthorization,
+					DATA_SYNC_CALL);
 
-		logger.info("Down-sync flag updated at central for {} records of {}", acks.size(), tableDetail.getTableName());
+			ResponseEntity<String> response;
+			try {
+				response = restTemplate.exchange(downSyncFlagUpdateUrl, HttpMethod.POST, request, String.class);
+			} catch (Exception e) {
+				// the batches already accepted stay acknowledged - say how far we got, so
+				// the gap between the two sides is visible rather than guessed at
+				throw new Exception("Down-sync flag update failed for " + tableDetail.getTableName() + " after "
+						+ acknowledged + " of " + acks.size() + " records : " + e.getMessage(), e);
+			}
+
+			if (response == null || !response.hasBody())
+				throw new Exception("Empty response while updating the down-sync flag for "
+						+ tableDetail.getTableName() + " after " + acknowledged + " of " + acks.size() + " records");
+
+			JSONObject responseObj = new JSONObject(response.getBody());
+			if (!responseObj.has("statusCode") || responseObj.getInt("statusCode") != 200)
+				throw new Exception("Could not update the down-sync flag at central for "
+						+ tableDetail.getTableName() + " after " + acknowledged + " of " + acks.size() + " records : "
+						+ responseObj.optString("errorMessage"));
+
+			acknowledged += batch.size();
+		}
+
+		logger.info("Down-sync flag updated at central for {} records of {} in {} batch(es)", acknowledged,
+				tableDetail.getTableName(), (acks.size() + ACK_BATCH_SIZE - 1) / ACK_BATCH_SIZE);
 	}
 
 	private List<String> splitColumns(String columns) {
