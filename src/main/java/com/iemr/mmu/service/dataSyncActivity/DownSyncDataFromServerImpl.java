@@ -71,6 +71,7 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 	private static final String DOWN_SYNC_FAILURE_REASON = "DownSyncFailureReason";
 	private static final String PROCESSED = "Processed";
 	private static final String SYNC_FAILURE_REASON = "SyncFailureReason";
+	private static final String CENTRAL_ID = "CentralID";
 
 	@Value("${downSyncDataUrl}")
 	private String downSyncDataUrl;
@@ -317,15 +318,14 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 
 		for (Map<String, Object> record : dataFromCentral) {
 			Long centralID = toLong(record.get(pkColumn));
-			Object vanSerialNo = normalize(record.get(VAN_SERIAL_NO));
 
 			try {
 				Map<String, Object> localRecord = dataSyncRepository.getLocalRecordForDownSync(
-						tableDetail.getSchemaName(), tableDetail.getTableName(), pkColumn, vanSerialNo, vanID,
+						tableDetail.getSchemaName(), tableDetail.getTableName(), pkColumn, centralID, vanID,
 						lastModColumn);
 
 				if (localRecord == null) {
-					Long localID = insertRecord(tableDetail, serverColumns, vanColumns, pkColumn, record);
+					Long localID = insertRecord(tableDetail, serverColumns, vanColumns, pkColumn, record, centralID);
 					insertedCounter++;
 					if (currentResult != null)
 						currentResult.addInserted();
@@ -366,7 +366,7 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 				String reason = shorten(e.getMessage());
 				if (currentResult != null)
 					currentResult.recordFailed(reason);
-				acks.add(DownSyncRecordAck.failure(centralID, toLong(vanSerialNo), reason));
+				acks.add(DownSyncRecordAck.failure(centralID, null, reason));
 				logger.error("Down-sync failed for record " + centralID + " of " + tableDetail.getTableName() + " : "
 						+ e.getMessage(), e);
 			}
@@ -395,7 +395,7 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 	}
 
 	private Long insertRecord(DownSyncTableDetail tableDetail, List<String> serverColumns, List<String> vanColumns,
-			String pkColumn, Map<String, Object> record) {
+			String pkColumn, Map<String, Object> record, Long centralID) {
 
 		List<String> columns = new ArrayList<>();
 		List<Object> values = new ArrayList<>();
@@ -410,6 +410,8 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 			values.add(normalize(record.get(serverColumns.get(i))));
 		}
 
+		columns.add(CENTRAL_ID);
+		values.add(centralID);
 		columns.add(PROCESSED);
 		values.add("P");
 		columns.add(SYNC_FAILURE_REASON);
@@ -431,7 +433,13 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 		String query = " INSERT INTO " + tableDetail.getSchemaName() + "." + tableDetail.getTableName() + " ( "
 				+ String.join(", ", columns) + " ) VALUES ( " + placeHolders + " ) ";
 
-		return dataSyncRepository.insertDownSyncRecordInLocal(query, values.toArray());
+		Long localID = dataSyncRepository.insertDownSyncRecordInLocal(query, values.toArray());
+
+		if (localID != null)
+			dataSyncRepository.updateVanSerialNoInLocal(tableDetail.getSchemaName(), tableDetail.getTableName(),
+					pkColumn, localID);
+
+		return localID;
 	}
 
 	private void updateRecord(DownSyncTableDetail tableDetail, List<String> serverColumns, List<String> vanColumns,
@@ -478,7 +486,8 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 	}
 	
 	private boolean isDownSyncManagedColumn(String column) {
-		return PROCESSED.equalsIgnoreCase(column) || SYNC_FAILURE_REASON.equalsIgnoreCase(column)
+		return VAN_SERIAL_NO.equalsIgnoreCase(column) || CENTRAL_ID.equalsIgnoreCase(column)
+				|| PROCESSED.equalsIgnoreCase(column) || SYNC_FAILURE_REASON.equalsIgnoreCase(column)
 				|| LAST_DOWN_SYNC_DATE.equalsIgnoreCase(column) || DOWN_SYNCED.equalsIgnoreCase(column)
 				|| DOWN_SYNC_DATE.equalsIgnoreCase(column) || DOWN_SYNC_FAILURE_REASON.equalsIgnoreCase(column);
 	}

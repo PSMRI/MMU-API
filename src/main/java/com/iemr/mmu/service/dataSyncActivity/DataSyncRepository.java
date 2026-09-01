@@ -180,7 +180,7 @@ public class DataSyncRepository {
 
 		String query = " SELECT COLUMN_NAME FROM information_schema.COLUMNS "
 				+ " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? "
-				+ " AND COLUMN_NAME NOT IN ('DownSynced', 'DownSyncDate', 'DownSyncFailureReason', "
+				+ " AND COLUMN_NAME NOT IN ('CentralID', 'DownSynced', 'DownSyncDate', 'DownSyncFailureReason', "
 				+ " 'LastDownSyncDate', 'Processed', 'SyncFailureReason', 'SyncedBy', 'SyncedDate') "
 				+ " ORDER BY COLUMN_NAME ";
 
@@ -188,16 +188,16 @@ public class DataSyncRepository {
 	}
 
 	public Map<String, Object> getLocalRecordForDownSync(String schema, String table, String autoIncColumnName,
-			Object vanSerialNo, Object vanID, String lastModColumn) {
-		if (vanSerialNo == null)
+			Object centralID, Object vanID, String lastModColumn) {
+		if (centralID == null)
 			return null;
 
 		jdbcTemplate = getJdbcTemplate();
 		String query = " SELECT " + autoIncColumnName + ", Processed, " + lastModColumn
 				+ " AS LastModDate, LastDownSyncDate FROM " + schema + "." + table
-				+ " WHERE " + autoIncColumnName + " = ? AND VanID = ? ";
+				+ " WHERE CentralID = ? AND VanID = ? ";
 
-		List<Map<String, Object>> resultSet = jdbcTemplate.queryForList(query, vanSerialNo, vanID);
+		List<Map<String, Object>> resultSet = jdbcTemplate.queryForList(query, centralID, vanID);
 		if (resultSet == null || resultSet.isEmpty())
 			return null;
 
@@ -223,6 +223,12 @@ public class DataSyncRepository {
 	public int updateDownSyncRecordInLocal(String query, Object[] params) {
 		jdbcTemplate = getJdbcTemplate();
 		return jdbcTemplate.update(query, params);
+	}
+
+	public int updateVanSerialNoInLocal(String schema, String table, String autoIncColumnName, Object localID) {
+		jdbcTemplate = getJdbcTemplate();
+		String query = " UPDATE " + schema + "." + table + " SET VanSerialNo = ? WHERE " + autoIncColumnName + " = ? ";
+		return jdbcTemplate.update(query, localID, localID);
 	}
 
 	public int markDownSyncConflictInLocal(String schema, String table, String autoIncColumnName, Object localID) {
