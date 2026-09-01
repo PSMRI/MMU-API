@@ -391,7 +391,8 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 				// a pointer at another table's primary key means a different number here
 				// than at central, so it is rewritten before the row is written
 				StringBuilder unresolved = new StringBuilder();
-				Map<String, Object> mapped = translateForeignKeys(fkMapping, record, vanID, fkCache, unresolved);
+				Map<String, Object> mapped = translateForeignKeys(tableDetail, fkMapping, record, vanID, fkCache,
+						unresolved);
 
 				if (localRecord == null) {
 					if (mapped == null)
@@ -577,8 +578,8 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 	}
 
 	
-	private Map<String, Object> translateForeignKeys(Map<String, String> fkMapping, Map<String, Object> record,
-			Integer vanID, Map<String, Long> cache, StringBuilder unresolved) {
+	private Map<String, Object> translateForeignKeys(DownSyncTableDetail tableDetail, Map<String, String> fkMapping,
+			Map<String, Object> record, Integer vanID, Map<String, Long> cache, StringBuilder unresolved) {
 
 		if (fkMapping.isEmpty())
 			return record;
@@ -616,6 +617,21 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 			}
 
 			if (localValue == null) {
+				// A pointer the van cannot place is only fatal if the column demands a
+				// value. Where it is optional - a consent or an image the van has no copy
+				// of - the record is worth more than the pointer, so it lands with the
+				// column empty and the loss is reported rather than hidden.
+				if (dataSyncRepository.isColumnNullable(tableDetail.getSchemaName(), tableDetail.getTableName(),
+						childColumn)) {
+					translated.put(childColumn, null);
+					String warning = fk.getKey() + " could not be placed (" + parent
+							+ " has no such row on this van) and was left empty";
+					if (currentResult != null)
+						currentResult.recordWarning(warning);
+					logger.warn("{}.{} : {}", tableDetail.getSchemaName(), tableDetail.getTableName(), warning);
+					continue;
+				}
+
 				unresolved.append(fk.getKey()).append('=').append(centralValue).append(" not found in ").append(parent)
 						.append("; ");
 				continue;

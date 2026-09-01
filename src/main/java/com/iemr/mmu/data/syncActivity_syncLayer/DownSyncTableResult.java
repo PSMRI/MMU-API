@@ -70,6 +70,7 @@ public class DownSyncTableResult {
 	/** distinct record-level failure reasons, each with the number of records */
 	@Expose
 	private Map<String, Integer> recordFailureReasons = new LinkedHashMap<>();
+	private Map<String, Integer> recordWarnings = new LinkedHashMap<>();
 
 	public DownSyncTableResult(String groupName, String schemaName, String tableName) {
 		this.groupName = groupName;
@@ -91,6 +92,14 @@ public class DownSyncTableResult {
 		recordFailureReasons.merge(key, 1, Integer::sum);
 		if (STATUS_SUCCESS.equals(this.status))
 			this.status = STATUS_PARTIAL;
+	}
+
+	public void recordWarning(String reason) {
+		recordWarnings.merge(reason, 1, Integer::sum);
+	}
+
+	public Map<String, Integer> getRecordWarnings() {
+		return recordWarnings;
 	}
 
 	public int getRecordsProcessed() {

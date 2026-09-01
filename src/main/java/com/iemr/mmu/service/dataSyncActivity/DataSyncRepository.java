@@ -253,6 +253,15 @@ public class DataSyncRepository {
 		return queryForFirstLong(" SELECT " + pkColumn + from + pkColumn + " = ? AND VanID = ? ", centralValue, vanID);
 	}
 
+	public boolean isColumnNullable(String schema, String table, String column) {
+		jdbcTemplate = getJdbcTemplate();
+		List<String> nullable = jdbcTemplate.queryForList(
+				" SELECT IS_NULLABLE FROM information_schema.COLUMNS "
+						+ " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ? ",
+				String.class, schema, table, column);
+		return !nullable.isEmpty() && "YES".equalsIgnoreCase(nullable.get(0));
+	}
+
 	private Long queryForFirstLong(String query, Object... params) {
 		List<Long> found = jdbcTemplate.queryForList(query, Long.class, params);
 		return (found == null || found.isEmpty()) ? null : found.get(0);
