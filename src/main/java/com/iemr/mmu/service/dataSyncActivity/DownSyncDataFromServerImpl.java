@@ -477,10 +477,11 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 		List<String> columns = new ArrayList<>();
 		List<Object> values = new ArrayList<>();
 
+		boolean preservePK = tableDetail.isPreserveCentralPK();
+
 		for (int i = 0; i < vanColumns.size(); i++) {
 			String vanColumn = vanColumns.get(i);
-			// the local auto-increment PK is skipped so that local generates its own value
-			if (vanColumn.equalsIgnoreCase(pkColumn) || isDownSyncManagedColumn(vanColumn))
+			if ((vanColumn.equalsIgnoreCase(pkColumn) && !preservePK) || isDownSyncManagedColumn(vanColumn))
 				continue;
 
 			columns.add(vanColumn);
@@ -511,6 +512,12 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 				+ String.join(", ", columns) + " ) VALUES ( " + placeHolders + " ) ";
 
 		Long localID = dataSyncRepository.insertDownSyncRecordInLocal(query, values.toArray());
+
+		if (preservePK && localID == null)
+			localID = centralID;
+
+		if (localID == null && preservePK)
+			localID = centralID;
 
 		if (localID != null)
 			dataSyncRepository.updateVanSerialNoInLocal(tableDetail.getSchemaName(), tableDetail.getTableName(),
