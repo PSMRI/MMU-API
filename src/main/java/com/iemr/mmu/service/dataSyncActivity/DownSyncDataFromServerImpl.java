@@ -103,6 +103,8 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 			Collections.synchronizedList(new ArrayList<>());
 	private static DownSyncTableResult currentResult;
 	private static String currentTable = "";
+	private static int outstandingConflictCounter = 0;
+	private static final Map<String, Integer> outstandingConflictTables = new LinkedHashMap<>();
 
 	public String startDownSync(String serverAuthorization, String jwtToken, Integer vanID,
 			Integer providerServiceMapID) throws Exception {
@@ -152,6 +154,7 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 				}
 				progressCounter++;
 			}
+			countOutstandingConflicts(downSyncTables, vanID);
 		} finally {
 			IN_PROGRESS.set(false);
 			currentTable = "";
@@ -183,9 +186,34 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 		resultMap.put("recordsUpdated", updatedCounter);
 		resultMap.put("recordsSkipped", skippedCounter);
 		resultMap.put("conflicts", conflictCounter);
-		resultMap.put("conflictsPending", conflictCounter > 0);
+		resultMap.put("outstandingConflicts", outstandingConflictCounter);
+		synchronized (outstandingConflictTables) {
+			resultMap.put("outstandingConflictTables", new LinkedHashMap<>(outstandingConflictTables));
+		}
+		resultMap.put("conflictsPending", conflictCounter > 0 || outstandingConflictCounter > 0);
 		resultMap.put("summary", buildSummary());
 		return resultMap;
+	}
+
+	private void countOutstandingConflicts(List<DownSyncTableDetail> downSyncTables, Integer vanID) {
+		outstandingConflictCounter = 0;
+		outstandingConflictTables.clear();
+
+		for (DownSyncTableDetail tableDetail : downSyncTables) {
+			if (!tableDetail.isTransactionalTable())
+				continue;
+			try {
+				int conflicts = dataSyncRepository.countConflictsInLocal(tableDetail.getSchemaName(),
+						tableDetail.getTableName(), vanID);
+				if (conflicts > 0) {
+					outstandingConflictCounter += conflicts;
+					outstandingConflictTables.put(tableDetail.getTableName(), conflicts);
+				}
+			} catch (Exception e) {
+				logger.warn("Could not count outstanding conflicts for {}.{} : {}", tableDetail.getSchemaName(),
+						tableDetail.getTableName(), e.getMessage());
+			}
+		}
 	}
 
 	private String buildSummary() {
@@ -200,7 +228,10 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 			summary.append(". ").append(failedRecordCounter).append(" record(s) failed");
 		if (conflictCounter > 0)
 			summary.append(". ").append(conflictCounter)
-					.append(conflictCounter == 1 ? " record is in conflict" : " records are in conflict")
+					.append(conflictCounter == 1 ? " new conflict" : " new conflicts");
+		if (outstandingConflictCounter > 0)
+			summary.append(". ").append(outstandingConflictCounter)
+					.append(outstandingConflictCounter == 1 ? " record is in conflict" : " records are in conflict")
 					.append(" and needs review before it can sync");
 
 		return summary.toString();

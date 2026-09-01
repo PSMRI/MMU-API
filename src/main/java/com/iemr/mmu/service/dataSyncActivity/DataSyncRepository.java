@@ -253,6 +253,14 @@ public class DataSyncRepository {
 		return queryForFirstLong(" SELECT " + pkColumn + from + pkColumn + " = ? AND VanID = ? ", centralValue, vanID);
 	}
 
+	public int countConflictsInLocal(String schema, String table, Object vanID) {
+		jdbcTemplate = getJdbcTemplate();
+		String query = " SELECT COUNT(*) FROM " + schema + "." + table
+				+ " WHERE VanID = ? AND Processed = 'F' AND SyncFailureReason = 'CONFLICT' ";
+		Integer count = jdbcTemplate.queryForObject(query, Integer.class, vanID);
+		return count == null ? 0 : count;
+	}
+
 	public boolean isColumnNullable(String schema, String table, String column) {
 		jdbcTemplate = getJdbcTemplate();
 		List<String> nullable = jdbcTemplate.queryForList(
