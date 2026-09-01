@@ -270,7 +270,8 @@ public class DataSyncRepository {
 	public int markDownSyncConflictInLocal(String schema, String table, String autoIncColumnName, Object localID) {
 		jdbcTemplate = getJdbcTemplate();
 		String query = " UPDATE " + schema + "." + table
-				+ " SET Processed = 'F', SyncFailureReason = 'CONFLICT' WHERE " + autoIncColumnName + " = ? ";
+				+ " SET Processed = 'F', SyncFailureReason = 'CONFLICT',"
+				+ " DownSynced = 'F', DownSyncFailureReason = 'CONFLICT' WHERE " + autoIncColumnName + " = ? ";
 		return jdbcTemplate.update(query, localID);
 	}
 

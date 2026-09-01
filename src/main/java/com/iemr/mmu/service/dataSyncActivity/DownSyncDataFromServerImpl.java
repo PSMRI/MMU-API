@@ -161,7 +161,8 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 				+ "{} conflicts, {} failed records", progressCounter - failedTableCounter, totalCounter,
 				insertedCounter, updatedCounter, skippedCounter, conflictCounter, failedRecordCounter);
 
-		return "Down-sync completed";
+		return conflictCounter > 0 ? "Down-sync completed with " + conflictCounter + " conflict(s) to review"
+				: "Down-sync completed";
 	}
 
 	public Map<String, Object> getDownSyncStatus() {
@@ -182,7 +183,27 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 		resultMap.put("recordsUpdated", updatedCounter);
 		resultMap.put("recordsSkipped", skippedCounter);
 		resultMap.put("conflicts", conflictCounter);
+		resultMap.put("conflictsPending", conflictCounter > 0);
+		resultMap.put("summary", buildSummary());
 		return resultMap;
+	}
+
+	private String buildSummary() {
+		StringBuilder summary = new StringBuilder();
+		summary.append(progressCounter - failedTableCounter).append(" of ").append(totalCounter)
+				.append(" tables synced, ").append(insertedCounter).append(" inserted, ").append(updatedCounter)
+				.append(" updated, ").append(skippedCounter).append(" unchanged");
+
+		if (failedTableCounter > 0)
+			summary.append(". ").append(failedTableCounter).append(" table(s) failed");
+		if (failedRecordCounter > 0)
+			summary.append(". ").append(failedRecordCounter).append(" record(s) failed");
+		if (conflictCounter > 0)
+			summary.append(". ").append(conflictCounter)
+					.append(conflictCounter == 1 ? " record is in conflict" : " records are in conflict")
+					.append(" and needs review before it can sync");
+
+		return summary.toString();
 	}
 
 	/***

@@ -45,6 +45,7 @@ public class DownSyncTableResult {
 	public static final String STATUS_SUCCESS = "SUCCESS";
 	public static final String STATUS_FAILED = "FAILED";
 	public static final String STATUS_PARTIAL = "PARTIAL";
+	public static final String STATUS_CONFLICT = "CONFLICT";
 
 	@Expose
 	private String groupName;
@@ -120,6 +121,8 @@ public class DownSyncTableResult {
 
 	public void addConflict() {
 		conflicts++;
+		if (STATUS_SUCCESS.equals(this.status))
+			this.status = STATUS_CONFLICT;
 	}
 
 	public String getGroupName() {
