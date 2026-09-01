@@ -443,7 +443,7 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 				String reason = shorten(e.getMessage());
 				if (currentResult != null)
 					currentResult.recordFailed(reason);
-				acks.add(DownSyncRecordAck.failure(centralID, null, reason));
+				acks.add(DownSyncRecordAck.retryable(centralID, null, reason));
 				logger.error("Down-sync failed for record " + centralID + " of " + tableDetail.getTableName() + " : "
 						+ e.getMessage(), e);
 			}
