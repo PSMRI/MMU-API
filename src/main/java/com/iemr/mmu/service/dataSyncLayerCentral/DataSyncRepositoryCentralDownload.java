@@ -225,7 +225,8 @@ public class DataSyncRepositoryCentralDownload {
 	}
 
 	 public List<Map<String, Object>> getDownSyncDataFromTable(String schema, String table, String columnNames,
-			String tableType, Integer vanID, String lastModColumn) throws Exception {
+			String tableType, Integer vanID, String lastModColumn, String pkColumn, Long lastFetchedID,
+			Integer batchSize) throws Exception {
 		jdbcTemplate = getJdbcTemplate();
 
 		if (schema == null || table == null)
@@ -238,12 +239,28 @@ public class DataSyncRepositoryCentralDownload {
 			if (vanID == null)
 				throw new Exception("Invalid down-sync request. VanID is mandatory for transactional table " + table);
 
-			String query = " SELECT " + columns + " FROM " + schema + "." + table
-					+ " WHERE VanID = ? AND ( DownSynced IS NULL OR DownSynced IN ('N', 'U') "
-					+ " OR ( DownSynced = 'P' AND DownSyncDate IS NOT NULL AND " + lastModColumn
-					+ " > DownSyncDate ) ) ";
+			boolean paged = pkColumn != null && pkColumn.matches("^[a-zA-Z_][a-zA-Z0-9_]*$") && batchSize != null
+					&& batchSize > 0;
+
+			StringBuilder query = new StringBuilder(" SELECT ").append(columns).append(" FROM ").append(schema)
+					.append(".").append(table)
+					.append(" WHERE VanID = ? AND ( DownSynced IS NULL OR DownSynced IN ('N', 'U') ")
+					.append(" OR ( DownSynced = 'P' AND DownSyncDate IS NOT NULL AND ").append(lastModColumn)
+					.append(" > DownSyncDate ) ) ");
+
+			List<Object> params = new ArrayList<>();
+			params.add(vanID);
+
+			if (paged) {
+				if (lastFetchedID != null) {
+					query.append(" AND ").append(pkColumn).append(" > ? ");
+					params.add(lastFetchedID);
+				}
+				query.append(" ORDER BY ").append(pkColumn).append(" LIMIT ").append(batchSize.intValue());
+			}
+
 			logger.info("Down-sync select query for {}.{} : {}", schema, table, query);
-			resultSetList = jdbcTemplate.queryForList(query, vanID);
+			resultSetList = jdbcTemplate.queryForList(query.toString(), params.toArray());
 		} else {
 			String query = " SELECT " + columns + " FROM " + schema + "." + table;
 			logger.info("Down-sync select query for {}.{} : {}", schema, table, query);
