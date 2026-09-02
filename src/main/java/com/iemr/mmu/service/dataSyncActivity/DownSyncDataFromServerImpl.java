@@ -94,6 +94,8 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 	private static int progressCounter = 0;
 	private static int insertedCounter = 0;
 	private static int updatedCounter = 0;
+	private static int transactionalFetchedCounter = 0;
+	private static int masterUpdatedCounter = 0;
 	private static int conflictCounter = 0;
 	private static int skippedCounter = 0;
 	private static int failedTableCounter = 0;
@@ -123,6 +125,8 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 		progressCounter = 0;
 		insertedCounter = 0;
 		updatedCounter = 0;
+		transactionalFetchedCounter = 0;
+		masterUpdatedCounter = 0;
 		conflictCounter = 0;
 		skippedCounter = 0;
 		failedTableCounter = 0;
@@ -160,12 +164,13 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 			currentTable = "";
 		}
 
-		logger.info("Down-sync finished : {} of {} tables succeeded, {} inserted, {} updated, {} skipped, "
-				+ "{} conflicts, {} failed records", progressCounter - failedTableCounter, totalCounter,
-				insertedCounter, updatedCounter, skippedCounter, conflictCounter, failedRecordCounter);
+		logger.info("Down-sync finished : {} of {} tables succeeded, {} records delivered for van {}, {} inserted,"
+				+ " {} updated, {} skipped, {} conflicts, {} failed records, {} master rows refreshed",
+				progressCounter - failedTableCounter, totalCounter, transactionalFetchedCounter, vanID,
+				insertedCounter, updatedCounter, skippedCounter, conflictCounter, failedRecordCounter,
+				masterUpdatedCounter);
 
-		return conflictCounter > 0 ? "Down-sync completed with " + conflictCounter + " conflict(s) to review"
-				: "Down-sync completed";
+		return buildSummary();
 	}
 
 	public Map<String, Object> getDownSyncStatus() {
@@ -191,7 +196,9 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 			resultMap.put("outstandingConflictTables", new LinkedHashMap<>(outstandingConflictTables));
 		}
 		resultMap.put("conflictsPending", conflictCounter > 0 || outstandingConflictCounter > 0);
+		resultMap.put("recordsFoundForVan", transactionalFetchedCounter);
 		resultMap.put("summary", buildSummary());
+		resultMap.put("message", buildSummary());
 		return resultMap;
 	}
 
@@ -218,6 +225,17 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 
 	private String buildSummary() {
 		StringBuilder summary = new StringBuilder();
+
+		if (transactionalFetchedCounter == 0 && failedTableCounter == 0) {
+			summary.append("There is no record to down-sync for your van");
+			if (outstandingConflictCounter > 0)
+				summary.append(". ").append(outstandingConflictCounter)
+						.append(outstandingConflictCounter == 1 ? " record is in conflict"
+								: " records are in conflict")
+						.append(" and needs review before it can sync");
+			return summary.toString();
+		}
+
 		summary.append(progressCounter - failedTableCounter).append(" of ").append(totalCounter)
 				.append(" tables synced, ").append(insertedCounter).append(" inserted, ").append(updatedCounter)
 				.append(" updated, ").append(skippedCounter).append(" unchanged");
@@ -299,6 +317,7 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 
 			page++;
 			totalFetched += dataFromCentral.size();
+			transactionalFetchedCounter += dataFromCentral.size();
 
 			List<DownSyncRecordAck> acks = saveTransactionalData(tableDetail, serverColumns, vanColumns,
 					dataFromCentral, vanID);
@@ -389,7 +408,7 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 		}
 
 		int[] result = dataSyncRepository.updateLatestMasterInLocal(query, batch);
-		updatedCounter += result != null ? result.length : 0;
+		masterUpdatedCounter += result != null ? result.length : 0;
 		logger.info("Down-synced {} master records into {}.{}", batch.size(), tableDetail.getSchemaName(),
 				tableDetail.getTableName());
 	}
