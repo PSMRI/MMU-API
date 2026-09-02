@@ -261,6 +261,31 @@ public class DataSyncRepository {
 		return count == null ? 0 : count;
 	}
 
+	public List<Map<String, Object>> getForeignKeysOfTable(String schema, String table) {
+		jdbcTemplate = getJdbcTemplate();
+		String query = " SELECT k.CONSTRAINT_NAME, k.COLUMN_NAME AS CHILD_COLUMN,"
+				+ " k.REFERENCED_TABLE_SCHEMA AS PARENT_SCHEMA, k.REFERENCED_TABLE_NAME AS PARENT_TABLE,"
+				+ " k.REFERENCED_COLUMN_NAME AS PARENT_COLUMN "
+				+ " FROM information_schema.KEY_COLUMN_USAGE k "
+				+ " WHERE k.TABLE_SCHEMA = ? AND k.TABLE_NAME = ? AND k.REFERENCED_TABLE_NAME IS NOT NULL ";
+
+		List<Map<String, Object>> foreignKeys = jdbcTemplate.queryForList(query, schema, table);
+		if (foreignKeys == null)
+			return new ArrayList<>();
+
+		Map<String, Integer> columnsPerConstraint = new LinkedHashMap<>();
+		for (Map<String, Object> foreignKey : foreignKeys) {
+			columnsPerConstraint.merge(String.valueOf(foreignKey.get("CONSTRAINT_NAME")), 1, Integer::sum);
+		}
+
+		List<Map<String, Object>> singleColumn = new ArrayList<>();
+		for (Map<String, Object> foreignKey : foreignKeys) {
+			if (columnsPerConstraint.get(String.valueOf(foreignKey.get("CONSTRAINT_NAME"))) == 1)
+				singleColumn.add(foreignKey);
+		}
+		return singleColumn;
+	}
+
 	public boolean isColumnNullable(String schema, String table, String column) {
 		jdbcTemplate = getJdbcTemplate();
 		List<String> nullable = jdbcTemplate.queryForList(

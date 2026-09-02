@@ -413,10 +413,7 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 				tableDetail.getTableName());
 	}
 
-	/***
-	 * TRANSACTIONAL tables : record by record, so that a conflict on one record
-	 * does not block the delivery of the rest.
-	 */
+	
 	private List<DownSyncRecordAck> saveTransactionalData(DownSyncTableDetail tableDetail, List<String> serverColumns,
 			List<String> vanColumns, List<Map<String, Object>> dataFromCentral, Integer vanID) throws Exception {
 
@@ -435,17 +432,13 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 					+ " has neither LastModDate nor last_mod_date, so a change cannot be dated");
 		requireIdentifier(lastModColumn, "modification-time column", tableDetail);
 
-		Map<String, String> fkMapping = parseFkColumnMapping(tableDetail);
+		Map<String, String> fkMapping = resolveFkColumnMapping(tableDetail);
 		Map<String, Long> fkCache = new LinkedHashMap<>();
 
 		List<DownSyncRecordAck> acks = new ArrayList<>();
 
 		for (Map<String, Object> incoming : dataFromCentral) {
 			Map<String, Object> record = incoming;
-			// Resolved ignoring case : column names differ in case between tables
-			// (BenConsentID vs BenConsentId, vanSerialNo vs VanSerialNo) and a map
-			// lookup is case-sensitive, so taking the configured spelling literally
-			// yields null and every record then looks new on every run.
 			Long centralID = toLong(record.get(resolveKeyIgnoringCase(record, pkColumn)));
 
 			try {
@@ -629,11 +622,62 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 		dataSyncRepository.updateDownSyncRecordInLocal(query, values.toArray());
 	}
 
-	/***
-	 * Parses FkColumnMapping - "childColumn:schema.parentTable", several separated
-	 * by ';' - into an ordered map. Blank config gives an empty map, which is the
-	 * "nothing to translate" case for almost every table.
-	 */
+	private Map<String, String> resolveFkColumnMapping(DownSyncTableDetail tableDetail) throws Exception {
+		Map<String, String> configured = parseFkColumnMapping(tableDetail);
+		if (!configured.isEmpty())
+			return configured;
+
+		Map<String, String> mapping = new LinkedHashMap<>();
+		String ownPK = tableDetail.getVanAutoIncColumnName() == null ? null
+				: tableDetail.getVanAutoIncColumnName().trim();
+
+		for (Map<String, Object> foreignKey : dataSyncRepository.getForeignKeysOfTable(tableDetail.getSchemaName(),
+				tableDetail.getTableName())) {
+
+			String childColumn = asTrimmedString(foreignKey.get("CHILD_COLUMN"));
+			String parentSchema = asTrimmedString(foreignKey.get("PARENT_SCHEMA"));
+			String parentTable = asTrimmedString(foreignKey.get("PARENT_TABLE"));
+			String parentColumn = asTrimmedString(foreignKey.get("PARENT_COLUMN"));
+
+			if (childColumn == null || parentSchema == null || parentTable == null || parentColumn == null)
+				continue;
+			if (childColumn.equalsIgnoreCase(ownPK))
+				continue;
+
+			String parentPK = downSyncedTransactionalPrimaryKey(parentSchema, parentTable);
+			if (parentPK == null || !parentPK.equalsIgnoreCase(parentColumn))
+				continue;
+
+			requireIdentifier(childColumn, "foreign key column", tableDetail);
+			mapping.put(childColumn, parentSchema + "." + parentTable);
+		}
+
+		if (!mapping.isEmpty())
+			logger.info("Down-sync will rewrite {} of {}.{} from the table\'s own foreign keys", mapping,
+					tableDetail.getSchemaName(), tableDetail.getTableName());
+
+		return mapping;
+	}
+
+	private String downSyncedTransactionalPrimaryKey(String parentSchema, String parentTable) {
+		ArrayList<DownSyncTableDetail> parents = downSyncTableDetailRepo.getActiveDownSyncTableByName(parentTable);
+		for (DownSyncTableDetail parent : parents) {
+			if (!parentSchema.equalsIgnoreCase(parent.getSchemaName()) || !parent.isTransactionalTable())
+				continue;
+			if (parent.getVanAutoIncColumnName() != null
+					&& parent.getVanAutoIncColumnName().trim().matches("^[a-zA-Z_][a-zA-Z0-9_]*$"))
+				return parent.getVanAutoIncColumnName().trim();
+		}
+		return null;
+	}
+
+	private String asTrimmedString(Object value) {
+		if (value == null)
+			return null;
+		String trimmed = String.valueOf(value).trim();
+		return trimmed.isEmpty() ? null : trimmed;
+	}
+
 	private Map<String, String> parseFkColumnMapping(DownSyncTableDetail tableDetail) throws Exception {
 		Map<String, String> mapping = new LinkedHashMap<>();
 		String config = tableDetail.getFkColumnMapping();
