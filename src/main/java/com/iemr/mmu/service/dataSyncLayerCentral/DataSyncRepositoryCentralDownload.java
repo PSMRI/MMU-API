@@ -244,9 +244,11 @@ public class DataSyncRepositoryCentralDownload {
 
 			StringBuilder query = new StringBuilder(" SELECT ").append(columns).append(" FROM ").append(schema)
 					.append(".").append(table)
-					.append(" WHERE VanID = ? AND ( DownSynced IS NULL OR DownSynced IN ('N', 'U') ")
+					.append(" WHERE VanID = ? AND ( DownSynced IS NULL OR DownSynced IN ('N', 'U', 'F') ")
 					.append(" OR ( DownSynced = 'P' AND DownSyncDate IS NOT NULL AND ").append(lastModColumn)
-					.append(" > DownSyncDate ) ) ");
+					.append(" > DownSyncDate ) ) ")
+					.append(" AND ( DownSyncFailureReason IS NULL OR DownSyncFailureReason <> '")
+					.append(DownSyncRecordAck.CONFLICT).append("' ) ");
 
 			List<Object> params = new ArrayList<>();
 			params.add(vanID);
