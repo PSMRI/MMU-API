@@ -101,4 +101,16 @@ public interface BenVisitDetailRepo extends CrudRepository<BeneficiaryVisitDetai
 	@Query(" UPDATE BeneficiaryVisitDetail set vanSerialNo = :benVisitID WHERE benVisitID = :benVisitID")
 	int updateVanSerialNo(@Param("benVisitID") Long benVisitID);
 
+	// store responsible doctor's user ID against the visit
+	@Transactional
+	@Modifying
+	@Query("UPDATE BeneficiaryVisitDetail set doctorID = :doctorID where visitCode = :visitCode ")
+	public Integer updateDoctorID(@Param("doctorID") Long doctorID, @Param("visitCode") Long visitCode);
+
+	// store responsible lab technician's user ID against the visit
+	@Transactional
+	@Modifying
+	@Query("UPDATE BeneficiaryVisitDetail set labTechnicianID = :labTechnicianID where visitCode = :visitCode ")
+	public Integer updateLabTechnicianID(@Param("labTechnicianID") Long labTechnicianID, @Param("visitCode") Long visitCode);
+
 }
