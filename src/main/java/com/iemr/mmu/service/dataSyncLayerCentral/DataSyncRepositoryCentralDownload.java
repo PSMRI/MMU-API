@@ -29,6 +29,7 @@ import java.util.Map;
 import javax.sql.DataSource;
 
 import com.iemr.mmu.data.syncActivity_syncLayer.DownSyncRecordAck;
+import com.iemr.mmu.utils.validator.SqlIdentifierValidator;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -232,20 +233,26 @@ public class DataSyncRepositoryCentralDownload {
 		if (schema == null || table == null)
 			throw new Exception("Invalid down-sync request. Schema/table info is missing");
 
-		String columns = (columnNames == null || columnNames.trim().isEmpty()) ? " * " : columnNames;
+		// schema, table & column names cannot be bound as query parameters, so each of
+		// them is validated before it is concatenated into the query
+		String validSchema = SqlIdentifierValidator.validatedSchemaName(schema);
+		String validTable = SqlIdentifierValidator.validatedTableName(table);
+		String columns = (columnNames == null || columnNames.trim().isEmpty()) ? " * "
+				: SqlIdentifierValidator.validatedColumnList(columnNames);
 		List<Map<String, Object>> resultSetList;
 
 		if (DOWN_SYNC_TRANSACTIONAL.equalsIgnoreCase(tableType)) {
 			if (vanID == null)
-				throw new Exception("Invalid down-sync request. VanID is mandatory for transactional table " + table);
+				throw new Exception(
+						"Invalid down-sync request. VanID is mandatory for transactional table " + validTable);
 
-			boolean paged = pkColumn != null && pkColumn.matches("^[a-zA-Z_][a-zA-Z0-9_]*$") && batchSize != null
-					&& batchSize > 0;
+			String validLastModColumn = SqlIdentifierValidator.validatedColumnName(lastModColumn);
+			boolean paged = SqlIdentifierValidator.isValidIdentifier(pkColumn) && batchSize != null && batchSize > 0;
 
-			StringBuilder query = new StringBuilder(" SELECT ").append(columns).append(" FROM ").append(schema)
-					.append(".").append(table)
+			StringBuilder query = new StringBuilder(" SELECT ").append(columns).append(" FROM ").append(validSchema)
+					.append(".").append(validTable)
 					.append(" WHERE VanID = ? AND ( DownSynced IS NULL OR DownSynced IN ('N', 'U', 'F') ")
-					.append(" OR ( DownSynced = 'P' AND DownSyncDate IS NOT NULL AND ").append(lastModColumn)
+					.append(" OR ( DownSynced = 'P' AND DownSyncDate IS NOT NULL AND ").append(validLastModColumn)
 					.append(" > DownSyncDate ) ) ")
 					.append(" AND ( DownSyncFailureReason IS NULL OR DownSyncFailureReason <> '")
 					.append(DownSyncRecordAck.CONFLICT).append("' ) ");
@@ -254,22 +261,23 @@ public class DataSyncRepositoryCentralDownload {
 			params.add(vanID);
 
 			if (paged) {
+				String validPkColumn = SqlIdentifierValidator.validatedColumnName(pkColumn);
 				if (lastFetchedID != null) {
-					query.append(" AND ").append(pkColumn).append(" > ? ");
+					query.append(" AND ").append(validPkColumn).append(" > ? ");
 					params.add(lastFetchedID);
 				}
-				query.append(" ORDER BY ").append(pkColumn).append(" LIMIT ").append(batchSize.intValue());
+				query.append(" ORDER BY ").append(validPkColumn).append(" LIMIT ").append(batchSize.intValue());
 			}
 
-			logger.info("Down-sync select query for {}.{} : {}", schema, table, query);
+			logger.info("Down-sync select query for {}.{} : {}", validSchema, validTable, query);
 			resultSetList = jdbcTemplate.queryForList(query.toString(), params.toArray());
 		} else {
-			String query = " SELECT " + columns + " FROM " + schema + "." + table;
-			logger.info("Down-sync select query for {}.{} : {}", schema, table, query);
+			String query = " SELECT " + columns + " FROM " + validSchema + "." + validTable;
+			logger.info("Down-sync select query for {}.{} : {}", validSchema, validTable, query);
 			resultSetList = jdbcTemplate.queryForList(query);
 		}
 
-		logger.info("Down-sync record count for {}.{} : {}", schema, table, resultSetList.size());
+		logger.info("Down-sync record count for {}.{} : {}", validSchema, validTable, resultSetList.size());
 		return resultSetList;
 	}
 
@@ -281,6 +289,12 @@ public class DataSyncRepositoryCentralDownload {
 			throw new Exception("Invalid request. Schema/table/primary key info is missing");
 		if (records == null || records.isEmpty())
 			return 0;
+
+		// schema, table & primary key column cannot be bound as query parameters, so
+		// each of them is validated before it is concatenated into the query
+		String validSchema = SqlIdentifierValidator.validatedSchemaName(schema);
+		String validTable = SqlIdentifierValidator.validatedTableName(table);
+		String validPkColumn = SqlIdentifierValidator.validatedColumnName(pkColumnName);
 
 		List<Object[]> successWithSerialNo = new ArrayList<>();
 		List<Object[]> successWithoutSerialNo = new ArrayList<>();
@@ -306,33 +320,33 @@ public class DataSyncRepositoryCentralDownload {
 		int updatedRows = 0;
 
 		if (!successWithSerialNo.isEmpty()) {
-			String query = " UPDATE " + schema + "." + table
+			String query = " UPDATE " + validSchema + "." + validTable
 					+ " SET DownSynced = 'P', DownSyncDate = now(), DownSyncFailureReason = NULL, VanSerialNo = ? "
-					+ " WHERE " + pkColumnName + " = ? ";
+					+ " WHERE " + validPkColumn + " = ? ";
 			updatedRows += countUpdatedRows(jdbcTemplate.batchUpdate(query, successWithSerialNo));
 		}
 
 		if (!successWithoutSerialNo.isEmpty()) {
-			String query = " UPDATE " + schema + "." + table
+			String query = " UPDATE " + validSchema + "." + validTable
 					+ " SET DownSynced = 'P', DownSyncDate = now(), DownSyncFailureReason = NULL " + " WHERE "
-					+ pkColumnName + " = ? ";
+					+ validPkColumn + " = ? ";
 			updatedRows += countUpdatedRows(jdbcTemplate.batchUpdate(query, successWithoutSerialNo));
 		}
 
 		if (!retryable.isEmpty()) {
-			String query = " UPDATE " + schema + "." + table
-					+ " SET DownSynced = 'U', DownSyncFailureReason = ? " + " WHERE " + pkColumnName + " = ? ";
+			String query = " UPDATE " + validSchema + "." + validTable
+					+ " SET DownSynced = 'U', DownSyncFailureReason = ? " + " WHERE " + validPkColumn + " = ? ";
 			updatedRows += countUpdatedRows(jdbcTemplate.batchUpdate(query, retryable));
 		}
 
 		if (!failed.isEmpty()) {
-			String query = " UPDATE " + schema + "." + table
-					+ " SET DownSynced = 'F', DownSyncFailureReason = ? " + " WHERE " + pkColumnName + " = ? ";
+			String query = " UPDATE " + validSchema + "." + validTable
+					+ " SET DownSynced = 'F', DownSyncFailureReason = ? " + " WHERE " + validPkColumn + " = ? ";
 			updatedRows += countUpdatedRows(jdbcTemplate.batchUpdate(query, failed));
 		}
 
-		logger.info("Down-sync flag updated for {}.{}. Records : {}, rows : {}", schema, table, records.size(),
-				updatedRows);
+		logger.info("Down-sync flag updated for {}.{}. Records : {}, rows : {}", validSchema, validTable,
+				records.size(), updatedRows);
 		return updatedRows;
 	}
 
@@ -341,7 +355,10 @@ public class DataSyncRepositoryCentralDownload {
 			return 0;
 
 		jdbcTemplate = getJdbcTemplate();
-		String query = " UPDATE " + schema + "." + table
+		// schema & table cannot be bound as query parameters, so both are validated
+		// before they are concatenated into the query
+		String query = " UPDATE " + SqlIdentifierValidator.validatedSchemaName(schema) + "."
+				+ SqlIdentifierValidator.validatedTableName(table)
 				+ " SET DownSynced = 'P', DownSyncDate = now(), DownSyncFailureReason = NULL "
 				+ " WHERE VanSerialNo = ? AND VanID = ? ";
 		return countUpdatedRows(jdbcTemplate.batchUpdate(query, vanSerialNoAndVanID));

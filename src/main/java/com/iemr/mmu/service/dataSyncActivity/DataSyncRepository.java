@@ -41,6 +41,7 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Service;
 
 import com.iemr.mmu.repo.syncActivity_syncLayer.SyncUtilityClassRepo;
+import com.iemr.mmu.utils.validator.SqlIdentifierValidator;
 
 /***
  * 
@@ -193,8 +194,15 @@ public class DataSyncRepository {
 			return null;
 
 		jdbcTemplate = getJdbcTemplate();
-		String query = " SELECT " + autoIncColumnName + ", Processed, " + lastModColumn
-				+ " AS LastModDate, LastDownSyncDate FROM " + schema + "." + table
+		// schema, table & column names cannot be bound as query parameters, so each of
+		// them is validated before it is concatenated into the query
+		String validSchema = SqlIdentifierValidator.validatedSchemaName(schema);
+		String validTable = SqlIdentifierValidator.validatedTableName(table);
+		String validPkColumn = SqlIdentifierValidator.validatedColumnName(autoIncColumnName);
+		String validLastModColumn = SqlIdentifierValidator.validatedColumnName(lastModColumn);
+
+		String query = " SELECT " + validPkColumn + ", Processed, " + validLastModColumn
+				+ " AS LastModDate, LastDownSyncDate FROM " + validSchema + "." + validTable
 				+ " WHERE CentralID = ? AND VanID = ? ";
 
 		List<Map<String, Object>> resultSet = jdbcTemplate.queryForList(query, centralID, vanID);
@@ -227,7 +235,14 @@ public class DataSyncRepository {
 
 	public int updateVanSerialNoInLocal(String schema, String table, String autoIncColumnName, Object localID) {
 		jdbcTemplate = getJdbcTemplate();
-		String query = " UPDATE " + schema + "." + table + " SET VanSerialNo = ? WHERE " + autoIncColumnName + " = ? ";
+		// schema, table & column names cannot be bound as query parameters, so each of
+		// them is validated before it is concatenated into the query
+		String validSchema = SqlIdentifierValidator.validatedSchemaName(schema);
+		String validTable = SqlIdentifierValidator.validatedTableName(table);
+		String validPkColumn = SqlIdentifierValidator.validatedColumnName(autoIncColumnName);
+
+		String query = " UPDATE " + validSchema + "." + validTable + " SET VanSerialNo = ? WHERE "
+				+ validPkColumn + " = ? ";
 		return jdbcTemplate.update(query, localID, localID);
 	}
 
@@ -238,24 +253,35 @@ public class DataSyncRepository {
 			return null;
 
 		jdbcTemplate = getJdbcTemplate();
-		String from = " FROM " + schema + "." + table + " WHERE ";
+		// schema, table & column names cannot be bound as query parameters, so each of
+		// them is validated before it is concatenated into the query
+		String validSchema = SqlIdentifierValidator.validatedSchemaName(schema);
+		String validTable = SqlIdentifierValidator.validatedTableName(table);
+		String validPkColumn = SqlIdentifierValidator.validatedColumnName(pkColumn);
+		String from = " FROM " + validSchema + "." + validTable + " WHERE ";
 
-		Long resolved = queryForFirstLong(" SELECT " + pkColumn + from + " CentralID = ? AND VanID = ? ", centralValue,
-				vanID);
+		Long resolved = queryForFirstLong(" SELECT " + validPkColumn + from + " CentralID = ? AND VanID = ? ",
+				centralValue, vanID);
 		if (resolved != null)
 			return resolved;
 
-		resolved = queryForFirstLong(" SELECT " + pkColumn + from + " VanSerialNo = ? AND VanID = ? ", centralValue,
-				vanID);
+		resolved = queryForFirstLong(" SELECT " + validPkColumn + from + " VanSerialNo = ? AND VanID = ? ",
+				centralValue, vanID);
 		if (resolved != null)
 			return resolved;
 
-		return queryForFirstLong(" SELECT " + pkColumn + from + pkColumn + " = ? AND VanID = ? ", centralValue, vanID);
+		return queryForFirstLong(" SELECT " + validPkColumn + from + validPkColumn + " = ? AND VanID = ? ",
+				centralValue, vanID);
 	}
 
 	public int countConflictsInLocal(String schema, String table, Object vanID) {
 		jdbcTemplate = getJdbcTemplate();
-		String query = " SELECT COUNT(*) FROM " + schema + "." + table
+		// schema & table cannot be bound as query parameters, so both are validated
+		// before they are concatenated into the query
+		String validSchema = SqlIdentifierValidator.validatedSchemaName(schema);
+		String validTable = SqlIdentifierValidator.validatedTableName(table);
+
+		String query = " SELECT COUNT(*) FROM " + validSchema + "." + validTable
 				+ " WHERE VanID = ? AND Processed = 'F' AND SyncFailureReason = 'CONFLICT' ";
 		Integer count = jdbcTemplate.queryForObject(query, Integer.class, vanID);
 		return count == null ? 0 : count;
@@ -302,9 +328,16 @@ public class DataSyncRepository {
 
 	public int markDownSyncConflictInLocal(String schema, String table, String autoIncColumnName, Object localID) {
 		jdbcTemplate = getJdbcTemplate();
-		String query = " UPDATE " + schema + "." + table
+		// schema, table & column names cannot be bound as query parameters, so each of
+		// them is validated before it is concatenated into the query
+		String validSchema = SqlIdentifierValidator.validatedSchemaName(schema);
+		String validTable = SqlIdentifierValidator.validatedTableName(table);
+		String validPkColumn = SqlIdentifierValidator.validatedColumnName(autoIncColumnName);
+
+		String query = " UPDATE " + validSchema + "." + validTable
 				+ " SET Processed = 'F', SyncFailureReason = 'CONFLICT',"
-				+ " DownSynced = 'F', DownSyncFailureReason = 'CONFLICT' WHERE " + autoIncColumnName + " = ? ";
+				+ " DownSynced = 'F', DownSyncFailureReason = 'CONFLICT' WHERE " + validPkColumn
+				+ " = ? ";
 		return jdbcTemplate.update(query, localID);
 	}
 
