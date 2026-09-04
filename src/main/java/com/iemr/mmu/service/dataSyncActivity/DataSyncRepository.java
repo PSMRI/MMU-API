@@ -23,8 +23,11 @@ package com.iemr.mmu.service.dataSyncActivity;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import java.sql.PreparedStatement;
 
 import javax.sql.DataSource;
 
@@ -33,9 +36,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Service;
 
 import com.iemr.mmu.repo.syncActivity_syncLayer.SyncUtilityClassRepo;
+import com.iemr.mmu.utils.validator.SqlIdentifierValidator;
 
 /***
  * 
@@ -136,5 +142,206 @@ public class DataSyncRepository {
 	}
 
 	// ---------------------------------- End of Download Repository
+
+	// ---------------------------------- Down-Sync Repository (central -> local)
+
+	public Map<String, String> getSyncGroupNamesByTable() {
+		jdbcTemplate = getJdbcTemplate();
+
+		String query = " SELECT LOWER(TRIM(s.TableName)) AS TableName, g.SyncTableGroupName "
+				+ " FROM db_iemr.m_synctabledetail s "
+				+ " JOIN db_iemr.m_synctablegroup g ON g.SyncTableGroupID = s.SyncTableGroupID "
+				+ " WHERE IFNULL(s.Deleted, b'0') = b'0' AND IFNULL(g.Deleted, b'0') = b'0' "
+				+ " AND s.TableName IS NOT NULL ";
+
+		Map<String, String> groups = new LinkedHashMap<>();
+		for (Map<String, Object> row : jdbcTemplate.queryForList(query)) {
+			Object table = row.get("TableName");
+			Object group = row.get("SyncTableGroupName");
+			if (table != null && group != null)
+				groups.putIfAbsent(String.valueOf(table), String.valueOf(group));
+		}
+		return groups;
+	}
+
+	public String resolveLastModColumn(String schema, String table) {
+		jdbcTemplate = getJdbcTemplate();
+
+		String query = " SELECT COLUMN_NAME FROM information_schema.COLUMNS "
+				+ " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? "
+				+ " AND COLUMN_NAME IN ('LastModDate', 'last_mod_date') "
+				+ " ORDER BY FIELD(COLUMN_NAME, 'LastModDate', 'last_mod_date') ";
+
+		List<String> found = jdbcTemplate.queryForList(query, String.class, schema, table);
+		return (found == null || found.isEmpty()) ? null : found.get(0);
+	}
+
+	public List<String> getDownSyncColumns(String schema, String table) {
+		jdbcTemplate = getJdbcTemplate();
+
+		String query = " SELECT COLUMN_NAME FROM information_schema.COLUMNS "
+				+ " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? "
+				+ " AND COLUMN_NAME NOT IN ('CentralID', 'DownSynced', 'DownSyncDate', 'DownSyncFailureReason', "
+				+ " 'LastDownSyncDate', 'Processed', 'SyncFailureReason', 'SyncedBy', 'SyncedDate') "
+				+ " ORDER BY COLUMN_NAME ";
+
+		return jdbcTemplate.queryForList(query, String.class, schema, table);
+	}
+
+	public Map<String, Object> getLocalRecordForDownSync(String schema, String table, String autoIncColumnName,
+			Object centralID, Object vanID, String lastModColumn) {
+		if (centralID == null)
+			return null;
+
+		jdbcTemplate = getJdbcTemplate();
+		// schema, table & column names cannot be bound as query parameters, so each of
+		// them is validated before it is concatenated into the query
+		String validSchema = SqlIdentifierValidator.validatedSchemaName(schema);
+		String validTable = SqlIdentifierValidator.validatedTableName(table);
+		String validPkColumn = SqlIdentifierValidator.validatedColumnName(autoIncColumnName);
+		String validLastModColumn = SqlIdentifierValidator.validatedColumnName(lastModColumn);
+
+		String query = " SELECT " + validPkColumn + ", Processed, " + validLastModColumn
+				+ " AS LastModDate, LastDownSyncDate FROM " + validSchema + "." + validTable
+				+ " WHERE CentralID = ? AND VanID = ? ";
+
+		List<Map<String, Object>> resultSet = jdbcTemplate.queryForList(query, centralID, vanID);
+		if (resultSet == null || resultSet.isEmpty())
+			return null;
+
+		return resultSet.get(0);
+	}
+
+	public Long insertDownSyncRecordInLocal(final String query, final Object[] params) {
+		jdbcTemplate = getJdbcTemplate();
+		KeyHolder keyHolder = new GeneratedKeyHolder();
+
+		jdbcTemplate.update(connection -> {
+			PreparedStatement ps = connection.prepareStatement(query, PreparedStatement.RETURN_GENERATED_KEYS);
+			for (int i = 0; i < params.length; i++) {
+				ps.setObject(i + 1, params[i]);
+			}
+			return ps;
+		}, keyHolder);
+
+		Number key = keyHolder.getKey();
+		return key != null ? key.longValue() : null;
+	}
+
+	public int updateDownSyncRecordInLocal(String query, Object[] params) {
+		jdbcTemplate = getJdbcTemplate();
+		return jdbcTemplate.update(query, params);
+	}
+
+	public int updateVanSerialNoInLocal(String schema, String table, String autoIncColumnName, Object localID) {
+		jdbcTemplate = getJdbcTemplate();
+		// schema, table & column names cannot be bound as query parameters, so each of
+		// them is validated before it is concatenated into the query
+		String validSchema = SqlIdentifierValidator.validatedSchemaName(schema);
+		String validTable = SqlIdentifierValidator.validatedTableName(table);
+		String validPkColumn = SqlIdentifierValidator.validatedColumnName(autoIncColumnName);
+
+		String query = " UPDATE " + validSchema + "." + validTable + " SET VanSerialNo = ? WHERE "
+				+ validPkColumn + " = ? ";
+		return jdbcTemplate.update(query, localID, localID);
+	}
+
+	
+	public Long resolveLocalIdForCentralValue(String schema, String table, String pkColumn, Object centralValue,
+			Object vanID) {
+		if (centralValue == null)
+			return null;
+
+		jdbcTemplate = getJdbcTemplate();
+		// schema, table & column names cannot be bound as query parameters, so each of
+		// them is validated before it is concatenated into the query
+		String validSchema = SqlIdentifierValidator.validatedSchemaName(schema);
+		String validTable = SqlIdentifierValidator.validatedTableName(table);
+		String validPkColumn = SqlIdentifierValidator.validatedColumnName(pkColumn);
+		String from = " FROM " + validSchema + "." + validTable + " WHERE ";
+
+		Long resolved = queryForFirstLong(" SELECT " + validPkColumn + from + " CentralID = ? AND VanID = ? ",
+				centralValue, vanID);
+		if (resolved != null)
+			return resolved;
+
+		resolved = queryForFirstLong(" SELECT " + validPkColumn + from + " VanSerialNo = ? AND VanID = ? ",
+				centralValue, vanID);
+		if (resolved != null)
+			return resolved;
+
+		return queryForFirstLong(" SELECT " + validPkColumn + from + validPkColumn + " = ? AND VanID = ? ",
+				centralValue, vanID);
+	}
+
+	public int countConflictsInLocal(String schema, String table, Object vanID) {
+		jdbcTemplate = getJdbcTemplate();
+		// schema & table cannot be bound as query parameters, so both are validated
+		// before they are concatenated into the query
+		String validSchema = SqlIdentifierValidator.validatedSchemaName(schema);
+		String validTable = SqlIdentifierValidator.validatedTableName(table);
+
+		String query = " SELECT COUNT(*) FROM " + validSchema + "." + validTable
+				+ " WHERE VanID = ? AND Processed = 'F' AND SyncFailureReason = 'CONFLICT' ";
+		Integer count = jdbcTemplate.queryForObject(query, Integer.class, vanID);
+		return count == null ? 0 : count;
+	}
+
+	public List<Map<String, Object>> getForeignKeysOfTable(String schema, String table) {
+		jdbcTemplate = getJdbcTemplate();
+		String query = " SELECT k.CONSTRAINT_NAME, k.COLUMN_NAME AS CHILD_COLUMN,"
+				+ " k.REFERENCED_TABLE_SCHEMA AS PARENT_SCHEMA, k.REFERENCED_TABLE_NAME AS PARENT_TABLE,"
+				+ " k.REFERENCED_COLUMN_NAME AS PARENT_COLUMN "
+				+ " FROM information_schema.KEY_COLUMN_USAGE k "
+				+ " WHERE k.TABLE_SCHEMA = ? AND k.TABLE_NAME = ? AND k.REFERENCED_TABLE_NAME IS NOT NULL ";
+
+		List<Map<String, Object>> foreignKeys = jdbcTemplate.queryForList(query, schema, table);
+		if (foreignKeys == null)
+			return new ArrayList<>();
+
+		Map<String, Integer> columnsPerConstraint = new LinkedHashMap<>();
+		for (Map<String, Object> foreignKey : foreignKeys) {
+			columnsPerConstraint.merge(String.valueOf(foreignKey.get("CONSTRAINT_NAME")), 1, Integer::sum);
+		}
+
+		List<Map<String, Object>> singleColumn = new ArrayList<>();
+		for (Map<String, Object> foreignKey : foreignKeys) {
+			if (columnsPerConstraint.get(String.valueOf(foreignKey.get("CONSTRAINT_NAME"))) == 1)
+				singleColumn.add(foreignKey);
+		}
+		return singleColumn;
+	}
+
+	public boolean isColumnNullable(String schema, String table, String column) {
+		jdbcTemplate = getJdbcTemplate();
+		List<String> nullable = jdbcTemplate.queryForList(
+				" SELECT IS_NULLABLE FROM information_schema.COLUMNS "
+						+ " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ? ",
+				String.class, schema, table, column);
+		return !nullable.isEmpty() && "YES".equalsIgnoreCase(nullable.get(0));
+	}
+
+	private Long queryForFirstLong(String query, Object... params) {
+		List<Long> found = jdbcTemplate.queryForList(query, Long.class, params);
+		return (found == null || found.isEmpty()) ? null : found.get(0);
+	}
+
+	public int markDownSyncConflictInLocal(String schema, String table, String autoIncColumnName, Object localID) {
+		jdbcTemplate = getJdbcTemplate();
+		// schema, table & column names cannot be bound as query parameters, so each of
+		// them is validated before it is concatenated into the query
+		String validSchema = SqlIdentifierValidator.validatedSchemaName(schema);
+		String validTable = SqlIdentifierValidator.validatedTableName(table);
+		String validPkColumn = SqlIdentifierValidator.validatedColumnName(autoIncColumnName);
+
+		String query = " UPDATE " + validSchema + "." + validTable
+				+ " SET Processed = 'F', SyncFailureReason = 'CONFLICT',"
+				+ " DownSynced = 'F', DownSyncFailureReason = 'CONFLICT' WHERE " + validPkColumn
+				+ " = ? ";
+		return jdbcTemplate.update(query, localID);
+	}
+
+	// End of Down-Sync Repository
+
 
 }
