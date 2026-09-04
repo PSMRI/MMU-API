@@ -175,7 +175,7 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 
 	public Map<String, Object> getDownSyncStatus() {
 		Map<String, Object> resultMap = new LinkedHashMap<>();
-		resultMap.put("percentage", totalCounter == 0 ? 0 : Math.floor((progressCounter * 100) / totalCounter));
+		resultMap.put("percentage", totalCounter == 0 ? 0 : Math.floor((progressCounter * 100.0) / totalCounter));
 		resultMap.put("inProgress", IN_PROGRESS.get());
 		resultMap.put("currentTable", currentTable);
 		resultMap.put("totalTables", totalCounter);
