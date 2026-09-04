@@ -264,7 +264,7 @@ public class StartSyncActivity {
 				response.setError(5000, "vanID is missing, Kindly contact the administrator.");
 			}
 		} catch (Exception e) {
-			logger.error("Error in down-sync : " + e);
+			logger.error("Error in down-sync : {}", e.getMessage(), e);
 			response.setError(e);
 		}
 		return response.toString();
@@ -277,7 +277,7 @@ public class StartSyncActivity {
 		try {
 			response.setResponse(new Gson().toJson(downSyncDataFromServerImpl.getDownSyncStatus()));
 		} catch (Exception e) {
-			logger.error("Error in down-sync progress check : " + e);
+			logger.error("Error in down-sync progress check : {}", e.getMessage(), e);
 			response.setError(e);
 		}
 		return response.toString();

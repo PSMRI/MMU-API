@@ -179,8 +179,8 @@ public class MMUDataSyncVanToServer {
 			}
 		} catch (Exception e) {
 			if (downSyncDataDigester != null)
-				logger.error(e + " - Error in down-sync for table " + downSyncDataDigester.getSchemaName() + "."
-						+ downSyncDataDigester.getTableName());
+				logger.error("Error in down-sync for table {}.{}", downSyncDataDigester.getSchemaName(),
+						downSyncDataDigester.getTableName(), e);
 			response.setError(e);
 		}
 		return response.toStringWithSerialization();
@@ -201,8 +201,8 @@ public class MMUDataSyncVanToServer {
 			}
 		} catch (Exception e) {
 			if (downSyncDataDigester != null)
-				logger.error(e + " - Error while updating the down-sync flag for "
-						+ downSyncDataDigester.getSchemaName() + "." + downSyncDataDigester.getTableName());
+				logger.error("Error while updating the down-sync flag for {}.{}", downSyncDataDigester.getSchemaName(),
+						downSyncDataDigester.getTableName(), e);
 			response.setError(e);
 		}
 		return response.toStringWithSerialization();
