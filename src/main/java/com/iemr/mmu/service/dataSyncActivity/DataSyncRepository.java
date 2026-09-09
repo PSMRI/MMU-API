@@ -189,7 +189,7 @@ public class DataSyncRepository {
 	}
 
 	public Map<String, Object> getLocalRecordForDownSync(String schema, String table, String autoIncColumnName,
-			Object centralID, Object vanID, String lastModColumn) {
+			Object centralID, Object vanID, String lastModColumn, boolean preserveCentralPK) {
 		if (centralID == null)
 			return null;
 
@@ -201,15 +201,49 @@ public class DataSyncRepository {
 		String validPkColumn = SqlIdentifierValidator.validatedColumnName(autoIncColumnName);
 		String validLastModColumn = SqlIdentifierValidator.validatedColumnName(lastModColumn);
 
-		String query = " SELECT " + validPkColumn + ", Processed, " + validLastModColumn
-				+ " AS LastModDate, LastDownSyncDate FROM " + validSchema + "." + validTable
-				+ " WHERE CentralID = ? AND VanID = ? ";
+		StringBuilder query = new StringBuilder(" SELECT ").append(validPkColumn).append(", CentralID, Processed, ")
+				.append(validLastModColumn).append(" AS LastModDate, LastDownSyncDate FROM ").append(validSchema)
+				.append(".").append(validTable);
 
-		List<Map<String, Object>> resultSet = jdbcTemplate.queryForList(query, centralID, vanID);
+		List<Object> params = new ArrayList<>();
+
+		if (preserveCentralPK) {
+			query.append(" WHERE ( CentralID = ? OR ").append(validPkColumn).append(" = ? ) ");
+			params.add(centralID);
+			params.add(centralID);
+		} else {
+			query.append(" WHERE CentralID = ? AND VanID = ? ");
+			params.add(centralID);
+			params.add(vanID);
+		}
+
+		List<Map<String, Object>> resultSet = jdbcTemplate.queryForList(query.toString(), params.toArray());
 		if (resultSet == null || resultSet.isEmpty())
 			return null;
 
 		return resultSet.get(0);
+	}
+
+	/***
+	 * Stamps the central key on a local row that was matched by its primary key, so
+	 * the later runs of the down-sync find it on the CentralID match itself.
+	 */
+	public int stampCentralIDInLocal(String schema, String table, String autoIncColumnName, Object localID,
+			Object centralID) {
+		if (localID == null || centralID == null)
+			return 0;
+
+		jdbcTemplate = getJdbcTemplate();
+		// schema, table & column names cannot be bound as query parameters, so each of
+		// them is validated before it is concatenated into the query
+		String validSchema = SqlIdentifierValidator.validatedSchemaName(schema);
+		String validTable = SqlIdentifierValidator.validatedTableName(table);
+		String validPkColumn = SqlIdentifierValidator.validatedColumnName(autoIncColumnName);
+
+		String query = " UPDATE " + validSchema + "." + validTable + " SET CentralID = ? WHERE " + validPkColumn
+				+ " = ? AND CentralID IS NULL ";
+
+		return jdbcTemplate.update(query, centralID, localID);
 	}
 
 	public Long insertDownSyncRecordInLocal(final String query, final Object[] params) {

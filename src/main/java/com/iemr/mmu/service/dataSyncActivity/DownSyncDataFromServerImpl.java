@@ -72,6 +72,11 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 	private static final String PROCESSED = "Processed";
 	private static final String SYNC_FAILURE_REASON = "SyncFailureReason";
 	private static final String CENTRAL_ID = "CentralID";
+	private static final String PROVISIONED = "Provisioned";
+	private static final String RESERVED = "Reserved";
+	private static final String RESERVED_FOR = "ReservedFor";
+	private static final String RESERVED_BY_ID = "ReservedById";
+	private static final String RESERVED_ON = "ReservedOn";
 	
 	private static final int ACK_BATCH_SIZE = 500;
 	
@@ -450,7 +455,7 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 
 				Map<String, Object> localRecord = dataSyncRepository.getLocalRecordForDownSync(
 						tableDetail.getSchemaName(), tableDetail.getTableName(), pkColumn, centralID, vanID,
-						lastModColumn);
+						lastModColumn, tableDetail.isPreserveCentralPK());
 
 				// a pointer at another table's primary key means a different number here
 				// than at central, so it is rewritten before the row is written
@@ -472,6 +477,11 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 				}
 
 				Long localID = toLong(localRecord.get(pkColumn));
+
+				// a row matched by its primary key alone carries no central key yet
+				if (localRecord.get(CENTRAL_ID) == null)
+					dataSyncRepository.stampCentralIDInLocal(tableDetail.getSchemaName(), tableDetail.getTableName(),
+							pkColumn, localID, centralID);
 
 				if (!isCentralCopyNewer(record, localRecord, lastModColumn)) {
 					skippedCounter++;
@@ -598,7 +608,8 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 
 		for (int i = 0; i < vanColumns.size(); i++) {
 			String vanColumn = vanColumns.get(i);
-			if (vanColumn.equalsIgnoreCase(pkColumn) || isDownSyncManagedColumn(vanColumn))
+			if (vanColumn.equalsIgnoreCase(pkColumn) || isDownSyncManagedColumn(vanColumn)
+					|| isVanOwnedColumn(vanColumn))
 				continue;
 			if (columnsToLeaveAlone != null && containsIgnoringCase(columnsToLeaveAlone, vanColumn))
 				continue;
@@ -816,6 +827,12 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 					+ what);
 	}
 	
+	private boolean isVanOwnedColumn(String column) {
+		return VAN_ID.equalsIgnoreCase(column) || PROVISIONED.equalsIgnoreCase(column)
+				|| RESERVED.equalsIgnoreCase(column) || RESERVED_FOR.equalsIgnoreCase(column)
+				|| RESERVED_BY_ID.equalsIgnoreCase(column) || RESERVED_ON.equalsIgnoreCase(column);
+	}
+
 	private boolean isDownSyncManagedColumn(String column) {
 		return VAN_SERIAL_NO.equalsIgnoreCase(column) || CENTRAL_ID.equalsIgnoreCase(column)
 				|| PROCESSED.equalsIgnoreCase(column) || SYNC_FAILURE_REASON.equalsIgnoreCase(column)
