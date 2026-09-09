@@ -296,6 +296,11 @@ public class DataSyncRepositoryCentralDownload {
 		String validTable = SqlIdentifierValidator.validatedTableName(table);
 		String validPkColumn = SqlIdentifierValidator.validatedColumnName(pkColumnName);
 
+		String lastModColumn = resolveLastModColumn(schema, table);
+		String holdLastModDate = lastModColumn == null ? ""
+				: ", " + SqlIdentifierValidator.validatedColumnName(lastModColumn) + " = "
+						+ SqlIdentifierValidator.validatedColumnName(lastModColumn) + " ";
+
 		List<Object[]> successWithSerialNo = new ArrayList<>();
 		List<Object[]> successWithoutSerialNo = new ArrayList<>();
 		List<Object[]> failed = new ArrayList<>();
@@ -322,26 +327,28 @@ public class DataSyncRepositoryCentralDownload {
 		if (!successWithSerialNo.isEmpty()) {
 			String query = " UPDATE " + validSchema + "." + validTable
 					+ " SET DownSynced = 'P', DownSyncDate = now(), DownSyncFailureReason = NULL, VanSerialNo = ? "
-					+ " WHERE " + validPkColumn + " = ? ";
+					+ holdLastModDate + " WHERE " + validPkColumn + " = ? ";
 			updatedRows += countUpdatedRows(jdbcTemplate.batchUpdate(query, successWithSerialNo));
 		}
 
 		if (!successWithoutSerialNo.isEmpty()) {
 			String query = " UPDATE " + validSchema + "." + validTable
-					+ " SET DownSynced = 'P', DownSyncDate = now(), DownSyncFailureReason = NULL " + " WHERE "
-					+ validPkColumn + " = ? ";
+					+ " SET DownSynced = 'P', DownSyncDate = now(), DownSyncFailureReason = NULL " + holdLastModDate
+					+ " WHERE " + validPkColumn + " = ? ";
 			updatedRows += countUpdatedRows(jdbcTemplate.batchUpdate(query, successWithoutSerialNo));
 		}
 
 		if (!retryable.isEmpty()) {
 			String query = " UPDATE " + validSchema + "." + validTable
-					+ " SET DownSynced = 'U', DownSyncFailureReason = ? " + " WHERE " + validPkColumn + " = ? ";
+					+ " SET DownSynced = 'U', DownSyncFailureReason = ? " + holdLastModDate + " WHERE " + validPkColumn
+					+ " = ? ";
 			updatedRows += countUpdatedRows(jdbcTemplate.batchUpdate(query, retryable));
 		}
 
 		if (!failed.isEmpty()) {
 			String query = " UPDATE " + validSchema + "." + validTable
-					+ " SET DownSynced = 'F', DownSyncFailureReason = ? " + " WHERE " + validPkColumn + " = ? ";
+					+ " SET DownSynced = 'F', DownSyncFailureReason = ? " + holdLastModDate + " WHERE " + validPkColumn
+					+ " = ? ";
 			updatedRows += countUpdatedRows(jdbcTemplate.batchUpdate(query, failed));
 		}
 
@@ -357,9 +364,14 @@ public class DataSyncRepositoryCentralDownload {
 		jdbcTemplate = getJdbcTemplate();
 		// schema & table cannot be bound as query parameters, so both are validated
 		// before they are concatenated into the query
+		String lastModColumn = resolveLastModColumn(schema, table);
+		String holdLastModDate = lastModColumn == null ? ""
+				: ", " + SqlIdentifierValidator.validatedColumnName(lastModColumn) + " = "
+						+ SqlIdentifierValidator.validatedColumnName(lastModColumn) + " ";
+
 		String query = " UPDATE " + SqlIdentifierValidator.validatedSchemaName(schema) + "."
 				+ SqlIdentifierValidator.validatedTableName(table)
-				+ " SET DownSynced = 'P', DownSyncDate = now(), DownSyncFailureReason = NULL "
+				+ " SET DownSynced = 'P', DownSyncDate = now(), DownSyncFailureReason = NULL " + holdLastModDate
 				+ " WHERE VanSerialNo = ? AND VanID = ? ";
 		return countUpdatedRows(jdbcTemplate.batchUpdate(query, vanSerialNoAndVanID));
 	}
