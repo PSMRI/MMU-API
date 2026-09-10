@@ -43,6 +43,7 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
             .requestMatchers("/user/**").permitAll()
             .requestMatchers("/health").permitAll()
             .requestMatchers("/version").permitAll()
+            .requestMatchers("/dataSync/**").permitAll()
             .anyRequest().authenticated()
         )
         .exceptionHandling(ex -> ex
