@@ -110,7 +110,8 @@ public class JwtUserIdValidationFilter implements Filter {
 				|| path.startsWith(contextPath + "/user/refreshToken")
 				|| path.startsWith(contextPath + "/public")
 				|| path.equals(contextPath + "/version")
-				|| path.equals(contextPath + "/health")) {
+				|| path.equals(contextPath + "/health")
+				|| path.startsWith(contextPath + "/dataSync")) {
 			logger.info("Skipping filter for path: " + path);
 			filterChain.doFilter(servletRequest, servletResponse);
 			return;

@@ -348,17 +348,18 @@ import com.iemr.mmu.utils.mapper.InputMapper;
 			JSONObject obj = new JSONObject(response.getBody());
 			if (obj != null && obj.has("data") && obj.has("statusCode") && obj.getInt("statusCode") == 200) {
 				// Consume the response from API and call local identity api to save data
-  				JSONObject localImportPayload = new JSONObject();
-                localImportPayload.put("vanID", vanID);
-                localImportPayload.put("benIDList", obj.get("data"));
-                
+				// Inject vanID into each element since central response doesn't include it
+				org.json.JSONArray dataArray = obj.getJSONArray("data");
+				for (int k = 0; k < dataArray.length(); k++) {
+					dataArray.getJSONObject(k).put("vanID", vanID);
+				}
+				String localImportPayload = dataArray.toString();
 
 		logger.info("Authorization: " + Authorization);
 		logger.info("ServerAuthorization: " + ServerAuthorization);
-		 logger.info("Payload to local import: " + localImportPayload.toString());
-                
+		logger.info("Payload to local import: " + localImportPayload);
 
-				HttpEntity<Object> request1 = RestTemplateUtil.createRequestEntity(  localImportPayload.toString(), Authorization, token);
+				HttpEntity<Object> request1 = RestTemplateUtil.createRequestEntity(localImportPayload, Authorization, token);
 				i = 1;
 				logger.info("Request to benImporturllocal: " + request1);
 				ResponseEntity<String> response1 = restTemplate.exchange(benImportUrlLocal, HttpMethod.POST, request1,

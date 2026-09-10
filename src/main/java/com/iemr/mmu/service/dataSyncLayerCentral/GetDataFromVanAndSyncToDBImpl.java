@@ -367,7 +367,9 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
     
 
         String vanSerialNo = String.valueOf(cleanRecord.get(vanAutoIncColumnName));
-        String vanID = String.valueOf(cleanRecord.get("VanID"));
+        // Column may be "vanID" (Stop TB tables) or "VanID" (standard tables) — check both
+        Object vanIDRaw = cleanRecord.get("VanID") != null ? cleanRecord.get("VanID") : cleanRecord.get("vanID");
+        String vanID = vanIDRaw != null ? String.valueOf(vanIDRaw) : null;
         int syncFacilityID = 0;
 
         cleanRecord.put("SyncedBy", syncUploadDataDigester.getSyncedBy());
