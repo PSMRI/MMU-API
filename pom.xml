@@ -5,7 +5,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.iemr.mmu</groupId>
 	<artifactId>mmu-api</artifactId>
-	<version>3.6.2</version>
+	<version>3.9.0</version>
 	<packaging>war</packaging>
 
 	<name>MMU-API</name>
@@ -291,6 +291,12 @@
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
 			<scope>runtime</scope>
+		</dependency>
+		<!-- AWS SDK v2 - S3 client, used for diagnostic document sync -->
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-csv</artifactId>
+			<version>1.11.0</version>
 		</dependency>
 		<!-- CSV parsing for the Nikshay results-file import (quoted/embedded-comma fields) -->
 		<dependency>
