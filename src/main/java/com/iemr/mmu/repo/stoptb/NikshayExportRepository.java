@@ -264,10 +264,10 @@ public class NikshayExportRepository {
 		return getJdbcTemplate().query(sql, (ResultSet rs) -> rs.next() ? rs.getLong("id") : null, benRegId);
 	}
 
-	public void updateNikshayId(Long suspectedId, String nikshayId, String modifiedBy) {
-		String sql = "UPDATE tb_suspected SET nikshay_id = ?, modified_by = ?, "
+	public void updateNikshayId(Long suspectedId, String nikshayId, boolean createdByAmrit, String modifiedBy) {
+		String sql = "UPDATE tb_suspected SET nikshay_id = ?, nikshay_created_by_amrit = ?, modified_by = ?, "
 				+ "last_mod_date = CURRENT_TIMESTAMP WHERE id = ?";
-		getJdbcTemplate().update(sql, nikshayId, modifiedBy, suspectedId);
+		getJdbcTemplate().update(sql, nikshayId, createdByAmrit, modifiedBy, suspectedId);
 	}
 
 	/** Called when a beneficiary had no tb_suspected row yet — creates one to
@@ -275,16 +275,17 @@ public class NikshayExportRepository {
 	 * because, unlike created_date on most other AMRIT tables, tb_suspected's
 	 * has no DB-side default. */
 	public Long insertSuspectedWithNikshayId(Long benRegId, LocalDate visitDate, String nikshayId,
-			String createdBy) {
-		String sql = "INSERT INTO tb_suspected (benRegID, visit_date, nikshay_id, created_by, created_date) "
-				+ "VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)";
+			boolean createdByAmrit, String createdBy) {
+		String sql = "INSERT INTO tb_suspected (benRegID, visit_date, nikshay_id, nikshay_created_by_amrit, "
+				+ "created_by, created_date) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)";
 		KeyHolder keyHolder = new GeneratedKeyHolder();
 		getJdbcTemplate().update(connection -> {
 			PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 			ps.setLong(1, benRegId);
 			ps.setTimestamp(2, Timestamp.valueOf(visitDate.atStartOfDay()));
 			ps.setString(3, nikshayId);
-			ps.setString(4, createdBy);
+			ps.setBoolean(4, createdByAmrit);
+			ps.setString(5, createdBy);
 			return ps;
 		}, keyHolder);
 		return keyHolder.getKey().longValue();

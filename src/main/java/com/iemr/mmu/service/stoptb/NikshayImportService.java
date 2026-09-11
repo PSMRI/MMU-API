@@ -78,6 +78,7 @@ public class NikshayImportService {
 	}
 
 	public record ImportSummary(int csvRowCount, int updated, int failed, int needsReview,
+			int createdByAmrit, int alreadyOnNikshay,
 			List<ImportRowResult> needsReviewRows, List<ImportRowResult> failedRows) {
 	}
 
@@ -104,6 +105,8 @@ public class NikshayImportService {
 		}
 
 		int updated = 0;
+		int createdByAmritCount = 0;
+		int alreadyOnNikshayCount = 0;
 		List<ImportRowResult> needsReview = new ArrayList<>();
 		List<ImportRowResult> failedRows = new ArrayList<>();
 
@@ -141,8 +144,14 @@ public class NikshayImportService {
 			if ("success".equalsIgnoreCase(status) || "skipped".equalsIgnoreCase(status)) {
 				String[] tokens = generatedId.isEmpty() ? new String[0] : generatedId.split("\\s+");
 				if (tokens.length == 1) {
-					writeNikshayId(visitDate, benRegId, tokens[0], modifiedBy);
+					boolean createdByAmrit = "success".equalsIgnoreCase(status);
+					writeNikshayId(visitDate, benRegId, tokens[0], createdByAmrit, modifiedBy);
 					updated++;
+					if (createdByAmrit) {
+						createdByAmritCount++;
+					} else {
+						alreadyOnNikshayCount++;
+					}
 				} else {
 					String note = tokens.length == 0 ? "Row marked " + status + " but has no generatedId."
 							: "Multiple possible existing Nikshay IDs (" + generatedId
@@ -157,8 +166,8 @@ public class NikshayImportService {
 			}
 		}
 
-		return new ImportSummary(records.size(), updated, failedRows.size(), needsReview.size(), needsReview,
-				failedRows);
+		return new ImportSummary(records.size(), updated, failedRows.size(), needsReview.size(),
+				createdByAmritCount, alreadyOnNikshayCount, needsReview, failedRows);
 	}
 
 	private static Long parseBenRegId(String raw) {
@@ -186,12 +195,14 @@ public class NikshayImportService {
 		return digits.matches("[1-9][0-9]{9}") ? digits : null;
 	}
 
-	private void writeNikshayId(LocalDate visitDate, Long benRegId, String nikshayId, String modifiedBy) {
+	private void writeNikshayId(LocalDate visitDate, Long benRegId, String nikshayId, boolean createdByAmrit,
+			String modifiedBy) {
 		Long suspectedId = nikshayExportRepository.findLatestSuspectedId(benRegId);
 		if (suspectedId != null) {
-			nikshayExportRepository.updateNikshayId(suspectedId, nikshayId, modifiedBy);
+			nikshayExportRepository.updateNikshayId(suspectedId, nikshayId, createdByAmrit, modifiedBy);
 		} else {
-			nikshayExportRepository.insertSuspectedWithNikshayId(benRegId, visitDate, nikshayId, modifiedBy);
+			nikshayExportRepository.insertSuspectedWithNikshayId(benRegId, visitDate, nikshayId, createdByAmrit,
+					modifiedBy);
 		}
 	}
 }
