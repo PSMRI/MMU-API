@@ -66,6 +66,18 @@ import com.iemr.mmu.repo.stoptb.NikshayExportRepository;
  *   as a success; more than one is ambiguous and left for manual review
  *   rather than guessed.
  * - "failed": never written; surfaced in the response for visibility.
+ *
+ * Alongside the ID itself, each written row records
+ * tb_suspected.nikshay_created_by_amrit — true when the portal generated
+ * that ID for us ("success"), false when the ID already existed on the
+ * portal and we only matched it back ("skipped"/"failed"). It exists purely
+ * so the programme can count how many Nikshay IDs this application actually
+ * caused to be created, rather than inferring it from the ID's presence.
+ * Rows written before this column existed, or by any other flow, stay NULL
+ * — deliberately distinct from an explicit false, since "we don't know"
+ * isn't the same as "it already existed". Note "failed" rows are never
+ * written at all (they have no ID), so false in practice comes from
+ * "skipped"; the mapping covers "failed" for completeness only.
  */
 @Service
 public class NikshayImportService {
@@ -77,7 +89,12 @@ public class NikshayImportService {
 			String status, String generatedId, String note) {
 	}
 
+	/** {@code createdByAmrit} + {@code alreadyOnNikshay} are a breakdown of
+	 * {@code updated}: of the rows written, how many carried a portal-generated
+	 * new ID vs. an ID that already existed there. They always sum to
+	 * {@code updated}. */
 	public record ImportSummary(int csvRowCount, int updated, int failed, int needsReview,
+			int createdByAmrit, int alreadyOnNikshay,
 			List<ImportRowResult> needsReviewRows, List<ImportRowResult> failedRows) {
 	}
 
@@ -104,6 +121,8 @@ public class NikshayImportService {
 		}
 
 		int updated = 0;
+		int createdByAmritCount = 0;
+		int alreadyOnNikshayCount = 0;
 		List<ImportRowResult> needsReview = new ArrayList<>();
 		List<ImportRowResult> failedRows = new ArrayList<>();
 
@@ -141,8 +160,14 @@ public class NikshayImportService {
 			if ("success".equalsIgnoreCase(status) || "skipped".equalsIgnoreCase(status)) {
 				String[] tokens = generatedId.isEmpty() ? new String[0] : generatedId.split("\\s+");
 				if (tokens.length == 1) {
-					writeNikshayId(visitDate, benRegId, tokens[0], modifiedBy);
+					boolean createdByAmrit = "success".equalsIgnoreCase(status);
+					writeNikshayId(visitDate, benRegId, tokens[0], createdByAmrit, modifiedBy);
 					updated++;
+					if (createdByAmrit) {
+						createdByAmritCount++;
+					} else {
+						alreadyOnNikshayCount++;
+					}
 				} else {
 					String note = tokens.length == 0 ? "Row marked " + status + " but has no generatedId."
 							: "Multiple possible existing Nikshay IDs (" + generatedId
@@ -157,8 +182,8 @@ public class NikshayImportService {
 			}
 		}
 
-		return new ImportSummary(records.size(), updated, failedRows.size(), needsReview.size(), needsReview,
-				failedRows);
+		return new ImportSummary(records.size(), updated, failedRows.size(), needsReview.size(),
+				createdByAmritCount, alreadyOnNikshayCount, needsReview, failedRows);
 	}
 
 	private static Long parseBenRegId(String raw) {
@@ -186,12 +211,14 @@ public class NikshayImportService {
 		return digits.matches("[1-9][0-9]{9}") ? digits : null;
 	}
 
-	private void writeNikshayId(LocalDate visitDate, Long benRegId, String nikshayId, String modifiedBy) {
+	private void writeNikshayId(LocalDate visitDate, Long benRegId, String nikshayId, boolean createdByAmrit,
+			String modifiedBy) {
 		Long suspectedId = nikshayExportRepository.findLatestSuspectedId(benRegId);
 		if (suspectedId != null) {
-			nikshayExportRepository.updateNikshayId(suspectedId, nikshayId, modifiedBy);
+			nikshayExportRepository.updateNikshayId(suspectedId, nikshayId, createdByAmrit, modifiedBy);
 		} else {
-			nikshayExportRepository.insertSuspectedWithNikshayId(benRegId, visitDate, nikshayId, modifiedBy);
+			nikshayExportRepository.insertSuspectedWithNikshayId(benRegId, visitDate, nikshayId, createdByAmrit,
+					modifiedBy);
 		}
 	}
 }
