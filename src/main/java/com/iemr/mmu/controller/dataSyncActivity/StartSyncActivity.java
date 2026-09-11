@@ -70,6 +70,10 @@ public class StartSyncActivity {
 	private DiagnosticDocumentFetchService diagnosticDocumentFetchService;
 	@Autowired
 	private DownSyncDataFromServerImpl downSyncDataFromServerImpl;
+	@Autowired
+	private DiagnosticDocumentPushServiceImpl diagnosticDocumentPushServiceImpl;
+	@Autowired
+	private DiagnosticDocumentFetchService diagnosticDocumentFetchService;
 	private static final String GROUP_ID = "groupID";
 	private static final String PROVIDER_SERVICE_MAP_ID = "providerServiceMapID";
 
