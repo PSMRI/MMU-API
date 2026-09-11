@@ -264,10 +264,6 @@ public class NikshayExportRepository {
 		return getJdbcTemplate().query(sql, (ResultSet rs) -> rs.next() ? rs.getLong("id") : null, benRegId);
 	}
 
-	/** {@code createdByAmrit} records whether this Nikshay ID was newly
-	 * generated for us by the portal (true) or already existed there and was
-	 * only matched back (false) — see nikshay_created_by_amrit on the write
-	 * methods' class Javadoc. */
 	public void updateNikshayId(Long suspectedId, String nikshayId, boolean createdByAmrit, String modifiedBy) {
 		String sql = "UPDATE tb_suspected SET nikshay_id = ?, nikshay_created_by_amrit = ?, modified_by = ?, "
 				+ "last_mod_date = CURRENT_TIMESTAMP WHERE id = ?";
