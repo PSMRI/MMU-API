@@ -24,7 +24,6 @@ package com.iemr.mmu.repo.stoptb;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.util.List;
@@ -35,8 +34,6 @@ import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementSetter;
-import org.springframework.jdbc.support.GeneratedKeyHolder;
-import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -89,9 +86,15 @@ import org.springframework.stereotype.Repository;
  * callers can report totals, but there is deliberately no separate report
  * of *who* was skipped or why.
  *
- * The Nikshay ID itself lives on db_iemr.tb_suspected.nikshay_id — not
- * tb_stoptb_diagnostics, which also has a nikshay_id column but is not the
- * table this feature writes to.
+ * The Nikshay ID itself lives on db_identity.i_beneficiarydetails.nikshayId —
+ * a beneficiary-level identifier, not a clinical fact, so it's stored
+ * alongside the beneficiary's identity (same table already holds rchid for
+ * RMNCH), not on db_iemr.tb_suspected. Storing it on tb_suspected would mean
+ * fabricating a bare "this beneficiary is a TB suspect" row for anyone who
+ * never actually had a genuine suspected-case row — wrong, since every
+ * Stop TB beneficiary needs a Nikshay ID regardless of suspect status.
+ * Not tb_stoptb_diagnostics either, which also has its own nikshay_id column
+ * but is a separate, manually-entered field this feature never touches.
  */
 @Repository
 public class NikshayExportRepository {
@@ -146,8 +149,7 @@ public class NikshayExportRepository {
 			+ "  (SELECT ge.hiv_status FROM tb_stoptb_general_examination ge WHERE ge.beneficiary_reg_id = m.BenRegId "
 			+ "     AND ge.deleted = 0 ORDER BY ge.id DESC LIMIT 1) AS hivStatus, "
 			+ "  d.IsHIVPositive AS isHivPos, "
-			+ "  (SELECT s.nikshay_id FROM tb_suspected s WHERE s.benRegID = m.BenRegId "
-			+ "     AND s.nikshay_id IS NOT NULL ORDER BY s.id DESC LIMIT 1) AS existingNikshayId "
+			+ "  d.nikshayId AS existingNikshayId "
 			+ "FROM db_identity.i_beneficiarymapping m "
 			+ "LEFT JOIN db_identity.i_beneficiarydetails d ON d.BeneficiaryDetailsId = m.BenDetailsId AND d.Deleted = 0 "
 			+ "LEFT JOIN db_identity.i_beneficiaryaddress a ON a.BenAddressID = m.BenAddressId "
@@ -254,40 +256,29 @@ public class NikshayExportRepository {
 		return getJdbcTemplate().query(sql, (rs, rowNum) -> rs.getLong("BenRegId"), phoneDigits, firstName);
 	}
 
-	/** The most recent tb_suspected row for this beneficiary, if any — looked
-	 * up live at import time (no export-time snapshot needed, since the
-	 * beneficiary is identified directly from the results CSV's own benRegId
-	 * column). Null if none exists yet. Note: tb_suspected has no `deleted`
-	 * column, unlike most other AMRIT tables. */
-	public Long findLatestSuspectedId(Long benRegId) {
-		String sql = "SELECT id FROM tb_suspected WHERE benRegID = ? ORDER BY id DESC LIMIT 1";
-		return getJdbcTemplate().query(sql, (ResultSet rs) -> rs.next() ? rs.getLong("id") : null, benRegId);
-	}
-
-	public void updateNikshayId(Long suspectedId, String nikshayId, boolean createdByAmrit, String modifiedBy) {
-		String sql = "UPDATE tb_suspected SET nikshay_id = ?, nikshay_created_by_amrit = ?, modified_by = ?, "
-				+ "last_mod_date = CURRENT_TIMESTAMP WHERE id = ?";
-		getJdbcTemplate().update(sql, nikshayId, createdByAmrit, modifiedBy, suspectedId);
-	}
-
-	/** Called when a beneficiary had no tb_suspected row yet — creates one to
-	 * hold the Nikshay ID the portal generated. created_date is set explicitly
-	 * because, unlike created_date on most other AMRIT tables, tb_suspected's
-	 * has no DB-side default. */
-	public Long insertSuspectedWithNikshayId(Long benRegId, LocalDate visitDate, String nikshayId,
-			boolean createdByAmrit, String createdBy) {
-		String sql = "INSERT INTO tb_suspected (benRegID, visit_date, nikshay_id, nikshay_created_by_amrit, "
-				+ "created_by, created_date) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)";
-		KeyHolder keyHolder = new GeneratedKeyHolder();
-		getJdbcTemplate().update(connection -> {
-			PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-			ps.setLong(1, benRegId);
-			ps.setTimestamp(2, Timestamp.valueOf(visitDate.atStartOfDay()));
-			ps.setString(3, nikshayId);
-			ps.setBoolean(4, createdByAmrit);
-			ps.setString(5, createdBy);
-			return ps;
-		}, keyHolder);
-		return keyHolder.getKey().longValue();
+	/** Writes the Nikshay ID onto the beneficiary's own identity record
+	 * (db_identity.i_beneficiarydetails.nikshayId) instead of tb_suspected —
+	 * see class Javadoc. Always an UPDATE, never an INSERT: every beneficiary
+	 * this method is called for already has an i_beneficiarydetails row (the
+	 * export only ever surfaces/matches beneficiaries whose identity has
+	 * synced — see streamPendingBeneficiaries/findMatchingBeneficiaryIds,
+	 * both of which require d.FirstName to be non-null), so there's no
+	 * "beneficiary has no row yet" case to fabricate a row for.
+	 *
+	 * Resolved via i_beneficiarymapping.BenRegId -> BenDetailsId, not by
+	 * trusting i_beneficiarydetails.BeneficiaryRegID directly — that column
+	 * is a nullable denormalized copy, not the authoritative link, same as
+	 * every other query in this class.
+	 *
+	 * Returns the number of rows updated. Callers should treat 0 as an error
+	 * — it means no synced i_beneficiarydetails row was found for this
+	 * benRegId, which shouldn't happen given the guarantee above, but is
+	 * worth surfacing rather than silently dropping the ID on the floor. */
+	public int writeNikshayId(Long benRegId, String nikshayId, boolean createdByAmrit, String modifiedBy) {
+		String sql = "UPDATE db_identity.i_beneficiarydetails d "
+				+ "JOIN db_identity.i_beneficiarymapping m ON m.BenDetailsId = d.BeneficiaryDetailsId "
+				+ "SET d.nikshayId = ?, d.nikshayCreatedByAmrit = ?, d.ModifiedBy = ?, d.LastModDate = CURRENT_TIMESTAMP "
+				+ "WHERE m.BenRegId = ? AND m.Deleted = 0 AND d.Deleted = 0";
+		return getJdbcTemplate().update(sql, nikshayId, createdByAmrit, modifiedBy, benRegId);
 	}
 }

@@ -85,6 +85,10 @@ public class NikshayImportService {
 	@Autowired
 	private NikshayExportRepository nikshayExportRepository;
 
+	// visitDate is accepted for API/form compatibility with the controller's
+	// multipart request but no longer used by the write itself — the Nikshay
+	// ID now lands on i_beneficiarydetails (no visit_date column there), not
+	// tb_suspected (see NikshayExportRepository.writeNikshayId's Javadoc).
 	public ImportSummary importResults(LocalDate visitDate, InputStream csvInputStream, String modifiedBy)
 			throws Exception {
 		List<CSVRecord> records;
@@ -145,12 +149,23 @@ public class NikshayImportService {
 				String[] tokens = generatedId.isEmpty() ? new String[0] : generatedId.split("\\s+");
 				if (tokens.length == 1) {
 					boolean createdByAmrit = "success".equalsIgnoreCase(status);
-					writeNikshayId(visitDate, benRegId, tokens[0], createdByAmrit, modifiedBy);
-					updated++;
-					if (createdByAmrit) {
-						createdByAmritCount++;
+					int rowsUpdated = nikshayExportRepository.writeNikshayId(benRegId, tokens[0], createdByAmrit,
+							modifiedBy);
+					if (rowsUpdated > 0) {
+						updated++;
+						if (createdByAmrit) {
+							createdByAmritCount++;
+						} else {
+							alreadyOnNikshayCount++;
+						}
 					} else {
-						alreadyOnNikshayCount++;
+						// Shouldn't happen — every benRegId reaching here was matched via a
+						// query that already requires a synced i_beneficiarydetails row (see
+						// NikshayExportRepository.writeNikshayId's Javadoc) — but surface it
+						// rather than silently dropping the generated ID on the floor.
+						failedRows.add(new ImportRowResult(i, benRegId, firstName, middleLastName, status,
+								generatedId, "No synced beneficiary details found for benRegId " + benRegId
+										+ " — could not write the Nikshay ID."));
 					}
 				} else {
 					String note = tokens.length == 0 ? "Row marked " + status + " but has no generatedId."
@@ -195,14 +210,4 @@ public class NikshayImportService {
 		return digits.matches("[1-9][0-9]{9}") ? digits : null;
 	}
 
-	private void writeNikshayId(LocalDate visitDate, Long benRegId, String nikshayId, boolean createdByAmrit,
-			String modifiedBy) {
-		Long suspectedId = nikshayExportRepository.findLatestSuspectedId(benRegId);
-		if (suspectedId != null) {
-			nikshayExportRepository.updateNikshayId(suspectedId, nikshayId, createdByAmrit, modifiedBy);
-		} else {
-			nikshayExportRepository.insertSuspectedWithNikshayId(benRegId, visitDate, nikshayId, createdByAmrit,
-					modifiedBy);
-		}
-	}
 }
