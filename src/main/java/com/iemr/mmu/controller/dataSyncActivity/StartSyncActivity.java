@@ -21,6 +21,8 @@
 */
 package com.iemr.mmu.controller.dataSyncActivity;
 
+import java.util.Map;
+
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +33,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.google.gson.Gson;
@@ -38,6 +41,8 @@ import com.iemr.mmu.service.dataSyncActivity.DownSyncDataFromServerImpl;
 import com.iemr.mmu.service.dataSyncActivity.DownloadDataFromServerImpl;
 import com.iemr.mmu.service.dataSyncActivity.DownloadDataFromServerTransactionalImpl;
 import com.iemr.mmu.service.dataSyncActivity.UploadDataToServerImpl;
+import com.iemr.mmu.service.dataSyncLayerCentral.DiagnosticDocumentFetchService;
+import com.iemr.mmu.service.dataSyncLayerCentral.DiagnosticDocumentPushServiceImpl;
 import com.iemr.mmu.utils.CookieUtil;
 import com.iemr.mmu.utils.response.OutputResponse;
 
@@ -60,7 +65,12 @@ public class StartSyncActivity {
 	@Autowired
 	private DownloadDataFromServerTransactionalImpl downloadDataFromServerTransactionalImpl;
 	@Autowired
+	private DiagnosticDocumentPushServiceImpl diagnosticDocumentPushServiceImpl;
+	@Autowired
+	private DiagnosticDocumentFetchService diagnosticDocumentFetchService;
+	@Autowired
 	private DownSyncDataFromServerImpl downSyncDataFromServerImpl;
+
 	private static final String GROUP_ID = "groupID";
 	private static final String PROVIDER_SERVICE_MAP_ID = "providerServiceMapID";
 
@@ -89,6 +99,45 @@ public class StartSyncActivity {
 			response.setError(e);
 		}
 		return response.toStringWithSerialization();
+	}
+
+	@Operation(summary = "Push pending diagnostic documents (docsProcessed='N') to the further central server, in batches")
+	@PostMapping(value = { "/diagnostic-documents-to-server" })
+	public String diagnosticDocumentsToServer(@RequestHeader(value = "Authorization") String authorization,
+			@RequestHeader(value = "ServerAuthorization") String serverAuthorization,
+			@RequestParam(required = false) Long villageId) {
+		OutputResponse response = new OutputResponse();
+		try {
+			String s = diagnosticDocumentPushServiceImpl.pushPendingDocuments(serverAuthorization, villageId);
+			if (s != null)
+				response.setResponse(s);
+			else
+				response.setError(5000, "Error in diagnostic document push");
+		} catch (Exception e) {
+			logger.error("Error in diagnostic document push : " + e);
+			response.setError(e);
+		}
+		return response.toString();
+	}
+
+	@Operation(summary = "Fetch a short-lived download URL for the latest successfully-pushed diagnostic document matching a beneficiary+documentType, from this van's own local record")
+	@GetMapping(value = { "/diagnostic-documents/download" })
+	public String diagnosticDocumentDownloadUrl(@RequestParam Long beneficiaryId, @RequestParam String documentType,
+			@RequestHeader(value = "Authorization") String authorization) {
+		OutputResponse response = new OutputResponse();
+		try {
+			Map<String, Object> download = diagnosticDocumentFetchService.getLatestDocumentDownload(beneficiaryId,
+					documentType);
+			if (download != null)
+				response.setResponse(new Gson().toJson(download));
+			else
+				response.setError(5000, "No pushed document found for beneficiaryId=" + beneficiaryId
+						+ ", documentType=" + documentType);
+		} catch (Exception e) {
+			logger.error("Error fetching diagnostic document download URL : " + e);
+			response.setError(e);
+		}
+		return response.toString();
 	}
 
 	@Operation(summary = "Get data sync group details")
