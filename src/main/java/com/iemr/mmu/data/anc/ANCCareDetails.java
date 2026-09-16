@@ -126,9 +126,9 @@ public class ANCCareDetails {
 	private Boolean deleted;
 
 	@Expose
-	@Column(name = "Processed", insertable = false, updatable = true)
-	private String processed;
-
+	@Column(name = "Processed", updatable = true)
+	private String processed = "N";
+	
 	@Expose
 	@Column(name = "CreatedBy")
 	private String createdBy;
