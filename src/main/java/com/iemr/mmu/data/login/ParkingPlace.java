@@ -34,6 +34,7 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 
+import jakarta.persistence.PreUpdate;
 import com.google.gson.annotations.Expose;
 import com.iemr.mmu.data.location.Country;
 import com.iemr.mmu.data.location.DistrictBlock;
@@ -133,6 +134,13 @@ public class ParkingPlace {
 	@Expose
 	@Column(name = "Processed", insertable = false, updatable = true)
 	private String processed;
+
+	@PreUpdate
+	public void setProcessedDefault() {
+		if (this.processed == null) {
+			this.processed = "N";
+		}
+	}
 	@Expose
 	@Column(name = "CreatedBy")
 	private String createdBy;

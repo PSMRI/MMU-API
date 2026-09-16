@@ -468,6 +468,10 @@ public class ANCServiceImpl implements ANCService {
 
 			BeneficiaryVisitDetail benVisitDetailsOBJ = InputMapper.gson().fromJson(visitDetailsOBJ.get(VISITDETAILS),
 					BeneficiaryVisitDetail.class);
+   
+			if (benVisitDetailsOBJ.getProcessed() == null) {
+            	benVisitDetailsOBJ.setProcessed("N");
+        	}
 
 			// benVisitDetailsOBJ.setVanID(commonUtilityClass.getVanID());
 			// benVisitDetailsOBJ.setParkingPlaceID(commonUtilityClass.getParkingPlaceID());
@@ -557,6 +561,10 @@ public class ANCServiceImpl implements ANCService {
 			if (null != ancCareDetailsOBJ) {
 				ancCareDetailsOBJ.setBenVisitID(benVisitID);
 				ancCareDetailsOBJ.setVisitCode(benVisitCode);
+				if (ancCareDetailsOBJ.getProcessed() == null) {
+                ancCareDetailsOBJ.setProcessed("N");
+            	}
+
 				ancCareSuccessFlag = ancNurseServiceImpl.saveBenAncCareDetails(ancCareDetailsOBJ);
 			}
 		}
