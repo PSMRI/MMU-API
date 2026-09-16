@@ -30,6 +30,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+import jakarta.persistence.PreUpdate;
 import com.google.gson.annotations.Expose;
 
 @Entity
@@ -63,6 +64,13 @@ public class M_Uom {
 	@Expose
 	@Column(name="Processed",insertable = false, updatable = true)
 	private Character processed;
+
+	@PreUpdate
+	public void setProcessedDefault() {
+		if (this.processed == null) {
+			this.processed = 'N';
+		}
+	}
 	@Expose
 	@Column(name="CreatedBy")
 	private String createdBy;

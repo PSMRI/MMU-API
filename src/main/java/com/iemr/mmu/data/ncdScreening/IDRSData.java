@@ -35,6 +35,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 
@@ -113,6 +114,14 @@ public class IDRSData {
 	@Expose
 	@Column(name = "Processed", insertable = false, updatable = true)
 	private String processed = "N";
+
+	@PreUpdate
+	public void setProcessedDefault() {
+		if (this.processed == null) {
+			this.processed = "N";
+		}
+	}
+
 	@Expose
 	@Column(name = "CreatedBy")
 	private String createdBy;

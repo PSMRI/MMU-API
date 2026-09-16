@@ -35,6 +35,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 
+import jakarta.persistence.PreUpdate;
 import com.google.gson.annotations.Expose;
 import com.iemr.mmu.annotation.sqlinjection.SQLInjectionSafe;
 
@@ -107,6 +108,13 @@ public class BenChildDevelopmentHistory {
 	@Expose
 	@Column(name = "Processed", insertable = false, updatable = true)
 	private String processed;
+
+	@PreUpdate
+	public void setProcessedDefault() {
+		if (this.processed == null) {
+			this.processed = "N";
+		}
+	}
 
 	@Expose
 	@Column(name = "CreatedBy")
