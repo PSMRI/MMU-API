@@ -468,7 +468,11 @@ public class ANCServiceImpl implements ANCService {
 
 			BeneficiaryVisitDetail benVisitDetailsOBJ = InputMapper.gson().fromJson(visitDetailsOBJ.get(VISITDETAILS),
 					BeneficiaryVisitDetail.class);
-
+   
+			if (benVisitDetailsOBJ.getProcessed() == null) {
+            	benVisitDetailsOBJ.setProcessed("N");
+        	}
+			
 			// benVisitDetailsOBJ.setVanID(commonUtilityClass.getVanID());
 			// benVisitDetailsOBJ.setParkingPlaceID(commonUtilityClass.getParkingPlaceID());
 			int i=commonNurseServiceImpl.getMaxCurrentdate(benVisitDetailsOBJ.getBeneficiaryRegID(),benVisitDetailsOBJ.getVisitReason(),benVisitDetailsOBJ.getVisitCategory());
