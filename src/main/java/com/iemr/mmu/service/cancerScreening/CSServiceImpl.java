@@ -1061,6 +1061,10 @@ public class CSServiceImpl implements CSService {
 		if (requestOBJ != null && requestOBJ.has("diagnosis") && !requestOBJ.get("diagnosis").isJsonNull()) {
 			CancerDiagnosis cancerDiagnosis = InputMapper.gson().fromJson(requestOBJ.get("diagnosis"),
 					CancerDiagnosis.class);
+		if (cancerDiagnosis.getProcessed() == null) {
+            cancerDiagnosis.setProcessed("N");
+        }
+
 			Long ID = cSDoctorServiceImpl.saveCancerDiagnosisData(cancerDiagnosis);
 			if (ID != null && ID > 0) {
 				// diagnosis details stored successfully...
