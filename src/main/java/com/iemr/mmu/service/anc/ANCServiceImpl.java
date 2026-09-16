@@ -472,7 +472,7 @@ public class ANCServiceImpl implements ANCService {
 			if (benVisitDetailsOBJ.getProcessed() == null) {
             	benVisitDetailsOBJ.setProcessed("N");
         	}
-			
+
 			// benVisitDetailsOBJ.setVanID(commonUtilityClass.getVanID());
 			// benVisitDetailsOBJ.setParkingPlaceID(commonUtilityClass.getParkingPlaceID());
 			int i=commonNurseServiceImpl.getMaxCurrentdate(benVisitDetailsOBJ.getBeneficiaryRegID(),benVisitDetailsOBJ.getVisitReason(),benVisitDetailsOBJ.getVisitCategory());
@@ -561,6 +561,10 @@ public class ANCServiceImpl implements ANCService {
 			if (null != ancCareDetailsOBJ) {
 				ancCareDetailsOBJ.setBenVisitID(benVisitID);
 				ancCareDetailsOBJ.setVisitCode(benVisitCode);
+				if (ancCareDetailsOBJ.getProcessed() == null) {
+                ancCareDetailsOBJ.setProcessed("N");
+            	}
+
 				ancCareSuccessFlag = ancNurseServiceImpl.saveBenAncCareDetails(ancCareDetailsOBJ);
 			}
 		}
