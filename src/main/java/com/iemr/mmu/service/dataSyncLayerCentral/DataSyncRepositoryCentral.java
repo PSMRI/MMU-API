@@ -24,6 +24,7 @@ package com.iemr.mmu.service.dataSyncLayerCentral;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -53,7 +54,7 @@ public class DataSyncRepositoryCentral {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 
-    private static final Set<String> VALID_SCHEMAS = Set.of("public", "db_iemr", "db_identity","apl_db_iemr","apl_db_identity","db_iemr_sync","db_identity_sync");
+    private static final Set<String> VALID_SCHEMAS = Set.of("public", "db_iemr","db_iemr_mysuru", "db_identity","apl_db_iemr","apl_db_identity","db_iemr_sync","db_identity_sync");
 
     private static final Set<String> VALID_TABLES = Set.of(
             "m_beneficiaryregidmapping", "i_beneficiaryaccount", "i_beneficiaryaddress", "i_beneficiarycontacts",
@@ -99,11 +100,11 @@ public class DataSyncRepositoryCentral {
     }
 
     private boolean isValidSchemaName(String schemaName) {
-        return VALID_SCHEMAS.contains(schemaName.toLowerCase());
+        return schemaName != null && VALID_SCHEMAS.contains(schemaName.trim().toLowerCase(Locale.ROOT));
     }
 
     private boolean isValidTableName(String tableName) {
-        return VALID_TABLES.contains(tableName.toLowerCase());
+        return tableName != null && VALID_TABLES.contains(tableName.trim().toLowerCase(Locale.ROOT));
     }
 
     private boolean isValidColumnNamesList(String columnNames) {
@@ -137,24 +138,31 @@ public class DataSyncRepositoryCentral {
                 schemaName, tableName, vanSerialNo, vanID, vanAutoIncColumnName, syncFacilityID);
         jdbcTemplate = getJdbcTemplate();
         List<Object> params = new ArrayList<>();
+        String normalizedSchemaName = schemaName == null ? null : schemaName.trim();
+        String normalizedTableName = tableName == null ? null : tableName.trim();
+        String normalizedColumnName = vanAutoIncColumnName == null ? null : vanAutoIncColumnName.trim();
 
-        if (!isValidSchemaName(schemaName) || !isValidTableName(tableName) ||
-                !isValidDatabaseIdentifierCharacter(vanAutoIncColumnName)) {
+        if (!isValidSchemaName(normalizedSchemaName) || !isValidTableName(normalizedTableName) ||
+                !isValidDatabaseIdentifierCharacter(normalizedColumnName)) {
             logger.error("Invalid identifiers: schema={}, table={}, column={}", schemaName, tableName,
                     vanAutoIncColumnName);
             throw new IllegalArgumentException("Invalid identifiers provided.");
         }
 
+        String validatedSchemaName = normalizedSchemaName;
+        String validatedTableName = normalizedTableName;
+        String validatedColumnName = normalizedColumnName;
         StringBuilder queryBuilder = new StringBuilder("SELECT ")
-                .append(vanAutoIncColumnName).append(" FROM ")
-                .append(schemaName).append(".").append(tableName).append(" WHERE VanSerialNo = ?");
+                .append(validatedColumnName).append(" FROM ")
+                .append(validatedSchemaName).append(".").append(validatedTableName)
+                .append(" WHERE VanSerialNo = ?");
         logger.info("Constructed query: {}", queryBuilder.toString());
         params.add(vanSerialNo);
-        logger.info("Table name="+tableName.toLowerCase());
+        logger.info("Table name="+validatedTableName.toLowerCase(Locale.ROOT));
         if (List.of("t_patientissue", "t_physicalstockentry", "t_stockadjustment", "t_saitemmapping",
                 "t_stocktransfer", "t_patientreturn", "t_facilityconsumption", "t_indent",
                 "t_indentorder", "t_indentissue", "t_itemstockentry", "t_itemstockexit")
-                .contains(tableName.toLowerCase()) && syncFacilityID > 0) {
+                .contains(validatedTableName.toLowerCase(Locale.ROOT)) && syncFacilityID > 0) {
                     logger.info("If block");
             queryBuilder.append(" AND SyncFacilityID = ?");
             params.add(syncFacilityID);

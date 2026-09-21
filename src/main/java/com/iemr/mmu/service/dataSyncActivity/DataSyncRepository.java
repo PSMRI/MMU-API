@@ -149,8 +149,8 @@ public class DataSyncRepository {
 		jdbcTemplate = getJdbcTemplate();
 
 		String query = " SELECT LOWER(TRIM(s.TableName)) AS TableName, g.SyncTableGroupName "
-				+ " FROM db_iemr.m_synctabledetail s "
-				+ " JOIN db_iemr.m_synctablegroup g ON g.SyncTableGroupID = s.SyncTableGroupID "
+				+ " FROM db_iem_mysurur.m_synctabledetail s "
+				+ " JOIN db_iemr_mysuru.m_synctablegroup g ON g.SyncTableGroupID = s.SyncTableGroupID "
 				+ " WHERE IFNULL(s.Deleted, b'0') = b'0' AND IFNULL(g.Deleted, b'0') = b'0' "
 				+ " AND s.TableName IS NOT NULL ";
 

@@ -38,7 +38,7 @@ public final class SqlIdentifierValidator {
 
 	private static final int MAX_IDENTIFIER_LENGTH = 64;
 
-	private static final Set<String> VALID_SCHEMAS = Set.of("public", "db_iemr", "db_identity", "apl_db_iemr",
+	private static final Set<String> VALID_SCHEMAS = Set.of("public", "db_iemr", "db_iemr_mysuru", "db_identity", "apl_db_iemr",
 			"apl_db_identity", "db_iemr_sync", "db_identity_sync");
 
 	private SqlIdentifierValidator() {
