@@ -1,6 +1,6 @@
 {
   "name": "mmu-api",
-  "version": "1.0.0",
+  "version": "3.6.1",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepare": "husky",
