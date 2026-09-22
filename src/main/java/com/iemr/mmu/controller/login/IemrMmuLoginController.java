@@ -25,6 +25,8 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 
 import org.springframework.web.bind.annotation.GetMapping;
@@ -45,6 +47,8 @@ import com.iemr.mmu.utils.mapper.InputMapper;
 import com.iemr.mmu.utils.response.OutputResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
 @RequestMapping(value = "/user", headers = "Authorization")
 @RestController
@@ -65,8 +69,11 @@ public class IemrMmuLoginController {
 	}
 
 	@Operation(summary = "Get user service point van details")
+	@ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Success"),
+			@ApiResponse(responseCode = "401", description = "Unauthorized"),
+			@ApiResponse(responseCode = "500", description = "Internal server error") })
 	@GetMapping(value = "/getUserServicePointVanDetails", consumes = "application/json", produces = "application/json")
-	public String getUserServicePointVanDetails(@RequestBody String comingRequest, HttpServletRequest request) {
+	public ResponseEntity<String> getUserServicePointVanDetails(@RequestBody String comingRequest, HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
 		try {
 		String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
@@ -79,41 +86,54 @@ public class IemrMmuLoginController {
 			response.setResponse(responseData);
 			}
 			else {
-				response.setError(403, "Unauthorized access: Missing or invalid token");
-				return response.toString();
+				response.setError(401, "Unauthorized access: Missing or invalid token");
+				return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response.toString());
 			}
 			
 		} catch (Exception e) {
-			response.setError(5000, "Error while getting service points and van data");
+			response.setError(500, "Error while getting service points and van data");
 			logger.error("get User SP and van details failed with " + e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response.toString());
 
 		}
 		logger.info("getUserServicePointVanDetails response " + response.toString());
-		return response.toString();
+		return ResponseEntity.ok(response.toString());
 	}
 
 	@Operation(summary = "Get service point villages")
+	@ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Success"),
+			@ApiResponse(responseCode = "400", description = "Invalid request"),
+			@ApiResponse(responseCode = "500", description = "Internal server error") })
 	@PostMapping(value = "/getServicepointVillages", consumes = "application/json", produces = "application/json")
-	public String getServicepointVillages(@RequestBody String comingRequest) {
+	public ResponseEntity<String> getServicepointVillages(@RequestBody String comingRequest) {
 		OutputResponse response = new OutputResponse();
 		try {
 
 			JSONObject obj = new JSONObject(comingRequest);
+			if (!obj.has("servicePointID")) {
+				response.setError(400, "Invalid request: servicePointID is required");
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response.toString());
+			}
 			logger.info("getServicepointVillages request " + comingRequest);
 			String responseData = iemrMmuLoginServiceImpl.getServicepointVillages(obj.getInt("servicePointID"));
 			response.setResponse(responseData);
 		} catch (Exception e) {
-			response.setError(5000, "Error while getting service points and villages");
+			response.setError(500, "Error while getting service points and villages");
 			logger.error("get villages with servicepoint failed with " + e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response.toString());
 
 		}
 		logger.info("getServicepointVillages response " + response.toString());
-		return response.toString();
+		return ResponseEntity.ok(response.toString());
 	}
 
 	@Operation(summary = "Get user van details")
+	@ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Success"),
+			@ApiResponse(responseCode = "400", description = "Invalid request"),
+			@ApiResponse(responseCode = "401", description = "Unauthorized"),
+			@ApiResponse(responseCode = "500", description = "Internal server error") })
 	@PostMapping(value = "/getUserVanSpDetails", consumes = "application/json", produces = "application/json")
-	public String getUserVanSpDetails(@RequestBody String comingRequest, HttpServletRequest request) {
+	public ResponseEntity<String> getUserVanSpDetails(@RequestBody String comingRequest, HttpServletRequest request) {
 		OutputResponse response = new OutputResponse();
 		
 		try {
@@ -128,35 +148,49 @@ public class IemrMmuLoginController {
 						obj.getInt("providerServiceMapID"));
 				response.setResponse(responseData);
 			} else if (userId == null || jwtToken == null) {
-				response.setError(403, "Unauthorized access: Missing or invalid token");
+				response.setError(401, "Unauthorized access: Missing or invalid token");
+				return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response.toString());
 			} else {
-				response.setError(5000, "Invalid request");
+				response.setError(400, "Invalid request");
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response.toString());
 			}
 			
 			
 		} catch (Exception e) {
-			response.setError(5000, "Error while getting van and service points data");
+			response.setError(500, "Error while getting van and service points data");
 			logger.error("getUserVanSpDetails failed with " + e.getMessage(), e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response.toString());
 
 		}
 		logger.info("getUserVanSpDetails response " + response.toString());
-		return response.toString();
+		return ResponseEntity.ok(response.toString());
 	}
 
 	@Operation(summary = "Get van master data")
+	@ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Success"),
+			@ApiResponse(responseCode = "400", description = "Invalid request"),
+			@ApiResponse(responseCode = "404", description = "Not found"),
+			@ApiResponse(responseCode = "500", description = "Internal server error") })
 	@GetMapping(value = "/getVanMaster/{psmID}", consumes = "application/json", produces = "application/json")
-	public String getVanMaster(@PathVariable("psmID") Integer psmID) {
+	public ResponseEntity<String> getVanMaster(@PathVariable("psmID") Integer psmID) {
 		OutputResponse response = new OutputResponse();
 		try {
-			if (psmID != null)
-				response.setResponse(iemrMmuLoginServiceImpl.getVanMaster(psmID));
-			else
-				response.setError(5000, "Invalid request");
+			if (psmID == null || psmID <= 0) {
+				response.setError(400, "Invalid request");
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response.toString());
+			}
+			String masterData = iemrMmuLoginServiceImpl.getVanMaster(psmID);
+			if (masterData == null || masterData.trim().isEmpty()) {
+				response.setError(404, "No van master data found");
+				return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response.toString());
+			}
+			response.setResponse(masterData);
 		} catch (Exception e) {
 			logger.info("Error occurred while fetching van master is  : " + e);
-			response.setError(5000, "Error occurred while fetching van master is  : " + e);
+			response.setError(500, "Error occurred while fetching van master");
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response.toString());
 			
 		}
-		return response.toString();
+		return ResponseEntity.ok(response.toString());
 	}
 }
