@@ -34,6 +34,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.google.gson.Gson;
+import com.iemr.mmu.service.dataSyncActivity.DownSyncDataFromServerImpl;
 import com.iemr.mmu.service.dataSyncActivity.DownloadDataFromServerImpl;
 import com.iemr.mmu.service.dataSyncActivity.DownloadDataFromServerTransactionalImpl;
 import com.iemr.mmu.service.dataSyncActivity.UploadDataToServerImpl;
@@ -58,6 +59,8 @@ public class StartSyncActivity {
 	private DownloadDataFromServerImpl downloadDataFromServerImpl;
 	@Autowired
 	private DownloadDataFromServerTransactionalImpl downloadDataFromServerTransactionalImpl;
+	@Autowired
+	private DownSyncDataFromServerImpl downSyncDataFromServerImpl;
 	private static final String GROUP_ID = "groupID";
 	private static final String PROVIDER_SERVICE_MAP_ID = "providerServiceMapID";
 
@@ -220,6 +223,61 @@ public class StartSyncActivity {
 			}
 		} catch (Exception e) {
 			logger.error("Error while downloading inventory transaction data : " + e);
+			response.setError(e);
+		}
+		return response.toString();
+	}
+
+
+	@Operation(summary = "Start the down-sync of masters & transactional data from central to local")
+	@PostMapping(value = { "/startDownSync" })
+	public String startDownSync(@RequestBody String requestOBJ,
+			@RequestHeader(value = "Authorization") String authorization,
+			@RequestHeader(value = "ServerAuthorization") String serverAuthorization, HttpServletRequest request) {
+		OutputResponse response = new OutputResponse();
+		try {
+			String jwtToken = CookieUtil.getJwtTokenFromCookie(request);
+
+			if (serverAuthorization == null || serverAuthorization.trim().isEmpty()) {
+				logger.error("Down-sync : ServerAuthorization is empty - do the data sync server login first");
+				response.setError(5000,
+						"Server authorization is missing. Kindly do the data sync server login and try again.");
+				return response.toString();
+			}
+			logger.info("Down-sync : ServerAuthorization received, length {}", serverAuthorization.trim().length());
+
+			JSONObject obj = new JSONObject(requestOBJ);
+			if (obj.has("vanID") && obj.get("vanID") != null) {
+				Integer providerServiceMapID = obj.has(PROVIDER_SERVICE_MAP_ID) && !obj.isNull(PROVIDER_SERVICE_MAP_ID)
+						? obj.getInt(PROVIDER_SERVICE_MAP_ID)
+						: null;
+
+				String s = downSyncDataFromServerImpl.startDownSync(serverAuthorization, jwtToken, obj.getInt("vanID"),
+						providerServiceMapID);
+
+				if (s != null && s.equalsIgnoreCase("inProgress")) {
+					response.setError(5000, "Down-sync is already in progress, kindly wait for it to finish");
+				} else {
+					response.setResponse(new Gson().toJson(downSyncDataFromServerImpl.getDownSyncStatus()));
+				}
+			} else {
+				response.setError(5000, "vanID is missing, Kindly contact the administrator.");
+			}
+		} catch (Exception e) {
+			logger.error("Error in down-sync : {}", e.getMessage(), e);
+			response.setError(e);
+		}
+		return response.toString();
+	}
+
+	@Operation(summary = "Down-sync progress check")
+	@GetMapping(value = { "/checkDownSyncProgress" })
+	public String checkDownSyncProgress() {
+		OutputResponse response = new OutputResponse();
+		try {
+			response.setResponse(new Gson().toJson(downSyncDataFromServerImpl.getDownSyncStatus()));
+		} catch (Exception e) {
+			logger.error("Error in down-sync progress check : {}", e.getMessage(), e);
 			response.setError(e);
 		}
 		return response.toString();

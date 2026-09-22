@@ -142,6 +142,22 @@ public class BeneficiaryVisitDetail {
 	private String visitFlowStatusFlag;
 
 	@Expose
+	@Column(name = "NurseID")
+	private Long nurseID;
+
+	@Expose
+	@Column(name = "DoctorID")
+	private Long doctorID;
+
+	@Expose
+	@Column(name = "PharmacistID")
+	private Long pharmacistID;
+
+	@Expose
+	@Column(name = "LabTechnicianID")
+	private Long labTechnicianID;
+
+	@Expose
 	@Column(name = "VanSerialNo")
 	private Long vanSerialNo;
 
@@ -533,6 +549,38 @@ public class BeneficiaryVisitDetail {
 
 	public void setFiles(ArrayList<Map<String, String>> files) {
 		this.files = files;
+	}
+
+	public Long getNurseID() {
+		return nurseID;
+	}
+
+	public void setNurseID(Long nurseID) {
+		this.nurseID = nurseID;
+	}
+
+	public Long getDoctorID() {
+		return doctorID;
+	}
+
+	public void setDoctorID(Long doctorID) {
+		this.doctorID = doctorID;
+	}
+
+	public Long getPharmacistID() {
+		return pharmacistID;
+	}
+
+	public void setPharmacistID(Long pharmacistID) {
+		this.pharmacistID = pharmacistID;
+	}
+
+	public Long getLabTechnicianID() {
+		return labTechnicianID;
+	}
+
+	public void setLabTechnicianID(Long labTechnicianID) {
+		this.labTechnicianID = labTechnicianID;
 	}
 
 }
