@@ -185,6 +185,7 @@ public class ANCCareDetails {
 
 	public ANCCareDetails() {
 		super();
+		this.processed = "N";
 		// TODO Auto-generated constructor stub
 	}
 
