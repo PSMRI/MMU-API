@@ -30,6 +30,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 
@@ -934,6 +935,13 @@ public class BeneficiaryFlowStatus {
 	public String getProcessed() {
 		return processed;
 	}
+
+	@PreUpdate 
+	public void preUpdate() {
+    if (this.processed == null) {
+        this.processed = "N";
+    }
+}
 
 	public void setProcessed(String processed) {
 		this.processed = processed;

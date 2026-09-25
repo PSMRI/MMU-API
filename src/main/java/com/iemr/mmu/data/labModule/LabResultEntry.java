@@ -39,6 +39,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 
+import jakarta.persistence.PreUpdate;
 import com.google.gson.annotations.Expose;
 import com.iemr.mmu.utils.AESEncryption.AESEncryptionDecryption;
 
@@ -106,6 +107,13 @@ public class LabResultEntry {
 	@Expose
 	@Column(name = "Processed", insertable = false)
 	private String processed;
+
+	@PreUpdate
+	public void setProcessedDefault() {
+		if (this.processed == null) {
+			this.processed = "N";
+		}
+	}
 
 	@Expose
 	@Column(name = "CreatedBy")
