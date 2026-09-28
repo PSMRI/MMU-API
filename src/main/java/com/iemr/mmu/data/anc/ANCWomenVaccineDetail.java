@@ -130,6 +130,7 @@ public class ANCWomenVaccineDetail {
 
 	public ANCWomenVaccineDetail() {
 		super();
+		this.processed = "N";
 		// TODO Auto-generated constructor stub
 	}
 

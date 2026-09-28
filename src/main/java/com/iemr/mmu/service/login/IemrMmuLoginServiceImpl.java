@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -43,6 +45,8 @@ import com.iemr.mmu.repo.login.VanServicepointMappingRepo;
 
 @Service
 public class IemrMmuLoginServiceImpl implements IemrMmuLoginService {
+
+	private static final Logger logger = LoggerFactory.getLogger(IemrMmuLoginServiceImpl.class);
 
 	private UserParkingplaceMappingRepo userParkingplaceMappingRepo;
 	private MasterVanRepo masterVanRepo;
@@ -186,6 +190,7 @@ public class IemrMmuLoginServiceImpl implements IemrMmuLoginService {
 			parkingPlaceLocationMap.put("blockName", obj1[6]);
 		}
 		resMap.put("UserLocDetails", parkingPlaceLocationMap);
+
 		// 1.1
 		return new Gson().toJson(resMap);
 	}
