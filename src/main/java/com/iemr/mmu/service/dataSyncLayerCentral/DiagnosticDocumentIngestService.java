@@ -58,16 +58,18 @@ public class DiagnosticDocumentIngestService {
 	}
 
 	private Map<String, Object> ingestOne(Map<String, Object> item) {
-		Long diagnosticOrderId = asLong(item.get("diagnosticOrderId"));
-		String externalOrderId = (String) item.get("externalOrderId");
-		String documentType = (String) item.get("documentType");
-
 		Map<String, Object> ack = new HashMap<>();
-		ack.put("diagnosticOrderId", diagnosticOrderId);
-		ack.put("externalOrderId", externalOrderId);
-		ack.put("documentType", documentType);
+		ack.put("documentId", item.get("documentId"));
+		ack.put("diagnosticOrderId", item.get("diagnosticOrderId"));
+		ack.put("externalOrderId", item.get("externalOrderId"));
+		ack.put("documentType", item.get("documentType"));
 
 		try {
+			ack.put("documentId", asLong(item.get("documentId")));
+			Long diagnosticOrderId = asLong(item.get("diagnosticOrderId"));
+			ack.put("diagnosticOrderId", diagnosticOrderId);
+			String documentType = (String) item.get("documentType");
+
 			byte[] plaintext = Base64.getDecoder().decode((String) item.get("fileContentBase64"));
 
 			String sha256Hash = (String) item.get("sha256Hash");
@@ -81,6 +83,12 @@ public class DiagnosticDocumentIngestService {
 			Long villageId = asLong(item.get("villageId"));
 			String orderType = (String) item.get("orderType");
 			String storedFileName = (String) item.get("storedFileName");
+			if (villageId == null || beneficiaryId == null || orderType == null || documentType == null
+					|| storedFileName == null) {
+				ack.put("status", "FAILED");
+				ack.put("error", "Missing villageId, beneficiaryId, orderType, documentType or storedFileName");
+				return ack;
+			}
 			String s3Key = villageId + "/" + beneficiaryId + "/" + orderType + "/" + documentType + "/"
 					+ storedFileName;
 			String contentType = (String) item.get("contentType");
@@ -94,8 +102,9 @@ public class DiagnosticDocumentIngestService {
 			ack.put("status", "SUCCESS");
 			ack.put("s3Path", s3Key);
 		} catch (Exception e) {
-			logger.error("Error ingesting diagnostic document: diagnosticOrderId=" + diagnosticOrderId
-					+ ", documentType=" + documentType, e);
+			logger.error("Error ingesting diagnostic document: documentId=" + item.get("documentId")
+					+ ", diagnosticOrderId=" + item.get("diagnosticOrderId")
+					+ ", documentType=" + item.get("documentType"), e);
 			ack.put("status", "FAILED");
 			ack.put("error", e.getMessage());
 		}

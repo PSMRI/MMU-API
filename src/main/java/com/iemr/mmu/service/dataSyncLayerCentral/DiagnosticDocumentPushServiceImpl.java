@@ -76,7 +76,7 @@ public class DiagnosticDocumentPushServiceImpl {
 			List<Map<String, Object>> rows = pendingRows.subList(offset, Math.min(offset + batchSize, pendingRows.size()));
 
 			List<Map<String, Object>> payloadItems = new ArrayList<>();
-			Map<String, Map<String, Object>> rowsByAckKey = new HashMap<>();
+			Map<Long, Map<String, Object>> rowsById = new HashMap<>();
 			for (Map<String, Object> row : rows) {
 				Long rowId = asLong(row.get("id"));
 				String base64Plaintext;
@@ -86,10 +86,6 @@ public class DiagnosticDocumentPushServiceImpl {
 					String encryptedPayload = new String(Files.readAllBytes(filePath), StandardCharsets.UTF_8);
 					base64Plaintext = cryptoUtil.decrypt(encryptedPayload);
 				} catch (Exception e) {
-					// File missing/unreadable off the shared filesystem - mark just this row
-					// failed and move on, rather than letting the exception abort the whole run
-					// (which would leave every other pending row, in this batch and beyond,
-					// completely untouched).
 					logger.warn("Skipping diagnostic document push, could not read file off disk: id={}, error={}",
 							rowId, e.getMessage());
 					diagnosticDocumentRepository.markPushFailed(rowId,
@@ -108,6 +104,7 @@ public class DiagnosticDocumentPushServiceImpl {
 				String contentType = (String) row.get("content_type");
 
 				Map<String, Object> item = new HashMap<>();
+				item.put("documentId", rowId);
 				item.put("diagnosticOrderId", diagnosticOrderId);
 				item.put("externalOrderId", externalOrderId);
 				item.put("beneficiaryId", row.get("beneficiary_id"));
@@ -124,22 +121,13 @@ public class DiagnosticDocumentPushServiceImpl {
 				item.put("villageId", villageId);
 				item.put("fileContentBase64", base64Plaintext);
 				payloadItems.add(item);
-				rowsByAckKey.put(ackKey(externalOrderId, documentType), row);
+				rowsById.put(rowId, row);
 			}
 
 			if (payloadItems.isEmpty()) {
-				// Every row in this batch already got marked failed above (missing file or
-				// failed decrypt) - nothing left to send.
 				continue;
 			}
 
-			// Counted here, not after the central round-trip below - these documents WERE
-			// successfully decrypted and queued for sending regardless of whether the central
-			// server subsequently accepts, rejects, or fails to respond to them. Otherwise a
-			// batch that decrypted fine but got rejected by the central server (e.g. an expired
-			// session) would leave totalAttempted at 0, and the caller would see the misleading
-			// "No documents could be decrypted for push" instead of the real per-row reason
-			// (already recorded in docSyncFailureReason).
 			totalAttempted += payloadItems.size();
 
 			String requestOBJ = new Gson().toJson(payloadItems);
@@ -152,7 +140,7 @@ public class DiagnosticDocumentPushServiceImpl {
 
 				if (response == null || !response.hasBody()) {
 					logger.warn("No response body from central server for diagnostic document push, marking batch failed");
-					markBatchFailed(rowsByAckKey, "No response body from central server");
+					markBatchFailed(rowsById, "No response body from central server");
 					continue;
 				}
 
@@ -161,7 +149,7 @@ public class DiagnosticDocumentPushServiceImpl {
 				JsonElement parsedBody = JsonParser.parseString(response.getBody());
 				if (!parsedBody.isJsonObject()) {
 					logger.warn("Unexpected response shape from central server for diagnostic document push, marking batch failed");
-					markBatchFailed(rowsByAckKey, "Unexpected response shape from central server");
+					markBatchFailed(rowsById, "Unexpected response shape from central server");
 					continue;
 				}
 				JsonObject envelope = parsedBody.getAsJsonObject();
@@ -169,7 +157,7 @@ public class DiagnosticDocumentPushServiceImpl {
 						|| !envelope.has("data")) {
 					logger.warn("Central server reported failure for diagnostic document push batch, marking batch failed: {}",
 							response.getBody());
-					markBatchFailed(rowsByAckKey, "Central server reported failure: " + response.getBody());
+					markBatchFailed(rowsById, "Central server reported failure: " + response.getBody());
 					continue;
 				}
 
@@ -177,43 +165,40 @@ public class DiagnosticDocumentPushServiceImpl {
 				}.getType();
 				acks = new Gson().fromJson(envelope.get("data"), ackListType);
 				if (acks == null) {
-					markBatchFailed(rowsByAckKey, "Central server returned no acknowledgements");
+					markBatchFailed(rowsById, "Central server returned no acknowledgements");
 					continue;
 				}
 			} catch (Exception e) {
 				logger.error("Error calling central server for diagnostic document push, marking batch failed", e);
-				markBatchFailed(rowsByAckKey, "Error calling central server: " + e.getMessage());
+				markBatchFailed(rowsById, "Error calling central server: " + e.getMessage());
 				continue;
 			}
 
 			int batchSuccessCount = 0;
-			Map<String, Map<String, Object>> unmatchedRowsByAckKey = new HashMap<>(rowsByAckKey);
+			Map<Long, Map<String, Object>> unmatchedRowsById = new HashMap<>(rowsById);
 			for (Map<String, Object> ack : acks) {
-				String key = ackKey((String) ack.get("externalOrderId"), (String) ack.get("documentType"));
-				Map<String, Object> row = rowsByAckKey.get(key);
-				if (row == null) {
+				Long rowId = ack.get("documentId") instanceof Number ? asLong(ack.get("documentId")) : null;
+				if (rowId == null || unmatchedRowsById.remove(rowId) == null) {
 					continue;
 				}
-				unmatchedRowsByAckKey.remove(key);
 				if ("SUCCESS".equalsIgnoreCase((String) ack.get("status"))) {
-					diagnosticDocumentRepository.markPushedToCentral(asLong(row.get("id")),
-							(String) ack.get("s3Path"));
+					diagnosticDocumentRepository.markPushedToCentral(rowId, (String) ack.get("s3Path"));
 					batchSuccessCount++;
 				} else {
 					String reason = (String) ack.get("error");
-					logger.warn("Central server rejected diagnostic document push: externalOrderId={}, documentType={}, error={}",
-							ack.get("externalOrderId"), ack.get("documentType"), reason);
-					diagnosticDocumentRepository.markPushFailed(asLong(row.get("id")),
+					logger.warn("Central server rejected diagnostic document push: id={}, externalOrderId={}, documentType={}, error={}",
+							rowId, ack.get("externalOrderId"), ack.get("documentType"), reason);
+					diagnosticDocumentRepository.markPushFailed(rowId,
 							reason != null ? reason : "Central server rejected the document");
 				}
 			}
-			if (!unmatchedRowsByAckKey.isEmpty()) {
+			if (!unmatchedRowsById.isEmpty()) {
 				// Central sent back fewer acks than documents we sent - whatever wasn't
 				// accounted for must not be silently left at its previous status forever.
 				logger.warn(
 						"Diagnostic document push: {} row(s) in this batch got no matching ack back, marking failed",
-						unmatchedRowsByAckKey.size());
-				markBatchFailed(unmatchedRowsByAckKey, "No acknowledgement received from central server");
+						unmatchedRowsById.size());
+				markBatchFailed(unmatchedRowsById, "No acknowledgement received from central server");
 			}
 
 			totalSucceeded += batchSuccessCount;
@@ -239,19 +224,15 @@ public class DiagnosticDocumentPushServiceImpl {
 		return "Data successfully synced";
 	}
 
-	private static String ackKey(String externalOrderId, String documentType) {
-		return externalOrderId + "|" + documentType;
-	}
-
 	/***
 	 * @purpose Called when the whole batch call to the central server fails (no/garbled
 	 *          response, non-200, or a thrown exception) - marks every row that was in this
 	 *          batch as failed, matching how /van-to-server marks a whole batch failed on a
 	 *          connection error, rather than leaving them stuck at docsProcessed='N' forever.
 	 */
-	private void markBatchFailed(Map<String, Map<String, Object>> rowsByAckKey, String reason) {
-		for (Map<String, Object> row : rowsByAckKey.values()) {
-			diagnosticDocumentRepository.markPushFailed(asLong(row.get("id")), reason);
+	private void markBatchFailed(Map<Long, Map<String, Object>> rowsById, String reason) {
+		for (Long rowId : rowsById.keySet()) {
+			diagnosticDocumentRepository.markPushFailed(rowId, reason);
 		}
 	}
 
