@@ -48,6 +48,22 @@ public class LabTechnicianServiceImpl implements LabTechnicianService {
     private CommonBenStatusFlowServiceImpl commonBenStatusFlowServiceImpl;
 
     @Autowired
+    private com.iemr.mmu.repo.nurse.BenVisitDetailRepo benVisitDetailRepo;
+    @Autowired
+    private com.iemr.mmu.repo.login.UserLoginRepo userLoginRepo;
+
+    /**
+     * Resolve the numeric user ID of the responsible staff member from the username
+     * captured in createdBy. Returns null if it cannot be resolved.
+     */
+    private Long resolveUserId(String username) {
+        if (username == null || username.trim().isEmpty())
+            return null;
+        com.iemr.mmu.data.login.Users user = userLoginRepo.getUserByUsername(username.trim());
+        return user != null ? user.getUserID() : null;
+    }
+
+    @Autowired
     public void setCommonBenStatusFlowServiceImpl(CommonBenStatusFlowServiceImpl commonBenStatusFlowServiceImpl) {
         this.commonBenStatusFlowServiceImpl = commonBenStatusFlowServiceImpl;
     }
@@ -345,6 +361,12 @@ public class LabTechnicianServiceImpl implements LabTechnicianService {
             labResultSaveFlag = saveLabTestResult(wrapperLabResults);
 
             if (labResultSaveFlag == 1) {
+                // Store the responsible lab technician's user ID against the visit
+                if (wrapperLabResults.getVisitCode() != null) {
+                    Long labTechnicianID = resolveUserId(wrapperLabResults.getCreatedBy());
+                    if (labTechnicianID != null)
+                        benVisitDetailRepo.updateLabTechnicianID(labTechnicianID, wrapperLabResults.getVisitCode());
+                }
                 int i = updateBenFlowStatusFlagAfterLabResultEntry(wrapperLabResults.getLabCompleted(),
                         wrapperLabResults.getBenFlowID(), wrapperLabResults.getBeneficiaryRegID(),
                         wrapperLabResults.getVisitID(), wrapperLabResults.getNurseFlag(),

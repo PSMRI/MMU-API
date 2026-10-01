@@ -24,7 +24,6 @@ package com.iemr.mmu.controller.dataSyncLayerCentral;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -32,12 +31,14 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.iemr.mmu.data.syncActivity_syncLayer.DownSyncDataDigester;
 import com.iemr.mmu.data.syncActivity_syncLayer.SyncDownloadMaster;
 import com.iemr.mmu.data.syncActivity_syncLayer.SyncUploadDataDigester;
+import com.iemr.mmu.service.dataSyncLayerCentral.DiagnosticDocumentIngestService;
 import com.iemr.mmu.service.dataSyncLayerCentral.FetchDownloadDataImpl;
 import com.iemr.mmu.service.dataSyncLayerCentral.GetDataFromVanAndSyncToDBImpl;
+import com.iemr.mmu.service.dataSyncLayerCentral.GetDownSyncDataFromCentralImpl;
 import com.iemr.mmu.service.dataSyncLayerCentral.GetMasterDataFromCentralForVanImpl;
-import com.iemr.mmu.utils.CookieUtil;
 import com.iemr.mmu.utils.response.OutputResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -57,6 +58,10 @@ public class MMUDataSyncVanToServer {
 	private GetMasterDataFromCentralForVanImpl getMasterDataFromCentralForVanImpl;
 	@Autowired
 	private FetchDownloadDataImpl fetchDownloadDataImpl;
+	@Autowired
+	private GetDownSyncDataFromCentralImpl getDownSyncDataFromCentralImpl;
+	@Autowired
+	private DiagnosticDocumentIngestService diagnosticDocumentIngestService;
 
 	@Operation(summary = "Sync data from van-to-server")
 	@PostMapping(value = { "/van-to-server" }, consumes = "application/json", produces = "application/json")
@@ -73,6 +78,24 @@ public class MMUDataSyncVanToServer {
 		} catch (Exception e) {
 			response.setError(e);
 			logger.error("Upload SYNC Exception" + e);
+		}
+		return response.toString();
+	}
+
+	@Operation(summary = "Receive diagnostic documents pushed from a van and store each in S3 (no database write here)")
+	@PostMapping(value = { "/diagnostic-documents" }, consumes = "application/json", produces = "application/json")
+	public String diagnosticDocumentsFromVan(@RequestBody String requestOBJ,
+			@RequestHeader(value = "Authorization") String Authorization) {
+		OutputResponse response = new OutputResponse();
+		try {
+			String s = diagnosticDocumentIngestService.ingestDocuments(requestOBJ);
+			if (s != null)
+				response.setResponse(s);
+			else
+				response.setError(5000, "diagnostic document ingest failed");
+		} catch (Exception e) {
+			response.setError(e);
+			logger.error("Diagnostic document ingest Exception" + e);
 		}
 		return response.toString();
 	}
@@ -151,6 +174,54 @@ public class MMUDataSyncVanToServer {
 						+ syncUploadDataDigester.getSchemaName() + "." + syncUploadDataDigester.getTableName() + "."
 						+ syncUploadDataDigester.getIds());
 			}
+			response.setError(e);
+		}
+		return response.toStringWithSerialization();
+	}
+
+
+	@Operation(summary = "Down-sync data of one configured table from central to van")
+	@PostMapping(value = { "/server-to-van-downsync" }, consumes = "application/json", produces = "application/json")
+	public String downSyncDataFromServer(@RequestBody DownSyncDataDigester downSyncDataDigester,
+			@RequestHeader(value = "Authorization") String Authorization) {
+		OutputResponse response = new OutputResponse();
+		try {
+			if (downSyncDataDigester != null) {
+				String s = getDownSyncDataFromCentralImpl.getDownSyncDataForVan(downSyncDataDigester);
+				if (s != null)
+					response.setResponse(s);
+				else
+					response.setError(5000, "Error in down-sync for table " + downSyncDataDigester.getSchemaName() + "."
+							+ downSyncDataDigester.getTableName());
+			} else {
+				response.setError(5000, "Invalid request");
+			}
+		} catch (Exception e) {
+			if (downSyncDataDigester != null)
+				logger.error("Error in down-sync for table {}.{}", downSyncDataDigester.getSchemaName(),
+						downSyncDataDigester.getTableName(), e);
+			response.setError(e);
+		}
+		return response.toStringWithSerialization();
+	}
+
+	@Operation(summary = "Update the down-sync flag at central post delivery to the van")
+	@PostMapping(value = {
+			"/updateDownSyncFlagPostDownload" }, consumes = "application/json", produces = "application/json")
+	public String updateDownSyncFlagPostDownload(@RequestBody DownSyncDataDigester downSyncDataDigester,
+			@RequestHeader(value = "Authorization") String Authorization) {
+		OutputResponse response = new OutputResponse();
+		try {
+			if (downSyncDataDigester != null) {
+				int i = getDownSyncDataFromCentralImpl.updateDownSyncFlagPostDownload(downSyncDataDigester);
+				response.setResponse(String.valueOf(i));
+			} else {
+				response.setError(5000, "Invalid request");
+			}
+		} catch (Exception e) {
+			if (downSyncDataDigester != null)
+				logger.error("Error while updating the down-sync flag for {}.{}", downSyncDataDigester.getSchemaName(),
+						downSyncDataDigester.getTableName(), e);
 			response.setError(e);
 		}
 		return response.toStringWithSerialization();
