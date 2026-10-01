@@ -294,7 +294,12 @@
 			<artifactId>h2</artifactId>
 			<scope>runtime</scope>
 		</dependency>
-		<!-- CSV parsing for the Nikshay results-file import (quoted/embedded-comma fields) -->
+		<!-- AWS SDK v2 - S3 client, used for diagnostic document sync -->
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>s3</artifactId>
+			<version>2.25.60</version>
+		</dependency>
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-csv</artifactId>
