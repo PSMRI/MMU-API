@@ -31,6 +31,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,6 +46,12 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
 
     @Autowired
     private DataSyncRepositoryCentral dataSyncRepositoryCentral;
+
+    @Autowired
+    private GetDownSyncDataFromCentral getDownSyncDataFromCentral;
+
+    @Value("${downSync.markDeliveredOnUpSync:true}")
+    private boolean markDownSyncedOnUpSync;
 
     private static final Map<Integer, List<String>> TABLE_GROUPS = new HashMap<>();
     static {
@@ -326,6 +333,7 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
 
     Map<Integer, Integer> insertIndexMap = new HashMap<>();
     Map<Integer, Integer> updateIndexMap = new HashMap<>();
+    Map<Integer, String> vanIDByResultIndex = new HashMap<>();
 
     boolean overallSuccess = true;
 
@@ -463,6 +471,7 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
         int currentSyncResultIndex = syncResults.size();
         syncResults.add(new SyncResult(schemaName, syncTableName, vanSerialNo,
                 syncUploadDataDigester.getSyncedBy(), false, "Pending"));
+        vanIDByResultIndex.put(currentSyncResultIndex, vanID);
 
         if (recordCheck == 0) {
             insertIndexMap.put(currentSyncResultIndex, syncDataListInsert.size());
@@ -591,9 +600,35 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
     }
 
     logger.info("Sync results for table {}: {}", syncTableName, syncResults);
+
+    flagUpSyncedRecordsForDownSync(schemaName, syncTableName, syncResults, vanIDByResultIndex);
+
     return overallSuccess;
 }
    
+    private void flagUpSyncedRecordsForDownSync(String schemaName, String tableName, List<SyncResult> syncResults,
+            Map<Integer, String> vanIDByResultIndex) {
+        if (!markDownSyncedOnUpSync || vanIDByResultIndex.isEmpty())
+            return;
+
+        List<Object[]> vanSerialNoAndVanID = new ArrayList<>();
+        for (Map.Entry<Integer, String> entry : vanIDByResultIndex.entrySet()) {
+            int index = entry.getKey();
+            if (index >= syncResults.size())
+                continue;
+
+            SyncResult result = syncResults.get(index);
+            if (result == null || !result.isSuccess() || result.getVanSerialNo() == null
+                    || entry.getValue() == null || "null".equalsIgnoreCase(entry.getValue()))
+                continue;
+
+            vanSerialNoAndVanID.add(new Object[] { result.getVanSerialNo(), entry.getValue() });
+        }
+
+        if (!vanSerialNoAndVanID.isEmpty())
+            getDownSyncDataFromCentral.markDownSyncedPostUpSync(schemaName, tableName, vanSerialNoAndVanID);
+    }
+
     private String getVanSerialNo(Object[] record, int vanSerialIndex, SyncResult originalResult) {
         if (vanSerialIndex >= 0 && vanSerialIndex < record.length) {
             return String.valueOf(record[vanSerialIndex]);
