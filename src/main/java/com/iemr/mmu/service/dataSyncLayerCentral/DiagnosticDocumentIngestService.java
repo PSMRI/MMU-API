@@ -35,6 +35,7 @@ public class DiagnosticDocumentIngestService {
 
 	private final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 	private static final Gson GSON = new Gson();
+	private static final String ENCRYPTED_FILE_SUFFIX = ".enc";
 
 	@Value("${diagnostic.documents.s3.bucket}")
 	private String bucket;
@@ -90,7 +91,7 @@ public class DiagnosticDocumentIngestService {
 				return ack;
 			}
 			String s3Key = vanId + "/" + beneficiaryId + "/" + orderType + "/" + documentType + "/"
-					+ storedFileName;
+					+ objectFileName(storedFileName, (String) item.get("fileExtension"));
 			String contentType = (String) item.get("contentType");
 
 			s3Client.putObject(
@@ -109,6 +110,18 @@ public class DiagnosticDocumentIngestService {
 			ack.put("error", e.getMessage());
 		}
 		return ack;
+	}
+
+	/***
+	 * @purpose The van stores files encrypted as "<name>.enc", but S3 holds the decrypted
+	 *          content - so the object is named with the real extension the van derived from
+	 *          its content type (e.g. CAD.enc -> CAD.pdf), not the misleading ".enc".
+	 */
+	private static String objectFileName(String storedFileName, String fileExtension) {
+		String baseName = storedFileName.endsWith(ENCRYPTED_FILE_SUFFIX)
+				? storedFileName.substring(0, storedFileName.length() - ENCRYPTED_FILE_SUFFIX.length())
+				: storedFileName;
+		return fileExtension != null && !fileExtension.isEmpty() ? baseName + "." + fileExtension : baseName;
 	}
 
 	private static Long asLong(Object value) {
