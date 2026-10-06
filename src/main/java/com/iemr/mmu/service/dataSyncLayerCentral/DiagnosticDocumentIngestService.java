@@ -80,16 +80,16 @@ public class DiagnosticDocumentIngestService {
 			}
 
 			Long beneficiaryId = asLong(item.get("beneficiaryId"));
-			Long villageId = asLong(item.get("villageId"));
+			Long vanId = asLong(item.get("vanID"));
 			String orderType = (String) item.get("orderType");
 			String storedFileName = (String) item.get("storedFileName");
-			if (villageId == null || beneficiaryId == null || orderType == null || documentType == null
+			if (vanId == null || beneficiaryId == null || orderType == null || documentType == null
 					|| storedFileName == null) {
 				ack.put("status", "FAILED");
-				ack.put("error", "Missing villageId, beneficiaryId, orderType, documentType or storedFileName");
+				ack.put("error", "Missing vanID, beneficiaryId, orderType, documentType or storedFileName");
 				return ack;
 			}
-			String s3Key = villageId + "/" + beneficiaryId + "/" + orderType + "/" + documentType + "/"
+			String s3Key = vanId + "/" + beneficiaryId + "/" + orderType + "/" + documentType + "/"
 					+ storedFileName;
 			String contentType = (String) item.get("contentType");
 
