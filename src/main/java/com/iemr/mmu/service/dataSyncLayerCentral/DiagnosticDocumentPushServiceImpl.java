@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -68,9 +69,8 @@ public class DiagnosticDocumentPushServiceImpl {
 
 	public String pushPendingDocuments(String Authorization) throws Exception {
 		List<Map<String, Object>> pendingRows = diagnosticDocumentRepository.findPendingDocuments();
-		boolean anyRowsFound = !pendingRows.isEmpty();
-		int totalAttempted = 0;
 		int totalSucceeded = 0;
+		List<String> failureReasons = new ArrayList<>();
 
 		for (int offset = 0; offset < pendingRows.size(); offset += batchSize) {
 			List<Map<String, Object>> rows = pendingRows.subList(offset, Math.min(offset + batchSize, pendingRows.size()));
@@ -88,13 +88,12 @@ public class DiagnosticDocumentPushServiceImpl {
 				} catch (Exception e) {
 					logger.warn("Skipping diagnostic document push, could not read file off disk: id={}, error={}",
 							rowId, e.getMessage());
-					diagnosticDocumentRepository.markPushFailed(rowId,
-							"Could not read file off shared filesystem: " + e.getMessage());
+					markFailed(rowId, "Could not read file off shared filesystem: " + e.getMessage(), failureReasons);
 					continue;
 				}
 				if (base64Plaintext == null) {
 					logger.warn("Skipping diagnostic document push, decrypt failed: id={}", rowId);
-					diagnosticDocumentRepository.markPushFailed(rowId, "Decrypt failed");
+					markFailed(rowId, "Decrypt failed", failureReasons);
 					continue;
 				}
 
@@ -127,8 +126,6 @@ public class DiagnosticDocumentPushServiceImpl {
 				continue;
 			}
 
-			totalAttempted += payloadItems.size();
-
 			String requestOBJ = new Gson().toJson(payloadItems);
 			List<Map<String, Object>> acks;
 			try {
@@ -139,7 +136,7 @@ public class DiagnosticDocumentPushServiceImpl {
 
 				if (response == null || !response.hasBody()) {
 					logger.warn("No response body from central server for diagnostic document push, marking batch failed");
-					markBatchFailed(rowsById, "No response body from central server");
+					markBatchFailed(rowsById, "No response body from central server", failureReasons);
 					continue;
 				}
 
@@ -148,7 +145,7 @@ public class DiagnosticDocumentPushServiceImpl {
 				JsonElement parsedBody = JsonParser.parseString(response.getBody());
 				if (!parsedBody.isJsonObject()) {
 					logger.warn("Unexpected response shape from central server for diagnostic document push, marking batch failed");
-					markBatchFailed(rowsById, "Unexpected response shape from central server");
+					markBatchFailed(rowsById, "Unexpected response shape from central server", failureReasons);
 					continue;
 				}
 				JsonObject envelope = parsedBody.getAsJsonObject();
@@ -156,7 +153,7 @@ public class DiagnosticDocumentPushServiceImpl {
 						|| !envelope.has("data")) {
 					logger.warn("Central server reported failure for diagnostic document push batch, marking batch failed: {}",
 							response.getBody());
-					markBatchFailed(rowsById, "Central server reported failure: " + response.getBody());
+					markBatchFailed(rowsById, "Central server reported failure: " + response.getBody(), failureReasons);
 					continue;
 				}
 
@@ -164,12 +161,12 @@ public class DiagnosticDocumentPushServiceImpl {
 				}.getType();
 				acks = new Gson().fromJson(envelope.get("data"), ackListType);
 				if (acks == null) {
-					markBatchFailed(rowsById, "Central server returned no acknowledgements");
+					markBatchFailed(rowsById, "Central server returned no acknowledgements", failureReasons);
 					continue;
 				}
 			} catch (Exception e) {
 				logger.error("Error calling central server for diagnostic document push, marking batch failed", e);
-				markBatchFailed(rowsById, "Error calling central server: " + e.getMessage());
+				markBatchFailed(rowsById, "Error calling central server: " + e.getMessage(), failureReasons);
 				continue;
 			}
 
@@ -187,8 +184,7 @@ public class DiagnosticDocumentPushServiceImpl {
 					String reason = (String) ack.get("error");
 					logger.warn("Central server rejected diagnostic document push: id={}, externalOrderId={}, documentType={}, error={}",
 							rowId, ack.get("externalOrderId"), ack.get("documentType"), reason);
-					diagnosticDocumentRepository.markPushFailed(rowId,
-							reason != null ? reason : "Central server rejected the document");
+					markFailed(rowId, reason != null ? reason : "Central server rejected the document", failureReasons);
 				}
 			}
 			if (!unmatchedRowsById.isEmpty()) {
@@ -197,7 +193,7 @@ public class DiagnosticDocumentPushServiceImpl {
 				logger.warn(
 						"Diagnostic document push: {} row(s) in this batch got no matching ack back, marking failed",
 						unmatchedRowsById.size());
-				markBatchFailed(unmatchedRowsById, "No acknowledgement received from central server");
+				markBatchFailed(unmatchedRowsById, "No acknowledgement received from central server", failureReasons);
 			}
 
 			totalSucceeded += batchSuccessCount;
@@ -205,22 +201,47 @@ public class DiagnosticDocumentPushServiceImpl {
 					batchSuccessCount);
 		}
 
-		if (!anyRowsFound) {
-			return "No pending diagnostic documents to sync";
-		}
-		if (totalAttempted == 0) {
-			return "No documents could be decrypted for push";
-		}
-		if (totalSucceeded == 0) {
-			// Documents WERE decrypted and sent, but none were accepted (e.g. the central
-			// server rejected every batch) - the specific reason for each row is recorded in
-			// its own docSyncFailureReason, this is just the overall-outcome summary.
-			return "Documents were sent but none were accepted by the central server";
+		if (pendingRows.isEmpty()) {
+			return "No data to sync";
 		}
 
-		logger.info("Diagnostic document push complete overall: attempted={}, succeeded={}", totalAttempted,
-				totalSucceeded);
-		return "Data successfully synced";
+		// Same table-level summary shape as /van-to-server (UploadDataToServerImpl) so the
+		// data sync screen can read both the same way.
+		int totalRecords = pendingRows.size();
+		int failedRecords = failureReasons.size();
+		String status;
+		if (failedRecords == 0) {
+			status = "success";
+		} else if (totalSucceeded == 0) {
+			status = "failed";
+		} else {
+			status = "partial";
+		}
+
+		Map<String, Object> finalResponse = new LinkedHashMap<>();
+		finalResponse.put("response",
+				"success".equals(status) ? "Data sync completed successfully" : "Data sync completed with failures");
+		finalResponse.put("schemaName", "db_iemr");
+		finalResponse.put("tableName", "tb_diagnostic_document");
+		finalResponse.put("status", status);
+		finalResponse.put("totalRecords", totalRecords);
+		finalResponse.put("successfulRecords", totalSucceeded);
+		finalResponse.put("failedRecords", failedRecords);
+		if (!failureReasons.isEmpty()) {
+			finalResponse.put("failureReasons", failureReasons);
+		}
+
+		logger.info("Diagnostic document push complete: {} (Success: {}, Failed: {}, Total: {})", status,
+				totalSucceeded, failedRecords, totalRecords);
+		return new Gson().toJson(finalResponse);
+	}
+
+	/***
+	 * @purpose Marks one row failed locally and records its reason for the run summary.
+	 */
+	private void markFailed(Long rowId, String reason, List<String> failureReasons) {
+		diagnosticDocumentRepository.markPushFailed(rowId, reason);
+		failureReasons.add("documentId " + rowId + ": " + reason);
 	}
 
 	/***
@@ -229,9 +250,9 @@ public class DiagnosticDocumentPushServiceImpl {
 	 *          batch as failed, matching how /van-to-server marks a whole batch failed on a
 	 *          connection error, rather than leaving them stuck at docsProcessed='N' forever.
 	 */
-	private void markBatchFailed(Map<Long, Map<String, Object>> rowsById, String reason) {
+	private void markBatchFailed(Map<Long, Map<String, Object>> rowsById, String reason, List<String> failureReasons) {
 		for (Long rowId : rowsById.keySet()) {
-			diagnosticDocumentRepository.markPushFailed(rowId, reason);
+			markFailed(rowId, reason, failureReasons);
 		}
 	}
 
