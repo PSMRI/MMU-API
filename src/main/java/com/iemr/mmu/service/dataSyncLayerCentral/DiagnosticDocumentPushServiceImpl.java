@@ -66,7 +66,7 @@ public class DiagnosticDocumentPushServiceImpl {
 	@Autowired
 	private CryptoUtil cryptoUtil;
 
-	public String pushPendingDocuments(String Authorization, Long villageId) throws Exception {
+	public String pushPendingDocuments(String Authorization) throws Exception {
 		List<Map<String, Object>> pendingRows = diagnosticDocumentRepository.findPendingDocuments();
 		boolean anyRowsFound = !pendingRows.isEmpty();
 		int totalAttempted = 0;
@@ -118,7 +118,6 @@ public class DiagnosticDocumentPushServiceImpl {
 				item.put("vanID", row.get("vanID"));
 				item.put("parkingPlaceID", row.get("parkingPlaceID"));
 				item.put("vanSerialNo", row.get("vanSerialNo"));
-				item.put("villageId", villageId);
 				item.put("fileContentBase64", base64Plaintext);
 				payloadItems.add(item);
 				rowsById.put(rowId, row);

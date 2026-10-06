@@ -105,10 +105,10 @@ public class StartSyncActivity {
 	@PostMapping(value = { "/diagnostic-documents-to-server" })
 	public String diagnosticDocumentsToServer(@RequestHeader(value = "Authorization") String authorization,
 			@RequestHeader(value = "ServerAuthorization") String serverAuthorization,
-			@RequestParam Long villageId) {
+			@RequestParam(required = false) Long villageId) {
 		OutputResponse response = new OutputResponse();
 		try {
-			String s = diagnosticDocumentPushServiceImpl.pushPendingDocuments(serverAuthorization, villageId);
+			String s = diagnosticDocumentPushServiceImpl.pushPendingDocuments(serverAuthorization);
 			if (s != null)
 				response.setResponse(s);
 			else
