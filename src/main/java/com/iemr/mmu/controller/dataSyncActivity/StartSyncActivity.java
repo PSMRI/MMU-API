@@ -37,6 +37,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.google.gson.Gson;
+import com.iemr.mmu.service.benid.BenIdAutoTopUpService;
 import com.iemr.mmu.service.dataSyncActivity.DownSyncDataFromServerImpl;
 import com.iemr.mmu.service.dataSyncActivity.DownloadDataFromServerImpl;
 import com.iemr.mmu.service.dataSyncActivity.DownloadDataFromServerTransactionalImpl;
@@ -71,6 +72,9 @@ public class StartSyncActivity {
 	@Autowired
 	private DownSyncDataFromServerImpl downSyncDataFromServerImpl;
 
+	@Autowired
+	private BenIdAutoTopUpService benIdAutoTopUpService;
+
 	private static final String GROUP_ID = "groupID";
 	private static final String PROVIDER_SERVICE_MAP_ID = "providerServiceMapID";
 
@@ -89,6 +93,8 @@ public class StartSyncActivity {
 						serverAuthorization, jwtToken);
 				// if (s != null)
 				response.setResponse(s);
+				// internet is up right now: top up the BenID pool if it is low
+				benIdAutoTopUpService.triggerNow();
 				// else
 				// response.setError(5000, "Error in data sync");
 			} else {
@@ -180,8 +186,11 @@ public class StartSyncActivity {
 					if (s.equalsIgnoreCase("inProgress"))
 						response.setError(5000,
 								"Download is already in progress from different device, kindly wait to finish this");
-					else
+					else {
 						response.setResponse(s);
+						// internet is up right now: top up the BenID pool if it is low
+						benIdAutoTopUpService.triggerNow();
+					}
 				} else
 					response.setError(5000, s);
 			} else {
