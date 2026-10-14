@@ -25,7 +25,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.concurrent.CompletableFuture;
+import java.nio.file.StandardCopyOption;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.json.JSONArray;
@@ -45,6 +48,7 @@ import org.springframework.web.client.RestTemplate;
 import com.iemr.mmu.utils.RestTemplateUtil;
 
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 
 /**
  * Keeps the local BenID pool filled without anyone clicking "Generate BenID".
@@ -86,6 +90,11 @@ public class BenIdAutoTopUpService {
 	@Value("${benid.pool.bootstrapSize:10000}")
 	private long bootstrapSize;
 
+	// central is asked for at most this many IDs per request: a big request can outlast the
+	// central gateway timeout, and a reply lost after central created the IDs wastes them
+	@Value("${benid.pool.maxPerRequest:1000}")
+	private long maxPerRequest;
+
 	@Value("${benid.token.dir:/opt/amrit/data}")
 	private String dataDir;
 
@@ -107,6 +116,16 @@ public class BenIdAutoTopUpService {
 	private volatile long lastTopUpAt;
 	private volatile long lastTopUpCount;
 	private volatile String lastError;
+	private volatile int pendingImportFailures;
+
+	// one background thread for this feature, so network waits never hold shared pool threads
+	private final ExecutorService background = Executors.newSingleThreadExecutor(r -> {
+		Thread t = new Thread(r, "benid-auto-topup");
+		t.setDaemon(true);
+		return t;
+	});
+
+	private static final int MAX_PENDING_IMPORT_FAILURES = 3;
 
 	@PostConstruct
 	public void init() {
@@ -114,6 +133,16 @@ public class BenIdAutoTopUpService {
 		factory.setConnectTimeout(connectTimeoutMs);
 		factory.setReadTimeout(readTimeoutMs);
 		restTemplate = new RestTemplate(factory);
+	}
+
+	@PreDestroy
+	public void shutdown() {
+		background.shutdownNow();
+	}
+
+	/** Runs a task on this feature's own background thread. */
+	public void runInBackground(Runnable task) {
+		background.submit(task);
 	}
 
 	/** Regular check; does nothing on central or non-StopTB deployments. */
@@ -125,7 +154,7 @@ public class BenIdAutoTopUpService {
 	/** Run straight away (after a login or a Data Sync), in the background. */
 	public void triggerNow() {
 		if (centralAuthService.isEnabled()) {
-			CompletableFuture.runAsync(() -> runOnce(true));
+			background.submit(() -> runOnce(true));
 		}
 	}
 
@@ -163,7 +192,12 @@ public class BenIdAutoTopUpService {
 				return;
 			}
 
-			int imported = generateAndImport(centralAuthService.getVanID(), needed, key, key, "datasync");
+			int imported = 0;
+			for (long remaining = needed; remaining > 0;) {
+				long chunk = Math.min(remaining, Math.max(1, maxPerRequest));
+				imported += generateAndImport(centralAuthService.getVanID(), chunk, key, key, "datasync");
+				remaining -= chunk;
+			}
 			lastPoolCount = countLocalPool();
 			lastTopUpAt = System.currentTimeMillis();
 			lastTopUpCount = imported;
@@ -218,17 +252,24 @@ public class BenIdAutoTopUpService {
 		if (!Files.exists(pending)) {
 			return false;
 		}
-		String payload = new String(Files.readAllBytes(pending), StandardCharsets.UTF_8);
 		logger.info("Importing BenIDs left from an earlier run");
 		try {
+			String payload = new String(Files.readAllBytes(pending), StandardCharsets.UTF_8);
 			importLocally(payload, "datasync", "datasync");
 		} catch (Exception e) {
-			// the earlier run already saved these IDs; nothing left to import
-			if (e.getMessage() == null || !e.getMessage().toLowerCase().contains("duplicate")) {
+			pendingImportFailures++;
+			if (pendingImportFailures < MAX_PENDING_IMPORT_FAILURES) {
 				throw e;
 			}
-			logger.info("Pending BenIDs were already imported earlier");
+			// a file that keeps failing (e.g. half-written at a power cut) must not stop top-ups
+			Path setAside = Paths.get(dataDir, "benid-pending-import.failed-" + System.currentTimeMillis() + ".json");
+			Files.move(pending, setAside, StandardCopyOption.REPLACE_EXISTING);
+			pendingImportFailures = 0;
+			logger.warn("Pending BenID file could not be imported {} times; moved to {} and continuing: {}",
+					MAX_PENDING_IMPORT_FAILURES, setAside, e.getMessage());
+			return false;
 		}
+		pendingImportFailures = 0;
 		deletePending();
 		return true;
 	}
@@ -263,7 +304,9 @@ public class BenIdAutoTopUpService {
 	}
 
 	private void onFailure(Exception e) {
-		long delay = retryDelaysMs[Math.min(failureCount, retryDelaysMs.length - 1)];
+		long base = retryDelaysMs[Math.min(failureCount, retryDelaysMs.length - 1)];
+		// +/-20% so that many laptops do not all retry at the same moment after an outage
+		long delay = base <= 0 ? 0 : (long) (base * ThreadLocalRandom.current().nextDouble(0.8, 1.2));
 		failureCount++;
 		nextAttemptAt = System.currentTimeMillis() + delay;
 		lastError = e.getMessage();
@@ -278,7 +321,14 @@ public class BenIdAutoTopUpService {
 	private void writePending(String payload) {
 		try {
 			Files.createDirectories(Paths.get(dataDir));
-			Files.write(pendingPath(), payload.getBytes(StandardCharsets.UTF_8));
+			// write a temp file and swap it in, so a power cut never leaves a half-written file
+			Path tmp = Paths.get(dataDir, PENDING_FILE_NAME + ".tmp");
+			Files.write(tmp, payload.getBytes(StandardCharsets.UTF_8));
+			try {
+				Files.move(tmp, pendingPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+			} catch (java.nio.file.AtomicMoveNotSupportedException e) {
+				Files.move(tmp, pendingPath(), StandardCopyOption.REPLACE_EXISTING);
+			}
 		} catch (Exception e) {
 			logger.warn("Could not write pending BenID file: {}", e.getMessage());
 		}

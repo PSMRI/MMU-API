@@ -242,4 +242,35 @@ class CentralAuthServiceTest {
 			throw new AssertionError("revoked token must not throw", e);
 		}
 	}
+
+	@Test
+	void rejectedPasswordIsRememberedAfterRestart() {
+		expectLoginRejected();
+		service.capture("stoptb1", "wrong", false);
+		central.verify();
+
+		CentralAuthService restarted = newService(true, 403);
+		// laptop login after the restart must not reach central with the rejected password
+		assertFalse(restarted.capture("stoptb1", "wrong", false));
+		central.verify();
+	}
+
+	@Test
+	void successfulReconnectClearsTheRejectedMarker() {
+		expectLoginRejected();
+		expectLoginOk("RT-9");
+		service.capture("stoptb1", "wrong", false);
+		assertTrue(service.capture("stoptb1", "central-pw", true));
+		assertFalse(Files.exists(tokenDir.resolve("central-login-rejected")));
+		central.verify();
+	}
+
+	@Test
+	void rejectedMarkerHoldsNoPassword() throws Exception {
+		expectLoginRejected();
+		service.capture("stoptb1", "secret-pw", false);
+		String marker = Files.readString(tokenDir.resolve("central-login-rejected"));
+		assertEquals("stoptb1", marker.trim());
+		assertFalse(marker.contains("secret-pw"));
+	}
 }

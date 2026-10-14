@@ -78,6 +78,7 @@ class BenIdAutoTopUpServiceTest {
 		ReflectionTestUtils.setField(service, "lowerLimit", 2000L);
 		ReflectionTestUtils.setField(service, "batchSize", 1000L);
 		ReflectionTestUtils.setField(service, "bootstrapSize", 10000L);
+		ReflectionTestUtils.setField(service, "maxPerRequest", 1000L);
 		ReflectionTestUtils.setField(service, "dataDir", dataDir.toString());
 		ReflectionTestUtils.setField(service, "retryDelaysMs", new long[] { 0L });
 		ReflectionTestUtils.setField(service, "connectTimeoutMs", 1000);
@@ -142,8 +143,9 @@ class BenIdAutoTopUpServiceTest {
 
 	@Test
 	void emptyPoolGetsBootstrapSize() {
+		ReflectionTestUtils.setField(service, "bootstrapSize", 800L);
 		expectCount(0);
-		expectGenerate(10000, 3);
+		expectGenerate(800, 3);
 		expectImportOk();
 		expectCount(3);
 		run();
@@ -192,8 +194,9 @@ class BenIdAutoTopUpServiceTest {
 
 	@Test
 	void failedLocalImportKeepsIdsAndImportsThemNextRun() throws Exception {
+		ReflectionTestUtils.setField(service, "bootstrapSize", 800L);
 		expectCount(0);
-		expectGenerate(10000, 3);
+		expectGenerate(800, 3);
 		server.expect(requestTo(IMPORT)).andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
 		// next run: pending IDs are imported first, then the pool is healthy
 		expectImportOk();
@@ -220,6 +223,50 @@ class BenIdAutoTopUpServiceTest {
 			Thread.currentThread().interrupt();
 		} finally {
 			BenIdAutoTopUpService.GENERATION_LOCK.unlock();
+		}
+	}
+
+	@Test
+	void bigDownloadIsSplitIntoRequestsOfAtMost1000() {
+		ReflectionTestUtils.setField(service, "bootstrapSize", 2500L);
+		expectCount(0);
+		expectGenerate(1000, 2);
+		expectImportOk();
+		expectGenerate(1000, 2);
+		expectImportOk();
+		expectGenerate(500, 2);
+		expectImportOk();
+		expectCount(2500);
+		run();
+		server.verify();
+	}
+
+	@Test
+	void pendingFileThatKeepsFailingIsSetAsideAndTopUpsContinue() throws Exception {
+		Files.writeString(pending(), "[{\"benRegId\":12");  // half-written by a power cut
+		for (int i = 0; i < 3; i++) {
+			server.expect(requestTo(IMPORT)).andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
+		}
+		expectCount(2500);
+		run();
+		run();
+		assertTrue(Files.exists(pending()), "kept while retries are left");
+		run();
+		server.verify();
+		assertFalse(Files.exists(pending()), "set aside after 3 failures");
+		try (java.util.stream.Stream<Path> files = Files.list(dataDir)) {
+			assertTrue(files.anyMatch(f -> f.getFileName().toString().startsWith("benid-pending-import.failed-")));
+		}
+	}
+
+	@Test
+	void retryWaitIsSpreadPlusMinus20Percent() {
+		ReflectionTestUtils.setField(service, "retryDelaysMs", new long[] { 10000L });
+		for (int i = 0; i < 20; i++) {
+			long before = System.currentTimeMillis();
+			ReflectionTestUtils.invokeMethod(service, "onFailure", new RuntimeException("down"));
+			long wait = (long) ReflectionTestUtils.getField(service, "nextAttemptAt") - before;
+			assertTrue(wait >= 7990 && wait <= 12010, "wait " + wait + " ms is outside 8-12 s");
 		}
 	}
 }

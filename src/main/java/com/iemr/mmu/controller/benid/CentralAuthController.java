@@ -21,8 +21,6 @@
 */
 package com.iemr.mmu.controller.benid;
 
-import java.util.concurrent.CompletableFuture;
-
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,7 +79,7 @@ public class CentralAuthController {
 			String userName = obj.optString("userName", null);
 			String password = obj.optString("password", null);
 			boolean force = obj.optBoolean("reconnect", false);
-			CompletableFuture.runAsync(() -> {
+			benIdAutoTopUpService.runInBackground(() -> {
 				if (centralAuthService.capture(userName, password, force)) {
 					benIdAutoTopUpService.triggerNow();
 				}

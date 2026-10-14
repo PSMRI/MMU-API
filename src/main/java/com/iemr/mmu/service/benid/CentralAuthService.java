@@ -76,6 +76,9 @@ public class CentralAuthService {
 	// Central refresh tokens are only issued to API (mobile) clients.
 	private static final String API_CLIENT_USER_AGENT = "okhttp/4.12.0";
 	private static final String TOKEN_FILE_NAME = "central-refresh-token";
+	// user name only (no password): a laptop password central rejected is not sent again,
+	// also after a restart, so the central account cannot get locked by repeated attempts
+	private static final String REJECTED_FILE_NAME = "central-login-rejected";
 
 	@Value("${stoptb.enforce.vanid:false}")
 	private boolean enforceVanID;
@@ -128,6 +131,7 @@ public class CentralAuthService {
 			return;
 		}
 		refreshToken = readTokenFile();
+		rejectedUser = readRejectedUser();
 		state = refreshToken != null ? State.CONNECTED : State.NOT_CONNECTED;
 		logger.info("BenID auto top-up enabled for vanID {}; central token {}", vanID,
 				refreshToken != null ? "loaded" : "not present yet");
@@ -203,6 +207,7 @@ public class CentralAuthService {
 				saveToken(obj.getJSONObject("data").getString("refreshToken"));
 				connectedUser = userName.trim();
 				rejectedUser = null;
+				deleteRejectedUser();
 				state = State.CONNECTED;
 				lastError = null;
 				logger.info("Central token captured for user {}", connectedUser);
@@ -211,6 +216,7 @@ public class CentralAuthService {
 			// wrong username/password or account problem: do not retry with these credentials
 			lastError = obj.optString("errorMessage", "Central login rejected");
 			rejectedUser = userName.trim();
+			saveRejectedUser(rejectedUser);
 			state = State.PASSWORD_MISMATCH;
 			logger.warn("Central login rejected for user {}: {}", userName, lastError);
 		} catch (Exception e) {
@@ -333,6 +339,39 @@ public class CentralAuthService {
 			Files.deleteIfExists(tokenPath());
 		} catch (Exception e) {
 			logger.warn("Could not delete central token file: {}", e.getMessage());
+		}
+	}
+
+	private String readRejectedUser() {
+		try {
+			Path path = Paths.get(tokenDir, REJECTED_FILE_NAME);
+			if (Files.exists(path)) {
+				String user = new String(Files.readAllBytes(path), StandardCharsets.UTF_8).trim();
+				return user.isEmpty() ? null : user;
+			}
+		} catch (Exception e) {
+			logger.warn("Could not read rejected-login marker: {}", e.getMessage());
+		}
+		return null;
+	}
+
+	private void saveRejectedUser(String user) {
+		try {
+			Path dir = Paths.get(tokenDir);
+			Files.createDirectories(dir);
+			Path path = dir.resolve(REJECTED_FILE_NAME);
+			Files.write(path, user.getBytes(StandardCharsets.UTF_8));
+			setPermissions(path, "rw-------");
+		} catch (Exception e) {
+			logger.warn("Could not save rejected-login marker: {}", e.getMessage());
+		}
+	}
+
+	private void deleteRejectedUser() {
+		try {
+			Files.deleteIfExists(Paths.get(tokenDir, REJECTED_FILE_NAME));
+		} catch (Exception e) {
+			logger.warn("Could not delete rejected-login marker: {}", e.getMessage());
 		}
 	}
 
