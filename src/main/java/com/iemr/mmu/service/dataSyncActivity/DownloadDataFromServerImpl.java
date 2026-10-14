@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -45,6 +46,7 @@ import org.springframework.web.client.RestTemplate;
 
 import com.google.gson.Gson;
 import com.iemr.mmu.data.syncActivity_syncLayer.MasterDownloadDataDigester;
+import com.iemr.mmu.service.benid.BenIdAutoTopUpService;
 import com.iemr.mmu.data.syncActivity_syncLayer.SyncDownloadMaster;
 import com.iemr.mmu.data.syncActivity_syncLayer.TempVan;
 import com.iemr.mmu.repo.syncActivity_syncLayer.SyncDownloadMasterRepo;
@@ -326,6 +328,10 @@ import com.iemr.mmu.utils.mapper.InputMapper;
 	public int callCentralAPIToGenerateBenIDAndimportToLocal(String requestOBJ, String Authorization,
 			String ServerAuthorization, String token) throws Exception {
 		int i = 0, i1 = 0;
+		// never run together with the automatic top-up, so the same IDs are not requested twice
+		if (!BenIdAutoTopUpService.GENERATION_LOCK.tryLock(2, TimeUnit.MINUTES)) {
+			throw new Exception("BenID generation is already running, please try again in a few minutes");
+		}
 		try{
 			JSONObject originalRequest = new JSONObject(requestOBJ);
         BigInteger vanID = null;
@@ -378,6 +384,8 @@ import com.iemr.mmu.utils.mapper.InputMapper;
 		} catch (Exception e) {
 			logger.error("Error while generating catch UNIQUE_ID at central server: " + e.getMessage());
 			throw new Exception("Error while generating catch UNIQUE_ID at central server: " + e.getMessage());
+		} finally {
+			BenIdAutoTopUpService.GENERATION_LOCK.unlock();
 		}
 			return i;
 		}
