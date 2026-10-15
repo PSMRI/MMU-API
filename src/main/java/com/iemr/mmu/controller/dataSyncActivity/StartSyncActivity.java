@@ -41,6 +41,7 @@ import com.iemr.mmu.service.benid.BenIdAutoTopUpService;
 import com.iemr.mmu.service.dataSyncActivity.DownSyncDataFromServerImpl;
 import com.iemr.mmu.service.dataSyncActivity.DownloadDataFromServerImpl;
 import com.iemr.mmu.service.dataSyncActivity.DownloadDataFromServerTransactionalImpl;
+import com.iemr.mmu.service.dataSyncActivity.AutoSyncService;
 import com.iemr.mmu.service.dataSyncActivity.UploadDataToServerImpl;
 import com.iemr.mmu.service.dataSyncLayerCentral.DiagnosticDocumentFetchService;
 import com.iemr.mmu.service.dataSyncLayerCentral.DiagnosticDocumentPushServiceImpl;
@@ -74,6 +75,9 @@ public class StartSyncActivity {
 
 	@Autowired
 	private BenIdAutoTopUpService benIdAutoTopUpService;
+
+	@Autowired
+	private AutoSyncService autoSyncService;
 
 	private static final String GROUP_ID = "groupID";
 	private static final String PROVIDER_SERVICE_MAP_ID = "providerServiceMapID";
@@ -200,6 +204,19 @@ public class StartSyncActivity {
 
 		} catch (Exception e) {
 			logger.error("Error in Master data Download : " + e);
+			response.setError(e);
+		}
+		return response.toString();
+	}
+
+	@Operation(summary = "Automatic data sync status and the rows central rejected on upload")
+	@GetMapping(value = { "/autoSyncStatus" })
+	public String autoSyncStatus() {
+		OutputResponse response = new OutputResponse();
+		try {
+			response.setResponse(autoSyncService.status().toString());
+		} catch (Exception e) {
+			logger.error("Error while getting automatic sync status : " + e);
 			response.setError(e);
 		}
 		return response.toString();
