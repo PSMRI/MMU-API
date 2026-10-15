@@ -156,7 +156,7 @@ public class DataSyncRepository {
 				continue;
 			try {
 				List<Map<String, Object>> rows = jdbcTemplate.queryForList("SELECT '" + table.getTableName()
-						+ "' AS tableName, SyncFailureReason AS reason, COUNT(*) AS failedRows, MAX(SyncedDate) AS lastTried "
+						+ "' AS tableName, SyncFailureReason AS reason, COUNT(*) AS failedRows, DATE_FORMAT(MAX(SyncedDate), '%d-%m-%Y %H:%i') AS lastTried "
 						+ "FROM " + qualified + " WHERE Processed = 'F' GROUP BY SyncFailureReason");
 				result.addAll(rows);
 			} catch (Exception e) {
