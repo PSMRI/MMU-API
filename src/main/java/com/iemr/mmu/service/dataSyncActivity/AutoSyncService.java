@@ -71,6 +71,9 @@ public class AutoSyncService {
 	private DownloadDataFromServerImpl downloadDataFromServerImpl;
 
 	@Autowired
+	private DownloadDataFromServerTransactionalImpl downloadDataFromServerTransactional;
+
+	@Autowired
 	private DataSyncRepository dataSyncRepository;
 
 	@Autowired
@@ -82,10 +85,16 @@ public class AutoSyncService {
 	@Value("${sync.autoMasterDownload.enabled:true}")
 	private boolean masterDownloadEnabled;
 
+	// refills / stock issued at central for this van's store ("Inventory Data Download"), after each upload
+	@Value("${sync.autoInventoryDownload.enabled:true}")
+	private boolean inventoryDownloadEnabled;
+
 	private volatile long lastUploadAt;
 	private volatile String lastUploadResult;
 	private volatile long lastMasterDownloadAt;
 	private volatile String lastMasterDownloadResult;
+	private volatile long lastInventoryDownloadAt;
+	private volatile String lastInventoryDownloadResult;
 	private volatile String lastError;
 
 	// own thread: a long upload must not hold the shared scheduler thread
@@ -134,11 +143,27 @@ public class AutoSyncService {
 			logger.info("Automatic upload for vanID {} finished: {}", vanID, result);
 			// internet is up: top up the BenID pool if it is low (same as the manual upload)
 			benIdAutoTopUpService.triggerNow();
+			if (inventoryDownloadEnabled)
+				inventoryDownload(vanID, key);
 		} catch (Exception e) {
 			lastError = "Upload: " + e.getMessage();
 			logger.warn("Automatic upload failed: {}", e.getMessage());
 		} finally {
 			SYNC_LOCK.unlock();
+		}
+	}
+
+	// Same as the "Inventory Data Download" button: indents, indent issues, stock transfers and stock entries
+	// that central has for this van's store. Its own failure does not undo the upload.
+	private void inventoryDownload(int vanID, String key) {
+		try {
+			int done = downloadDataFromServerTransactional.downloadTransactionalData(vanID, key, "datasync");
+			lastInventoryDownloadAt = System.currentTimeMillis();
+			lastInventoryDownloadResult = done > 0 ? "success" : "nothing downloaded";
+			logger.info("Automatic inventory download for vanID {} finished: {}", vanID, lastInventoryDownloadResult);
+		} catch (Exception e) {
+			lastError = "Inventory download: " + e.getMessage();
+			logger.warn("Automatic inventory download failed: {}", e.getMessage());
 		}
 	}
 
@@ -186,6 +211,10 @@ public class AutoSyncService {
 		s.put("lastMasterDownloadAt", lastMasterDownloadAt);
 		s.put("lastMasterDownloadResult",
 				lastMasterDownloadResult == null ? JSONObject.NULL : lastMasterDownloadResult);
+		s.put("inventoryDownloadEnabled", inventoryDownloadEnabled);
+		s.put("lastInventoryDownloadAt", lastInventoryDownloadAt);
+		s.put("lastInventoryDownloadResult",
+				lastInventoryDownloadResult == null ? JSONObject.NULL : lastInventoryDownloadResult);
 		s.put("lastError", lastError == null ? JSONObject.NULL : lastError);
 		List<Map<String, Object>> failures = dataSyncRepository.getSyncFailures();
 		long failedRows = failures.stream().mapToLong(f -> ((Number) f.get("failedRows")).longValue()).sum();

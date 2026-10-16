@@ -49,6 +49,7 @@ class AutoSyncServiceTest {
 	private DownloadDataFromServerImpl download;
 	private DataSyncRepository repo;
 	private BenIdAutoTopUpService benId;
+	private DownloadDataFromServerTransactionalImpl inventory;
 
 	@BeforeEach
 	void setUp() throws Exception {
@@ -57,6 +58,7 @@ class AutoSyncServiceTest {
 		download = mock(DownloadDataFromServerImpl.class);
 		repo = mock(DataSyncRepository.class);
 		benId = mock(BenIdAutoTopUpService.class);
+		inventory = mock(DownloadDataFromServerTransactionalImpl.class);
 		when(centralAuth.isEnabled()).thenReturn(true);
 		when(centralAuth.getVanID()).thenReturn(403);
 		when(centralAuth.getConnectedUser()).thenReturn("stoptb1");
@@ -69,6 +71,8 @@ class AutoSyncServiceTest {
 		ReflectionTestUtils.setField(service, "downloadDataFromServerImpl", download);
 		ReflectionTestUtils.setField(service, "dataSyncRepository", repo);
 		ReflectionTestUtils.setField(service, "benIdAutoTopUpService", benId);
+		ReflectionTestUtils.setField(service, "downloadDataFromServerTransactional", inventory);
+		ReflectionTestUtils.setField(service, "inventoryDownloadEnabled", true);
 		ReflectionTestUtils.setField(service, "uploadEnabled", true);
 		ReflectionTestUtils.setField(service, "masterDownloadEnabled", true);
 	}
@@ -82,6 +86,28 @@ class AutoSyncServiceTest {
 		verify(upload).getDataToSyncToServer(403, "stoptb1", "SESSION-KEY", null);
 		verify(benId).triggerNow();
 		assertEquals("Data successfully synced", service.status().get("lastUploadResult"));
+	}
+
+	@Test
+	void uploadIsFollowedByInventoryDownload() throws Exception {
+		when(upload.getDataToSyncToServer(403, "stoptb1", "SESSION-KEY", null)).thenReturn("Data successfully synced");
+		when(inventory.downloadTransactionalData(403, "SESSION-KEY", "datasync")).thenReturn(1);
+
+		service.uploadOnce();
+
+		verify(inventory).downloadTransactionalData(403, "SESSION-KEY", "datasync");
+		assertEquals("success", service.status().get("lastInventoryDownloadResult"));
+	}
+
+	@Test
+	void inventoryDownloadFailureKeepsUploadResult() throws Exception {
+		when(upload.getDataToSyncToServer(403, "stoptb1", "SESSION-KEY", null)).thenReturn("Data successfully synced");
+		when(inventory.downloadTransactionalData(403, "SESSION-KEY", "datasync")).thenThrow(new RuntimeException("offline"));
+
+		service.uploadOnce();
+
+		assertEquals("Data successfully synced", service.status().get("lastUploadResult"));
+		assertEquals("Inventory download: offline", service.status().get("lastError"));
 	}
 
 	@Test
