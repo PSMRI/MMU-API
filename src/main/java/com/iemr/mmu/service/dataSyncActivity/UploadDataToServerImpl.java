@@ -184,8 +184,11 @@ public class UploadDataToServerImpl implements UploadDataToServer {
                     tableDetailsList.add(tableDetails);
                     continue;
                 }
-                logger.info("Fetched syncData for schema {} and table {}: {}", obj.getSchemaName(), obj.getTableName(),
-                        objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(syncData));
+                // Log the row count only. Pretty-printing every row here built a second, larger copy
+                // of the whole pending set in memory (photos/biometrics are ~1.3 MB per row) and threw
+                // OutOfMemoryError before a single batch was sent.
+                logger.info("Fetched syncData for schema {} and table {}: {} rows", obj.getSchemaName(),
+                        obj.getTableName(), syncData == null ? 0 : syncData.size());
 
                 if (syncData != null && syncData.size() > 0) {
                     int dataSize = syncData.size();
