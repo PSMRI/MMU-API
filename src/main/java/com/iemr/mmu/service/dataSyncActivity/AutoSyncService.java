@@ -23,6 +23,7 @@ package com.iemr.mmu.service.dataSyncActivity;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.locks.ReentrantLock;
@@ -52,6 +53,9 @@ import jakarta.annotation.PreDestroy;
  * SyncedBy is the operator who connected the laptop. Active only where CentralAuthService is enabled
  * (stoptb.enforce.vanid=true and stoptb.van.id>0); central and other deployments are unaffected. The manual
  * buttons keep working as before.
+ *
+ * Off by default (manual sync only) until the automatic schedule is approved: set sync.autoUpload.enabled,
+ * sync.autoMasterDownload.enabled and sync.autoInventoryDownload.enabled to true to switch it on.
  */
 @Service
 public class AutoSyncService {
@@ -79,15 +83,24 @@ public class AutoSyncService {
 	@Autowired
 	private BenIdAutoTopUpService benIdAutoTopUpService;
 
-	@Value("${sync.autoUpload.enabled:true}")
+	@Value("${sync.autoUpload.enabled:false}")
 	private boolean uploadEnabled;
 
-	@Value("${sync.autoMasterDownload.enabled:true}")
+	@Value("${sync.autoMasterDownload.enabled:false}")
 	private boolean masterDownloadEnabled;
 
 	// refills / stock issued at central for this van's store ("Inventory Data Download"), after each upload
-	@Value("${sync.autoInventoryDownload.enabled:true}")
+	@Value("${sync.autoInventoryDownload.enabled:false}")
 	private boolean inventoryDownloadEnabled;
+
+	// automatic master download fetches only the inventory masters (items, stores, item->store mapping, Min Stock);
+	// other masters (users, complaints, villages) come with the manual Download Masters button
+	@Value("${sync.autoMasterDownload.inventoryOnly:true}")
+	private boolean masterDownloadInventoryOnly;
+
+	static final Set<String> INVENTORY_MASTERS = Set.of("m_item", "m_itemcategory", "m_itemissueconfig", "m_uom",
+			"m_manufacturer", "m_pharmacologicalcategory", "m_supplier", "m_facilitytype", "m_facility",
+			"m_itemfacilitymapping");
 
 	private volatile long lastUploadAt;
 	private volatile String lastUploadResult;
@@ -183,7 +196,8 @@ public class AutoSyncService {
 				lastError = "Master download: van " + vanID + " not found in m_van";
 				return;
 			}
-			String result = downloadDataFromServerImpl.downloadMasterDataFromServer(key, null, vanID, psm);
+			String result = downloadDataFromServerImpl.downloadMasterDataFromServer(key, null, vanID, psm,
+					masterDownloadInventoryOnly ? INVENTORY_MASTERS : null);
 			if ("inProgress".equalsIgnoreCase(result)) {
 				logger.info("Master download already running (manual) - skipping the automatic one");
 				return;

@@ -75,6 +75,7 @@ class AutoSyncServiceTest {
 		ReflectionTestUtils.setField(service, "inventoryDownloadEnabled", true);
 		ReflectionTestUtils.setField(service, "uploadEnabled", true);
 		ReflectionTestUtils.setField(service, "masterDownloadEnabled", true);
+		ReflectionTestUtils.setField(service, "masterDownloadInventoryOnly", true);
 	}
 
 	@Test
@@ -121,18 +122,30 @@ class AutoSyncServiceTest {
 	}
 
 	@Test
-	void masterDownloadUsesVanServiceLine() throws Exception {
-		when(download.downloadMasterDataFromServer("SESSION-KEY", null, 403, 1726)).thenReturn("success");
+	void masterDownloadUsesVanServiceLineAndOnlyInventoryMasters() throws Exception {
+		when(download.downloadMasterDataFromServer("SESSION-KEY", null, 403, 1726, AutoSyncService.INVENTORY_MASTERS))
+				.thenReturn("success");
 
 		service.masterDownloadOnce();
 
-		verify(download).downloadMasterDataFromServer("SESSION-KEY", null, 403, 1726);
+		verify(download).downloadMasterDataFromServer("SESSION-KEY", null, 403, 1726, AutoSyncService.INVENTORY_MASTERS);
 		assertEquals("success", service.status().get("lastMasterDownloadResult"));
 	}
 
 	@Test
+	void masterDownloadCanFetchAllMasters() throws Exception {
+		ReflectionTestUtils.setField(service, "masterDownloadInventoryOnly", false);
+		when(download.downloadMasterDataFromServer("SESSION-KEY", null, 403, 1726, null)).thenReturn("success");
+
+		service.masterDownloadOnce();
+
+		verify(download).downloadMasterDataFromServer("SESSION-KEY", null, 403, 1726, null);
+	}
+
+	@Test
 	void manualMasterDownloadRunningIsNotCountedAsARun() throws Exception {
-		when(download.downloadMasterDataFromServer("SESSION-KEY", null, 403, 1726)).thenReturn("inProgress");
+		when(download.downloadMasterDataFromServer("SESSION-KEY", null, 403, 1726, AutoSyncService.INVENTORY_MASTERS))
+				.thenReturn("inProgress");
 
 		service.masterDownloadOnce();
 
