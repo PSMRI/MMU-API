@@ -80,6 +80,11 @@ public class UploadDataToServerImpl implements UploadDataToServer {
     @Value("${BATCH_SIZE}")
     private int BATCH_SIZE;
 
+    // StopTB camp laptop: a table configured in several sync groups is uploaded only by its last group (see
+    // skipTablesUploadedByLaterGroup)
+    @Value("${stoptb.enforce.vanid:false}")
+    private boolean stopTBLaptop;
+
     @Autowired
     private DataSyncRepository dataSyncRepository;
     @Autowired
@@ -407,8 +412,32 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 
     private List<SyncUtilityClass> getVanAndServerColumns(Integer groupID) throws Exception {
         List<SyncUtilityClass> syncUtilityClassList = getVanAndServerColumnList(groupID);
+        if (stopTBLaptop)
+            syncUtilityClassList = skipTablesUploadedByLaterGroup(syncUtilityClassList, groupID,
+                    syncutilityClassRepo.findByDeletedOrderBySyncTableDetailID(false));
         logger.debug("Fetched SyncUtilityClass list for groupID {}: {}", groupID, syncUtilityClassList);
         return syncUtilityClassList;
+    }
+
+    /**
+     * Inventory tables are configured twice: group 5 (old lists without the store columns of stock-outs and patient
+     * issues, batch insert fails) and group 9 "Inventory" (complete). Group 5 ran first and marked the rows uploaded,
+     * so central got stock-outs without their camp store. A table that a later group also uploads is skipped here.
+     */
+    static List<SyncUtilityClass> skipTablesUploadedByLaterGroup(List<SyncUtilityClass> groupTables, int groupID,
+            List<SyncUtilityClass> allTables) {
+        Map<String, Integer> lastGroup = new HashMap<>();
+        for (SyncUtilityClass t : allTables) {
+            if (t.getTableName() != null && t.getSyncTableGroupID() != null)
+                lastGroup.merge(t.getTableName().toLowerCase(), t.getSyncTableGroupID(), Math::max);
+        }
+        List<SyncUtilityClass> kept = new ArrayList<>();
+        for (SyncUtilityClass t : groupTables) {
+            Integer last = t.getTableName() == null ? null : lastGroup.get(t.getTableName().toLowerCase());
+            if (last == null || last <= groupID)
+                kept.add(t);
+        }
+        return kept;
     }
 
     public List<SyncUtilityClass> getVanAndServerColumnList(Integer groupID) throws Exception {
