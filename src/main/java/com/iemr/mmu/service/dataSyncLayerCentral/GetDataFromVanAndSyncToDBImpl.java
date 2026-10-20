@@ -53,6 +53,10 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
     @Value("${downSync.markDeliveredOnUpSync:true}")
     private boolean markDownSyncedOnUpSync;
 
+    // fill VanSerialNo / SyncFacilityID from the van row when not sent by name (see fillVanKeys)
+    @Value("${dataSync.fillVanKeys:true}")
+    private boolean fillVanKeysEnabled = true;
+
     private static final Map<Integer, List<String>> TABLE_GROUPS = new HashMap<>();
     static {
         TABLE_GROUPS.put(1,
@@ -372,7 +376,9 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
             // CRITICAL FIX: Keep null as null, don't convert to string
             cleanRecord.put(cleanKey.trim(), value);
         }
-    
+        if (fillVanKeysEnabled)
+            fillVanKeys(cleanRecord, serverColumnsList, vanAutoIncColumnName);
+
 
         String vanSerialNo = String.valueOf(cleanRecord.get(vanAutoIncColumnName));
         // Column may be "vanID" (Stop TB tables) or "VanID" (standard tables) — check both
@@ -606,6 +612,31 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
     return overallSuccess;
 }
    
+    /**
+     * m_synctabledetail maps van columns to server columns by position: the van's own ID (VanAutoIncColumnName,
+     * e.g. BenVisitID, ItemStockEntryID) sits where the server list has VanSerialNo. Records are filled by name, so
+     * without this VanSerialNo stays NULL: the row cannot be matched on the next upload (duplicates) and joins on
+     * VanSerialNo break. Same for SyncFacilityID, which some van lists do not send: it is the row's store.
+     */
+    static void fillVanKeys(Map<String, Object> record, List<String> serverColumns, String vanAutoIncColumnName) {
+        if (hasColumn(serverColumns, "VanSerialNo") && record.get("VanSerialNo") == null
+                && vanAutoIncColumnName != null && record.get(vanAutoIncColumnName) != null) {
+            record.put("VanSerialNo", record.get(vanAutoIncColumnName));
+        }
+        if (hasColumn(serverColumns, "SyncFacilityID") && record.get("SyncFacilityID") == null
+                && record.get("FacilityID") != null) {
+            record.put("SyncFacilityID", record.get("FacilityID"));
+        }
+    }
+
+    private static boolean hasColumn(List<String> columns, String name) {
+        for (String column : columns) {
+            if (column.trim().equals(name))
+                return true;
+        }
+        return false;
+    }
+
     private void flagUpSyncedRecordsForDownSync(String schemaName, String tableName, List<SyncResult> syncResults,
             Map<Integer, String> vanIDByResultIndex) {
         if (!markDownSyncedOnUpSync || vanIDByResultIndex.isEmpty())
