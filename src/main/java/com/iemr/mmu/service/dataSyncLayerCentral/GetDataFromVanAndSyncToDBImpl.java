@@ -25,6 +25,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -56,6 +57,17 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
     // fill VanSerialNo / SyncFacilityID from the van row when not sent by name (see fillVanKeys)
     @Value("${dataSync.fillVanKeys:true}")
     private boolean fillVanKeysEnabled = true;
+
+    // replace van IDs in link columns by central IDs (see translateVanLinks); off by default, on for StopTB central
+    @Value("${dataSync.translateVanLinks:false}")
+    private boolean translateVanLinksEnabled;
+
+    // link column -> {table it points to, that table's ID column}
+    private static final Map<String, String[]> VAN_LINKS = new LinkedHashMap<>();
+    static {
+        VAN_LINKS.put("BenVisitID", new String[] { "t_benvisitdetail", "BenVisitID" });
+        VAN_LINKS.put("PrescriptionID", new String[] { "t_prescription", "PrescriptionID" });
+    }
 
     private static final Map<Integer, List<String>> TABLE_GROUPS = new HashMap<>();
     static {
@@ -378,6 +390,18 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
         }
         if (fillVanKeysEnabled)
             fillVanKeys(cleanRecord, serverColumnsList, vanAutoIncColumnName);
+        if (translateVanLinksEnabled) {
+            Object linkVanID = cleanRecord.get("VanID") != null ? cleanRecord.get("VanID") : cleanRecord.get("vanID");
+            String linkError = translateVanLinks(schemaName, syncTableName, cleanRecord, serverColumnsList,
+                    linkVanID == null ? null : String.valueOf(linkVanID));
+            if (linkError != null) {
+                syncResults.add(new SyncResult(schemaName, syncTableName,
+                        String.valueOf(cleanRecord.get(vanAutoIncColumnName)), syncUploadDataDigester.getSyncedBy(),
+                        false, linkError));
+                overallSuccess = false;
+                continue;
+            }
+        }
 
 
         String vanSerialNo = String.valueOf(cleanRecord.get(vanAutoIncColumnName));
@@ -627,6 +651,32 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
                 && record.get("FacilityID") != null) {
             record.put("SyncFacilityID", record.get("FacilityID"));
         }
+    }
+
+    /**
+     * A van sends its own IDs in link columns (BenVisitID, PrescriptionID). On central those numbers belong to other
+     * rows (other vans, central data): the link pointed to the wrong visit/prescription, or the foreign key rejected
+     * the row. The link is replaced by the central ID of the row the van uploaded with that VanSerialNo. If that row
+     * is not on central yet, the record is not saved (returned reason) and is sent again on the next upload.
+     *
+     * @return null when done, or the reason the record cannot be saved yet
+     */
+    String translateVanLinks(String schemaName, String tableName, Map<String, Object> record,
+            List<String> serverColumns, String vanID) {
+        for (Map.Entry<String, String[]> link : VAN_LINKS.entrySet()) {
+            String column = link.getKey();
+            String parentTable = link.getValue()[0];
+            Object vanValue = record.get(column);
+            if (vanValue == null || vanID == null || tableName.equalsIgnoreCase(parentTable)
+                    || !hasColumn(serverColumns, column))
+                continue;
+            Long centralID = dataSyncRepositoryCentral.findCentralIdOfVanRow(schemaName, parentTable,
+                    link.getValue()[1], vanValue, vanID);
+            if (centralID == null)
+                return "Linked " + parentTable + " (van ID " + vanValue + ") not on central yet; sent again on next upload";
+            record.put(column, centralID);
+        }
+        return null;
     }
 
     private static boolean hasColumn(List<String> columns, String name) {
