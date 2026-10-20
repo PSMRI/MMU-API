@@ -215,6 +215,17 @@ public class DataSyncRepository {
 		return (found == null || found.isEmpty()) ? null : found.get(0);
 	}
 
+	public Set<String> getTableColumns(String schema, String table) {
+		jdbcTemplate = getJdbcTemplate();
+
+		String query = " SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? ";
+
+		Set<String> columns = new HashSet<>();
+		for (String c : jdbcTemplate.queryForList(query, String.class, schema, table))
+			columns.add(c.toLowerCase());
+		return columns;
+	}
+
 	public List<String> getDownSyncColumns(String schema, String table) {
 		jdbcTemplate = getJdbcTemplate();
 
