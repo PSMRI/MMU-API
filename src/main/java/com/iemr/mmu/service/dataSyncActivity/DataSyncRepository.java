@@ -23,9 +23,11 @@ package com.iemr.mmu.service.dataSyncActivity;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import java.sql.PreparedStatement;
 
@@ -40,6 +42,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Service;
 
+import com.iemr.mmu.data.syncActivity_syncLayer.SyncUtilityClass;
 import com.iemr.mmu.repo.syncActivity_syncLayer.SyncUtilityClassRepo;
 import com.iemr.mmu.utils.validator.SqlIdentifierValidator;
 
@@ -127,6 +130,42 @@ public class DataSyncRepository {
 
 	}
 
+	/** Service line (MMU) of the van, used for an automatic master download. */
+	public Integer getVanProviderServiceMapID(int vanID) {
+		List<Integer> psm = getJdbcTemplate().queryForList(
+				"SELECT ProviderServiceMapID FROM db_iemr.m_van WHERE VanID = ? AND Deleted = false", Integer.class,
+				vanID);
+		return psm.isEmpty() ? null : psm.get(0);
+	}
+
+	/**
+	 * Rows central rejected on upload (Processed = 'F'), per sync table and reason. They are sent again on every
+	 * upload until central accepts them.
+	 */
+	public List<Map<String, Object>> getSyncFailures() {
+		jdbcTemplate = getJdbcTemplate();
+		List<Map<String, Object>> result = new ArrayList<>();
+		Set<String> seen = new HashSet<>();
+		for (SyncUtilityClass table : syncutilityClassRepo.findByDeletedOrderBySyncTableDetailID(false)) {
+			if (Boolean.TRUE.equals(table.getIsMaster()) || table.getSchemaName() == null
+					|| table.getTableName() == null)
+				continue;
+			String qualified = SqlIdentifierValidator.validatedSchemaName(table.getSchemaName()) + "."
+					+ SqlIdentifierValidator.validatedTableName(table.getTableName());
+			if (!seen.add(qualified.toLowerCase()))
+				continue;
+			try {
+				List<Map<String, Object>> rows = jdbcTemplate.queryForList("SELECT '" + table.getTableName()
+						+ "' AS tableName, SyncFailureReason AS reason, COUNT(*) AS failedRows, DATE_FORMAT(MAX(SyncedDate), '%d-%m-%Y %H:%i') AS lastTried "
+						+ "FROM " + qualified + " WHERE Processed = 'F' GROUP BY SyncFailureReason");
+				result.addAll(rows);
+			} catch (Exception e) {
+				logger.warn("Sync failure check skipped for {}: {}", qualified, e.getMessage());
+			}
+		}
+		return result;
+	}
+
 	// ---------------------------------- End of Upload repository
 
 	// ---------------------------------- Download Repository
@@ -174,6 +213,17 @@ public class DataSyncRepository {
 
 		List<String> found = jdbcTemplate.queryForList(query, String.class, schema, table);
 		return (found == null || found.isEmpty()) ? null : found.get(0);
+	}
+
+	public Set<String> getTableColumns(String schema, String table) {
+		jdbcTemplate = getJdbcTemplate();
+
+		String query = " SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? ";
+
+		Set<String> columns = new HashSet<>();
+		for (String c : jdbcTemplate.queryForList(query, String.class, schema, table))
+			columns.add(c.toLowerCase());
+		return columns;
 	}
 
 	public List<String> getDownSyncColumns(String schema, String table) {

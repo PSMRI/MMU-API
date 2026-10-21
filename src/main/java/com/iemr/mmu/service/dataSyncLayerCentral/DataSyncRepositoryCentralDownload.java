@@ -205,7 +205,8 @@ public class DataSyncRepositoryCentralDownload {
 		}
 		logger.info("Select query central: " + baseQuery);
 		logger.info("Last Downloaded Date " + lastDownloadDate);
-		logger.info("Result set Details: " + resultSetList);
+		// Row count only: logging the rows of a large master (villages, 661k rows) exhausted the heap.
+		logger.info("Rows returned: " + resultSetList.size());
 		return resultSetList;
 	}
 
