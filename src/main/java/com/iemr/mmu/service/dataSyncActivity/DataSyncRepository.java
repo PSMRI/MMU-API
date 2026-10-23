@@ -169,6 +169,64 @@ public class DataSyncRepository {
 	// ---------------------------------- End of Upload repository
 
 	// ---------------------------------- Download Repository
+
+	/**
+	 * Down-sync copies the beneficiary tables but not i_ben_flow_outreach, and the tab download
+	 * (FLW-API getBeneficiaryData) only serves beneficiaries that have a worklist row. So a
+	 * beneficiary registered elsewhere and down-synced here never reached this laptop's tabs.
+	 * Creates the missing worklist row for this van's beneficiaries, filled as TM-API does at
+	 * registration. Processed = 'P' so it is not uploaded back: central already has its own row.
+	 */
+	public int createMissingWorklistRows(int vanID, int providerServiceMapID) {
+		jdbcTemplate = getJdbcTemplate();
+
+		String village = "(SELECT h.%s FROM db_identity.i_beneficiarydetails_rmnch r "
+				+ " JOIN db_identity.i_householddetails h ON h.houseoldId = r.houseoldId "
+				+ " WHERE r.BeneficiaryRegID = bm.BenRegId LIMIT 1)";
+
+		String insert = "INSERT INTO db_iemr.i_ben_flow_outreach "
+				+ " (beneficiary_reg_id, beneficiary_id, visit_no, ben_name, ben_age, ben_dob, ben_gender, "
+				+ "  ben_gender_val, ben_age_val, ben_phone_no, father_name, spouse_name, nurse_flag, doctor_flag, "
+				+ "  pharmacist_flag, doctor_signature_flag, BenArrivedFlag, created_by, created_date, modified_by, "
+				+ "  modified_date, registrationDate, districtID, district, villageID, village, "
+				+ "  providerServiceMapID, vanID, Processed, deleted) "
+				+ " SELECT * FROM ( SELECT bm.BenRegId, rg.BeneficiaryID, 1 AS visit_no, "
+				+ "  TRIM(CONCAT_WS(' ', d.FirstName, NULLIF(d.MiddleName, ''), d.LastName)) AS ben_name, "
+				+ "  CONCAT(TIMESTAMPDIFF(YEAR, d.DOB, bm.CreatedDate), ' years - ', "
+				+ "         MOD(TIMESTAMPDIFF(MONTH, d.DOB, bm.CreatedDate), 12), ' months') AS ben_age, "
+				+ "  d.DOB, d.Gender, d.GenderId, TIMESTAMPDIFF(YEAR, d.DOB, bm.CreatedDate) AS ben_age_val, "
+				+ "  COALESCE(c.PreferredPhoneNum, c.PhoneNum1) AS phone, "
+				+ "  COALESCE(d.FatherName, '') AS father, COALESCE(d.SpouseName, '') AS spouse, "
+				+ "  1 AS nf, 0 AS df, 0 AS pf, 0 AS dsf, 0 AS baf, bm.CreatedBy, bm.CreatedDate AS cdate, "
+				+ "  'downsync' AS mby, NOW() AS mdate, bm.CreatedDate AS rdate, "
+				+ "  COALESCE(a.CurrDistrictId, a.PermDistrictId) AS districtID, "
+				+ "  COALESCE(a.CurrDistrict, a.PermDistrict) AS district, "
+				+ "  COALESCE(" + String.format(village, "villageid") + ", a.CurrVillageId, a.PermVillageId) AS villageID, "
+				+ "  COALESCE(" + String.format(village, "village") + ", a.CurrVillage, a.PermVillage) AS village, "
+				+ "  ? AS psm, bm.VanID, 'P' AS processed, 0 AS deleted "
+				+ " FROM db_identity.i_beneficiarymapping bm "
+				+ " JOIN db_identity.m_beneficiaryregidmapping rg ON rg.BenRegId = bm.BenRegId "
+				+ " JOIN db_identity.i_beneficiarydetails d ON d.BeneficiaryDetailsId = bm.BenDetailsId "
+				+ " LEFT JOIN db_identity.i_beneficiarycontacts c ON c.BenContactsID = bm.BenContactsId "
+				+ " LEFT JOIN db_identity.i_beneficiaryaddress a ON a.BenAddressID = bm.BenAddressId "
+				+ " WHERE bm.VanID = ? AND bm.Deleted = false "
+				// the van can hold beneficiaries of other service lines; only its own get a row
+				+ "   AND (SELECT r.ProviderServiceMapID FROM db_identity.i_beneficiarydetails_rmnch r "
+				+ "        WHERE r.BeneficiaryRegID = bm.BenRegId LIMIT 1) = ? "
+				+ "   AND NOT EXISTS (SELECT 1 FROM db_iemr.i_ben_flow_outreach f "
+				+ "                   WHERE f.beneficiary_reg_id = bm.BenRegId) ) x "
+				+ " WHERE x.villageID IS NOT NULL";
+
+		int inserted = jdbcTemplate.update(insert, providerServiceMapID, vanID, providerServiceMapID);
+
+		if (inserted > 0)
+			// same convention as TM-API: VanSerialNo is the row's own id
+			jdbcTemplate.update("UPDATE db_iemr.i_ben_flow_outreach SET VanSerialNo = ben_flow_id "
+					+ " WHERE modified_by = 'downsync' AND VanSerialNo IS NULL");
+
+		return inserted;
+	}
+
 	public int[] updateLatestMasterInLocal(String query, List<Object[]> syncDataList) {
 		int[] i = null;
 		// get JDBC template
