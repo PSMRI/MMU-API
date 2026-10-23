@@ -163,6 +163,7 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 				}
 				progressCounter++;
 			}
+			createMissingWorklistRows(vanID, providerServiceMapID);
 			countOutstandingConflicts(downSyncTables, vanID);
 		} finally {
 			IN_PROGRESS.set(false);
@@ -205,6 +206,23 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 		resultMap.put("summary", buildSummary());
 		resultMap.put("message", buildSummary());
 		return resultMap;
+	}
+
+	/** Down-synced beneficiaries need a worklist row before this laptop's tabs can download them. */
+	private void createMissingWorklistRows(Integer vanID, Integer providerServiceMapID) {
+		try {
+			Integer psm = providerServiceMapID != null ? providerServiceMapID
+					: dataSyncRepository.getVanProviderServiceMapID(vanID);
+			if (psm == null) {
+				logger.warn("Worklist rows not created after down-sync: no service line for van {}", vanID);
+				return;
+			}
+			int created = dataSyncRepository.createMissingWorklistRows(vanID, psm);
+			logger.info("Created {} worklist rows for down-synced beneficiaries of van {}", created, vanID);
+		} catch (Exception e) {
+			// the down-sync itself already succeeded; a failure here must not undo it
+			logger.error("Creating worklist rows after down-sync failed for van " + vanID + " : " + e.getMessage(), e);
+		}
 	}
 
 	private void countOutstandingConflicts(List<DownSyncTableDetail> downSyncTables, Integer vanID) {
