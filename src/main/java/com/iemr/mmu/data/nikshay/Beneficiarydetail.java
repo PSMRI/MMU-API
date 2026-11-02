@@ -16,7 +16,7 @@ import java.sql.Timestamp;
 @Entity
 @Table(name = "i_beneficiarydetails", schema = "db_identity")
 @Data
-public class RMNCHMBeneficiarydetail {
+public class Beneficiarydetail {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(unique = true, nullable = false)

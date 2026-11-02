@@ -5,8 +5,7 @@ import com.iemr.mmu.data.nikshay.NikshayBeneficiaryPhaseStatus;
 import com.iemr.mmu.data.nikshay.NikshayBeneficiarySyncStatus;
 import com.iemr.mmu.data.nikshay.NikshayMissingBeneficiaryDTO;
 import com.iemr.mmu.data.nikshay.NikshayMissingBeneficiaryRow;
-import com.iemr.mmu.data.nikshay.RMNCHMBeneficiarydetail;
-import com.iemr.mmu.repo.nikshay.BeneficiaryRepo;
+import com.iemr.mmu.data.nikshay.BeneficiaryNameRow;
 import com.iemr.mmu.repo.nikshay.NikshayBeneficiaryPhaseStatusRepo;
 import com.iemr.mmu.repo.nikshay.NikshayBeneficiarySyncStatusRepo;
 import com.iemr.mmu.service.nikshay.NikshaySyncStatusService;
@@ -32,7 +31,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
-import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -65,9 +63,6 @@ public class NikshaySyncStatusServiceImpl implements NikshaySyncStatusService {
 
     @Autowired
     private NikshayBeneficiarySyncStatusRepo syncStatusRepo;
-
-    @Autowired
-    private BeneficiaryRepo beneficiaryRepo;
 
     @Value("${nikshay.http.connectTimeoutMs:15000}")
     private int connectTimeoutMs;
@@ -192,26 +187,28 @@ public class NikshaySyncStatusServiceImpl implements NikshaySyncStatusService {
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> getFailedBeneficiaries() {
-        List<Long> benRegIDs = phaseStatusRepo.findDistinctBenRegIDsByStatus(STATUS_FAILED);
+        // one query: all phases (the ENROLMENT row carries the nikshayId even when it did not fail),
+        // ordered newest beneficiary first; the LinkedHashMap keeps that order
+        Map<Long, Map<String, NikshayBeneficiaryPhaseStatus>> phasesByBen = new LinkedHashMap<>();
+        Set<Long> indexBenRegIDs = new LinkedHashSet<>();
+        for (NikshayBeneficiaryPhaseStatus row : phaseStatusRepo.findAllPhasesOfBeneficiariesWithStatus(STATUS_FAILED)) {
+            phasesByBen.computeIfAbsent(row.getBenRegID(), k -> new HashMap<>()).put(row.getPhase(), row);
+            if (row.getIndexBenRegID() != null) indexBenRegIDs.add(row.getIndexBenRegID());
+        }
+        List<Long> benRegIDs = new ArrayList<>(phasesByBen.keySet());
         logger.info("Nikshay failed beneficiaries: {} beneficiaries with a FAILED phase", benRegIDs.size());
 
         List<Map<String, Object>> beneficiaries = new ArrayList<>();
         if (!benRegIDs.isEmpty()) {
-            Map<Long, Map<String, NikshayBeneficiaryPhaseStatus>> phasesByBen = new HashMap<>();
             Set<Long> nameBenRegIDs = new LinkedHashSet<>(benRegIDs);
-            for (NikshayBeneficiaryPhaseStatus row : phaseStatusRepo.findByBenRegIDIn(benRegIDs)) {
-                phasesByBen.computeIfAbsent(row.getBenRegID(), k -> new HashMap<>()).put(row.getPhase(), row);
-                if (row.getIndexBenRegID() != null) nameBenRegIDs.add(row.getIndexBenRegID());
-            }
+            nameBenRegIDs.addAll(indexBenRegIDs);
 
             // Names of the beneficiaries and of their index patients, from i_beneficiarydetails
-            List<BigInteger> nameBenRegIDsBig = nameBenRegIDs.stream()
-                    .map(BigInteger::valueOf)
-                    .collect(Collectors.toList());
+            // (deleted records are already excluded by the query)
             Map<Long, String> nameByBen = new HashMap<>();
-            for (RMNCHMBeneficiarydetail detail : beneficiaryRepo.findDetailsByBenRegIDIn(nameBenRegIDsBig)) {
-                if (detail.getBenRegId() == null || Boolean.TRUE.equals(detail.getDeleted())) continue;
-                nameByBen.putIfAbsent(detail.getBenRegId().longValue(), buildName(detail));
+            for (BeneficiaryNameRow detail : syncStatusRepo.findBeneficiaryNames(nameBenRegIDs)) {
+                if (detail.getBenRegID() == null) continue;
+                nameByBen.putIfAbsent(detail.getBenRegID().longValue(), buildName(detail));
             }
 
             for (Long benRegID : benRegIDs) {
@@ -355,7 +352,7 @@ public class NikshaySyncStatusServiceImpl implements NikshaySyncStatusService {
         return Timestamp.from(OffsetDateTime.parse(value.toString()).toInstant());
     }
 
-    private String buildName(RMNCHMBeneficiarydetail detail) {
+    private String buildName(BeneficiaryNameRow detail) {
         String name = ((detail.getFirstName() != null ? detail.getFirstName() : "") + " "
                 + (detail.getLastName() != null ? detail.getLastName() : "")).trim();
         return name.isEmpty() ? null : name;

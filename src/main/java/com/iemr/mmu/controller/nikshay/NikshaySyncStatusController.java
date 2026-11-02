@@ -5,8 +5,11 @@ import com.iemr.mmu.data.nikshay.NikshayMissingBeneficiaryDTO;
 import com.iemr.mmu.data.nikshay.NikshaySyncStatusUpdateDTO;
 import com.iemr.mmu.service.nikshay.NikshaySyncStatusService;
 import com.iemr.mmu.utils.NikshayConstants;
+import com.iemr.mmu.utils.exception.IEMRException;
 import com.iemr.mmu.utils.response.OutputResponse;
+import com.iemr.mmu.utils.validator.Validator;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +41,9 @@ public class NikshaySyncStatusController {
     @Autowired
     private NikshaySyncStatusService nikshaySyncStatusService;
 
+    @Autowired
+    private Validator validator;
+
     @PostMapping("/syncStatus/syncFailed")
     @Operation(summary = "Copy all FAILED rows from nikshay_beneficiary_phase_status into nikshay_beneficiary_sync_status")
     public String syncFailedPhaseStatuses(@RequestHeader(value = "Authorization") String authorization,
@@ -54,7 +60,8 @@ public class NikshaySyncStatusController {
     }
 
     @GetMapping("/syncStatus/missingBeneficiaries")
-    @Operation(summary = "Get beneficiaries whose Ni-kshay sync failed, filtered by provider service map, village or both (paged)")
+    @Operation(summary = "Get beneficiaries whose Ni-kshay sync failed (paged); all of them with no filter, "
+            + "else only those matching providerServiceMapID and/or villageID")
     public ResponseEntity<Map<String, Object>> getMissingBeneficiaries(
             @RequestParam(value = "providerServiceMapID", required = false) Integer providerServiceMapID,
             @RequestParam(value = "villageID", required = false) Integer villageID,
@@ -63,9 +70,6 @@ public class NikshaySyncStatusController {
         logger.info("getMissingBeneficiaries request: providerServiceMapID={}, villageID={}, pageNo={}, pageSize={}",
                 providerServiceMapID, villageID, pageNo, pageSize);
         try {
-            if (providerServiceMapID == null && villageID == null) {
-                return errorResponse(HttpStatus.BAD_REQUEST, "providerServiceMapID or villageID is required");
-            }
             if (pageNo < 0) {
                 return errorResponse(HttpStatus.BAD_REQUEST, "pageNo must be 0 or greater");
             }
@@ -101,7 +105,24 @@ public class NikshaySyncStatusController {
 
     @GetMapping(NikshayConstants.FAILED_BENEFICIARIES_PATH)
     @Operation(summary = "Get every beneficiary with a FAILED phase in nikshay_beneficiary_phase_status, with all its phases (not paged)")
-    public ResponseEntity<Map<String, Object>> getFailedBeneficiaries(@RequestHeader(value = "ServerAuthorization") String serverAuthorization) {
+    public ResponseEntity<Map<String, Object>> getFailedBeneficiaries(
+            @RequestHeader(value = "ServerAuthorization") String serverAuthorization, HttpServletRequest request) {
+        // The JWT filter lets java/ and okhttp clients through without a token, and HttpInterceptor skips
+        // an empty Authorization header, so the header's presence proves nothing. ServerAuthorization must
+        // be a live login session key (the one /syncFailed sends after the data-sync server login).
+        if (serverAuthorization == null || serverAuthorization.trim().isEmpty()) {
+            return errorResponse(HttpStatus.UNAUTHORIZED, "ServerAuthorization is required");
+        }
+        String remoteAddress = request.getHeader("X-FORWARDED-FOR");
+        if (remoteAddress == null || remoteAddress.trim().isEmpty()) {
+            remoteAddress = request.getRemoteAddr();
+        }
+        try {
+            validator.checkKeyExists(serverAuthorization, remoteAddress);
+        } catch (IEMRException e) {
+            return errorResponse(HttpStatus.UNAUTHORIZED, "Invalid or expired ServerAuthorization");
+        }
+
         try {
             return ResponseEntity.ok(nikshaySyncStatusService.getFailedBeneficiaries());
         } catch (Exception e) {

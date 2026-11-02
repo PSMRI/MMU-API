@@ -8,27 +8,16 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface NikshayBeneficiaryPhaseStatusRepo extends JpaRepository<NikshayBeneficiaryPhaseStatus, Long> {
 
-    Optional<NikshayBeneficiaryPhaseStatus> findByBenRegIDAndPhase(Long benRegID, String phase);
-
-    List<NikshayBeneficiaryPhaseStatus> findByBenRegID(Long benRegID);
-
-    List<NikshayBeneficiaryPhaseStatus> findByStatus(String status);
-
-    List<NikshayBeneficiaryPhaseStatus> findByPhaseAndStatus(String phase, String status);
-
-    List<NikshayBeneficiaryPhaseStatus> findByStatusAndFailureReason(String status, String failureReason);
-
-    List<NikshayBeneficiaryPhaseStatus> findByIndexBenRegID(Long indexBenRegID);
-
     List<NikshayBeneficiaryPhaseStatus> findByBenRegIDIn(Collection<Long> benRegIDs);
 
-    // One entry per beneficiary that has at least one phase in the given status
-    @Query("SELECT DISTINCT p.benRegID FROM NikshayBeneficiaryPhaseStatus p WHERE p.status = :status " +
+    // Every phase row (any status) of every beneficiary that has at least one phase in the given status,
+    // newest beneficiary first
+    @Query("SELECT p FROM NikshayBeneficiaryPhaseStatus p WHERE p.benRegID IN " +
+            "(SELECT f.benRegID FROM NikshayBeneficiaryPhaseStatus f WHERE f.status = :status) " +
             "ORDER BY p.benRegID DESC")
-    List<Long> findDistinctBenRegIDsByStatus(@Param("status") String status);
+    List<NikshayBeneficiaryPhaseStatus> findAllPhasesOfBeneficiariesWithStatus(@Param("status") String status);
 }
