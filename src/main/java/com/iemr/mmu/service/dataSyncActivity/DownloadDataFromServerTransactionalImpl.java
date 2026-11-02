@@ -227,8 +227,6 @@ public class DownloadDataFromServerTransactionalImpl implements DownloadDataFrom
 			default:
 
 			}
-
-			i++;
 		}
 		return 1;
 
