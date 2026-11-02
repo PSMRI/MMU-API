@@ -36,7 +36,7 @@ public interface NikshayBeneficiarySyncStatusRepo extends JpaRepository<NikshayB
     @Transactional
     @Modifying
     @Query("DELETE FROM NikshayBeneficiarySyncStatus s WHERE s.isUpdated = true " +
-            "AND COALESCE(s.updatedAt, s.createdAt) < :cutoff")
+            "OR COALESCE(s.updatedAt, s.createdAt) < :cutoff")
     int deleteUpdatedOlderThan(@Param("cutoff") Timestamp cutoff);
 
     // Shared FROM/WHERE of findMissingBeneficiaries and its count query (annotation values must be constants).

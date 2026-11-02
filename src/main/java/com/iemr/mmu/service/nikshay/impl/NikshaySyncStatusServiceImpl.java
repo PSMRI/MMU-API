@@ -64,6 +64,10 @@ public class NikshaySyncStatusServiceImpl implements NikshaySyncStatusService {
     @Autowired
     private NikshayBeneficiarySyncStatusRepo syncStatusRepo;
 
+    // Server that hosts the failedBeneficiaries API (it reads nikshay_beneficiary_phase_status)
+    @Value("${nikshay.baseUrl}")
+    private String nikshayBaseUrl;
+
     @Value("${nikshay.http.connectTimeoutMs:15000}")
     private int connectTimeoutMs;
 
@@ -289,7 +293,8 @@ public class NikshaySyncStatusServiceImpl implements NikshaySyncStatusService {
 
         ResponseEntity<String> response;
         try {
-            response = restTemplate.exchange(NikshayConstants.FAILED_BENEFICIARIES_URL, HttpMethod.GET, new HttpEntity<>(headers),
+            String url = nikshayBaseUrl + NikshayConstants.NIKSHAY_PATH + NikshayConstants.FAILED_BENEFICIARIES_PATH;
+            response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers),
                     String.class);
         } catch (HttpStatusCodeException e) {
             throw new Exception("failedBeneficiaries API returned " + e.getStatusCode().value() + ": "
