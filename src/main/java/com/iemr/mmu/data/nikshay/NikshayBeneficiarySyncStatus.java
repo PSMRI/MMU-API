@@ -59,7 +59,7 @@ public class NikshayBeneficiarySyncStatus {
     @Column(name = "last_attempt_at")
     private Timestamp lastAttemptAt;
 
-    @Column(name = "isUpdated", nullable = false)
+    @Column(name = "is_updated", nullable = false)
     private Boolean isUpdated = false;
 
     @CreationTimestamp
