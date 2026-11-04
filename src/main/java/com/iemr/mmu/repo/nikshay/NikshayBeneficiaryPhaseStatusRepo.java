@@ -12,8 +12,6 @@ import java.util.List;
 @Repository
 public interface NikshayBeneficiaryPhaseStatusRepo extends JpaRepository<NikshayBeneficiaryPhaseStatus, Long> {
 
-    List<NikshayBeneficiaryPhaseStatus> findByBenRegIDIn(Collection<Long> benRegIDs);
-
     // Every phase row (any status) of every beneficiary that has at least one phase in the given status,
     // newest beneficiary first
     @Query("SELECT p FROM NikshayBeneficiaryPhaseStatus p WHERE p.benRegID IN " +
