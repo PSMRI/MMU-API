@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -79,6 +80,11 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 
     @Value("${BATCH_SIZE}")
     private int BATCH_SIZE;
+
+    // StopTB camp laptop: a table configured in several sync groups is uploaded only by its last group (see
+    // skipTablesUploadedByLaterGroup)
+    @Value("${stoptb.enforce.vanid:false}")
+    private boolean stopTBLaptop;
 
     @Autowired
     private DataSyncRepository dataSyncRepository;
@@ -151,9 +157,33 @@ public class UploadDataToServerImpl implements UploadDataToServer {
                 String tableKey = obj.getSchemaName() + "." + obj.getTableName();
                 boolean tableHasError = false;
 
-                // get data from DB to sync to server
-                List<Map<String, Object>> syncData = getDataToSync(obj.getSchemaName(), obj.getTableName(),
-                        obj.getVanColumnName());
+                String[] columns = { obj.getVanColumnName(), obj.getServerColumnName() };
+                List<Map<String, Object>> syncData;
+                try {
+                    if (stopTBLaptop)
+                        columns = useRenamedColumns(obj.getTableName(), columns[0], columns[1],
+                                dataSyncRepository.getTableColumns(obj.getSchemaName(), obj.getTableName()));
+
+                    // get data from DB to sync to server
+                    syncData = getDataToSync(obj.getSchemaName(), obj.getTableName(), columns[0]);
+                } catch (Exception e) {
+                    if (!stopTBLaptop)
+                        throw e;
+                    // StopTB camp laptop: one table that cannot be read must not stop the upload of the others;
+                    // its rows stay unprocessed and go on the next upload
+                    logger.error("Upload of table {} skipped: {}", tableKey, e.getMessage());
+                    groupHasFailures = true;
+                    Map<String, Object> tableDetails = new HashMap<>();
+                    tableDetails.put("tableName", obj.getTableName());
+                    tableDetails.put("schemaName", obj.getSchemaName());
+                    tableDetails.put("status", "failed");
+                    tableDetails.put("totalRecords", 0);
+                    tableDetails.put("successfulRecords", 0);
+                    tableDetails.put("failedRecords", 0);
+                    tableDetails.put("failureReasons", List.of("Table could not be read: " + e.getMessage()));
+                    tableDetailsList.add(tableDetails);
+                    continue;
+                }
                 logger.info("Fetched syncData for schema {} and table {}: {}", obj.getSchemaName(), obj.getTableName(),
                         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(syncData));
 
@@ -179,7 +209,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 
                         Map<String, Object> syncResult = syncDataToServer(vanID, obj.getSchemaName(),
                                 obj.getTableName(),
-                                obj.getVanAutoIncColumnName(), obj.getServerColumnName(), syncDataBatch, user,
+                                obj.getVanAutoIncColumnName(), columns[1], syncDataBatch, user,
                                 Authorization, token);
 
                         if (syncResult == null) {
@@ -221,7 +251,7 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 
                         Map<String, Object> syncResult = syncDataToServer(vanID, obj.getSchemaName(),
                                 obj.getTableName(),
-                                obj.getVanAutoIncColumnName(), obj.getServerColumnName(), syncDataBatch, user,
+                                obj.getVanAutoIncColumnName(), columns[1], syncDataBatch, user,
                                 Authorization, token);
 
                         if (syncResult == null) {
@@ -407,8 +437,57 @@ public class UploadDataToServerImpl implements UploadDataToServer {
 
     private List<SyncUtilityClass> getVanAndServerColumns(Integer groupID) throws Exception {
         List<SyncUtilityClass> syncUtilityClassList = getVanAndServerColumnList(groupID);
+        if (stopTBLaptop)
+            syncUtilityClassList = skipTablesUploadedByLaterGroup(syncUtilityClassList, groupID,
+                    syncutilityClassRepo.findByDeletedOrderBySyncTableDetailID(false));
         logger.debug("Fetched SyncUtilityClass list for groupID {}: {}", groupID, syncUtilityClassList);
         return syncUtilityClassList;
+    }
+
+    /**
+     * Inventory tables are configured twice: group 5 (old lists without the store columns of stock-outs and patient
+     * issues, batch insert fails) and group 9 "Inventory" (complete). Group 5 ran first and marked the rows uploaded,
+     * so central got stock-outs without their camp store. A table that a later group also uploads is skipped here.
+     */
+    static List<SyncUtilityClass> skipTablesUploadedByLaterGroup(List<SyncUtilityClass> groupTables, int groupID,
+            List<SyncUtilityClass> allTables) {
+        Map<String, Integer> lastGroup = new HashMap<>();
+        for (SyncUtilityClass t : allTables) {
+            if (t.getTableName() != null && t.getSyncTableGroupID() != null)
+                lastGroup.merge(t.getTableName().toLowerCase(), t.getSyncTableGroupID(), Math::max);
+        }
+        List<SyncUtilityClass> kept = new ArrayList<>();
+        for (SyncUtilityClass t : groupTables) {
+            Integer last = t.getTableName() == null ? null : lastGroup.get(t.getTableName().toLowerCase());
+            if (last == null || last <= groupID)
+                kept.add(t);
+        }
+        return kept;
+    }
+
+    // columns renamed by DB scripts after the sync table lists were written (tb_diagnostic_order: V114 renamed
+    // reason_for_refusal to reason_to_close, V117 reverted it, V125 renamed it again)
+    private static final Map<String, Map<String, String>> RENAMED_COLUMNS = Map.of("tb_diagnostic_order",
+            Map.of("reason_for_refusal", "reason_to_close", "reason_to_close", "reason_for_refusal"));
+
+    /**
+     * The sync table list may still name a column by its old name (laptop m_synctabledetail has reason_for_refusal,
+     * the table has reason_to_close) and the whole upload stopped with "bad SQL grammar". The name the table really
+     * has is used in both the van and the server column lists (central has the same DB version).
+     */
+    static String[] useRenamedColumns(String tableName, String vanColumns, String serverColumns,
+            Set<String> tableColumns) {
+        Map<String, String> renamed = tableName == null ? null : RENAMED_COLUMNS.get(tableName.toLowerCase());
+        if (renamed == null || tableColumns == null || tableColumns.isEmpty())
+            return new String[] { vanColumns, serverColumns };
+        for (Map.Entry<String, String> r : renamed.entrySet()) {
+            if (!tableColumns.contains(r.getKey()) && tableColumns.contains(r.getValue())) {
+                String listed = "(?i)\\b" + r.getKey() + "\\b";
+                vanColumns = vanColumns == null ? null : vanColumns.replaceAll(listed, r.getValue());
+                serverColumns = serverColumns == null ? null : serverColumns.replaceAll(listed, r.getValue());
+            }
+        }
+        return new String[] { vanColumns, serverColumns };
     }
 
     public List<SyncUtilityClass> getVanAndServerColumnList(Integer groupID) throws Exception {
