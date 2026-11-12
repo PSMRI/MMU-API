@@ -146,8 +146,10 @@ public class NikshayExportRepository {
 			+ "  d.incomeStatus AS socioeconomicStatus, "
 			+ "  (SELECT o.chief_complaint FROM tb_stoptb_general_opd o WHERE o.ben_reg_id = m.BenRegId "
 			+ "     AND o.deleted = 0 ORDER BY o.id DESC LIMIT 1) AS chiefComplaint, "
-			+ "  (SELECT ge.hiv_status FROM tb_stoptb_general_examination ge WHERE ge.beneficiary_reg_id = m.BenRegId "
-			+ "     AND ge.deleted = 0 ORDER BY ge.id DESC LIMIT 1) AS hivStatus, "
+			// hiv_status used to live on tb_stoptb_general_examination too, but that copy was
+			// dropped (AMRIT-DB V109) once tb_screening became the single source of truth.
+			+ "  (SELECT s.hiv_status FROM tb_screening s WHERE s.ben_reg_id = m.BenRegId "
+			+ "     AND (s.deleted = 0 OR s.deleted IS NULL) ORDER BY s.id DESC LIMIT 1) AS hivStatus, "
 			+ "  d.IsHIVPositive AS isHivPos, "
 			+ "  d.nikshayId AS existingNikshayId "
 			+ "FROM db_identity.i_beneficiarymapping m "

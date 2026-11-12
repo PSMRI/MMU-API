@@ -173,6 +173,22 @@ public class DataSyncRepositoryCentral {
         }
     }
 
+    /**
+     * Central ID of a row a van uploaded earlier, found by the van's own ID (VanSerialNo) and the van; null if that
+     * row is not on central (yet).
+     */
+    public Long findCentralIdOfVanRow(String schemaName, String tableName, String idColumn, Object vanSerialNo,
+            String vanID) {
+        if (!isValidSchemaName(schemaName) || !isValidDatabaseIdentifierCharacter(tableName)
+                || !isValidDatabaseIdentifierCharacter(idColumn)) {
+            throw new IllegalArgumentException("Invalid identifiers provided.");
+        }
+        List<Long> ids = getJdbcTemplate().queryForList("SELECT " + idColumn + " FROM " + schemaName + "." + tableName
+                + " WHERE VanSerialNo = ? AND VanID = ? ORDER BY " + idColumn + " DESC LIMIT 1", Long.class,
+                String.valueOf(vanSerialNo), vanID);
+        return ids.isEmpty() ? null : ids.get(0);
+    }
+
     public int[] syncDataToCentralDB(String schema, String tableName, String serverColumns, String query,
             List<Object[]> syncDataList) {
         jdbcTemplate = getJdbcTemplate();
