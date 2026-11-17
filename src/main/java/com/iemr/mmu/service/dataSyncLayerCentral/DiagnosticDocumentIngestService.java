@@ -1,5 +1,7 @@
 package com.iemr.mmu.service.dataSyncLayerCentral;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.lang.reflect.Type;
 import java.security.MessageDigest;
 import java.util.ArrayList;
@@ -8,6 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.zip.GZIPInputStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +39,7 @@ public class DiagnosticDocumentIngestService {
 	private final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 	private static final Gson GSON = new Gson();
 	private static final String ENCRYPTED_FILE_SUFFIX = ".enc";
+	private static final String GZIP_CONTENT_ENCODING = "gzip";
 
 	@Value("${diagnostic.documents.s3.bucket}")
 	private String bucket;
@@ -72,6 +76,9 @@ public class DiagnosticDocumentIngestService {
 			String documentType = (String) item.get("documentType");
 
 			byte[] plaintext = Base64.getDecoder().decode((String) item.get("fileContentBase64"));
+			if (GZIP_CONTENT_ENCODING.equals(item.get("contentEncoding"))) {
+				plaintext = gunzip(plaintext);
+			}
 
 			String sha256Hash = (String) item.get("sha256Hash");
 			if (sha256Hash != null && !sha256Hash.equalsIgnoreCase(sha256Hex(plaintext))) {
@@ -122,6 +129,12 @@ public class DiagnosticDocumentIngestService {
 				? storedFileName.substring(0, storedFileName.length() - ENCRYPTED_FILE_SUFFIX.length())
 				: storedFileName;
 		return fileExtension != null && !fileExtension.isEmpty() ? baseName + "." + fileExtension : baseName;
+	}
+
+	private static byte[] gunzip(byte[] compressed) throws IOException {
+		try (GZIPInputStream in = new GZIPInputStream(new ByteArrayInputStream(compressed))) {
+			return in.readAllBytes();
+		}
 	}
 
 	private static Long asLong(Object value) {
