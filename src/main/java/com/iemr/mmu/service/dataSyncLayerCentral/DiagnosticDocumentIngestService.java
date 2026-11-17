@@ -1,5 +1,7 @@
 package com.iemr.mmu.service.dataSyncLayerCentral;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.lang.reflect.Type;
 import java.security.MessageDigest;
 import java.util.ArrayList;
@@ -8,6 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.zip.GZIPInputStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +39,10 @@ public class DiagnosticDocumentIngestService {
 	private final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 	private static final Gson GSON = new Gson();
 	private static final String ENCRYPTED_FILE_SUFFIX = ".enc";
+	private static final String GZIP_ENCRYPTED_FILE_SUFFIX = ".gz.enc";
+	private static final String GZIP_CONTENT_ENCODING = "gzip";
+	// Guards against oversized/malicious gzip payloads exhausting heap (DICOMs are large, batches hold several).
+	private static final int MAX_DECOMPRESSED_BYTES = 256 * 1024 * 1024;
 
 	@Value("${diagnostic.documents.s3.bucket}")
 	private String bucket;
@@ -72,6 +79,9 @@ public class DiagnosticDocumentIngestService {
 			String documentType = (String) item.get("documentType");
 
 			byte[] plaintext = Base64.getDecoder().decode((String) item.get("fileContentBase64"));
+			if (GZIP_CONTENT_ENCODING.equals(item.get("contentEncoding"))) {
+				plaintext = gunzip(plaintext);
+			}
 
 			String sha256Hash = (String) item.get("sha256Hash");
 			if (sha256Hash != null && !sha256Hash.equalsIgnoreCase(sha256Hex(plaintext))) {
@@ -116,12 +126,28 @@ public class DiagnosticDocumentIngestService {
 	 * @purpose The van stores files encrypted as "<name>.enc", but S3 holds the decrypted
 	 *          content - so the object is named with the real extension the van derived from
 	 *          its content type (e.g. CAD.enc -> CAD.pdf), not the misleading ".enc".
+	 *          Gzipped files ("<name>.gz.enc") are decompressed before upload, so ".gz" is
+	 *          dropped too (e.g. XRAY.gz.enc -> XRAY.dcm).
 	 */
-	private static String objectFileName(String storedFileName, String fileExtension) {
-		String baseName = storedFileName.endsWith(ENCRYPTED_FILE_SUFFIX)
-				? storedFileName.substring(0, storedFileName.length() - ENCRYPTED_FILE_SUFFIX.length())
-				: storedFileName;
+	static String objectFileName(String storedFileName, String fileExtension) {
+		String baseName = storedFileName.endsWith(GZIP_ENCRYPTED_FILE_SUFFIX)
+				? stripSuffix(storedFileName, GZIP_ENCRYPTED_FILE_SUFFIX)
+				: stripSuffix(storedFileName, ENCRYPTED_FILE_SUFFIX);
 		return fileExtension != null && !fileExtension.isEmpty() ? baseName + "." + fileExtension : baseName;
+	}
+
+	private static String stripSuffix(String value, String suffix) {
+		return value.endsWith(suffix) ? value.substring(0, value.length() - suffix.length()) : value;
+	}
+
+	static byte[] gunzip(byte[] compressed) throws IOException {
+		try (GZIPInputStream in = new GZIPInputStream(new ByteArrayInputStream(compressed))) {
+			byte[] decompressed = in.readNBytes(MAX_DECOMPRESSED_BYTES + 1);
+			if (decompressed.length > MAX_DECOMPRESSED_BYTES) {
+				throw new IOException("Decompressed document exceeds " + MAX_DECOMPRESSED_BYTES + " bytes");
+			}
+			return decompressed;
+		}
 	}
 
 	private static Long asLong(Object value) {

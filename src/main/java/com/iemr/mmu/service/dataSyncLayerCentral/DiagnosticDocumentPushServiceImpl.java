@@ -45,11 +45,13 @@ public class DiagnosticDocumentPushServiceImpl {
 
 	private final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 
+	private static final String GZIP_ENCRYPTED_FILE_SUFFIX = ".gz.enc";
 	private static final Map<String, String> CONTENT_TYPE_EXTENSIONS = new HashMap<>();
 	static {
 		CONTENT_TYPE_EXTENSIONS.put("application/pdf", "pdf");
 		CONTENT_TYPE_EXTENSIONS.put("image/jpeg", "jpg");
 		CONTENT_TYPE_EXTENSIONS.put("image/png", "png");
+		CONTENT_TYPE_EXTENSIONS.put("application/dicom", "dcm");
 	}
 
 	@Value("${diagnostic.documents.storage-root}")
@@ -80,8 +82,8 @@ public class DiagnosticDocumentPushServiceImpl {
 			for (Map<String, Object> row : rows) {
 				Long rowId = asLong(row.get("id"));
 				String base64Plaintext;
+				String storedPath = (String) row.get("stored_path");
 				try {
-					String storedPath = (String) row.get("stored_path");
 					Path filePath = Paths.get(storageRoot, storedPath);
 					String encryptedPayload = new String(Files.readAllBytes(filePath), StandardCharsets.UTF_8);
 					base64Plaintext = cryptoUtil.decrypt(encryptedPayload);
@@ -118,6 +120,11 @@ public class DiagnosticDocumentPushServiceImpl {
 				item.put("parkingPlaceID", row.get("parkingPlaceID"));
 				item.put("vanSerialNo", row.get("vanSerialNo"));
 				item.put("fileContentBase64", base64Plaintext);
+				// "<name>.gz.enc" files were gzipped by FLW before encryption: the decrypted content is
+				// already base64(gzip), so it's sent as-is and central decompresses it.
+				if (storedPath != null && storedPath.endsWith(GZIP_ENCRYPTED_FILE_SUFFIX)) {
+					item.put("contentEncoding", "gzip");
+				}
 				payloadItems.add(item);
 				rowsById.put(rowId, row);
 			}
@@ -260,7 +267,7 @@ public class DiagnosticDocumentPushServiceImpl {
 		return value == null ? null : ((Number) value).longValue();
 	}
 
-	private static String extensionFor(String contentType) {
+	static String extensionFor(String contentType) {
 		if (contentType == null) {
 			return "bin";
 		}
