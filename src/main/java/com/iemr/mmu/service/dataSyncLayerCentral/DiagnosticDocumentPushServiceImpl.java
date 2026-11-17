@@ -51,6 +51,7 @@ public class DiagnosticDocumentPushServiceImpl {
 		CONTENT_TYPE_EXTENSIONS.put("application/pdf", "pdf");
 		CONTENT_TYPE_EXTENSIONS.put("image/jpeg", "jpg");
 		CONTENT_TYPE_EXTENSIONS.put("image/png", "png");
+		CONTENT_TYPE_EXTENSIONS.put("application/dicom", "dcm");
 	}
 
 	@Value("${diagnostic.documents.storage-root}")
@@ -266,7 +267,7 @@ public class DiagnosticDocumentPushServiceImpl {
 		return value == null ? null : ((Number) value).longValue();
 	}
 
-	private static String extensionFor(String contentType) {
+	static String extensionFor(String contentType) {
 		if (contentType == null) {
 			return "bin";
 		}
