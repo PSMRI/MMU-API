@@ -27,9 +27,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -45,6 +47,7 @@ import org.springframework.web.client.RestTemplate;
 
 import com.google.gson.Gson;
 import com.iemr.mmu.data.syncActivity_syncLayer.MasterDownloadDataDigester;
+import com.iemr.mmu.service.benid.BenIdAutoTopUpService;
 import com.iemr.mmu.data.syncActivity_syncLayer.SyncDownloadMaster;
 import com.iemr.mmu.data.syncActivity_syncLayer.TempVan;
 import com.iemr.mmu.repo.syncActivity_syncLayer.SyncDownloadMasterRepo;
@@ -60,6 +63,9 @@ import com.iemr.mmu.utils.mapper.InputMapper;
 		// rest URLs from server to download master data for van
 		@Value("${dataSyncDownloadUrl}")
 		private String dataSyncDownloadUrl;
+		// StopTB camp laptop (laptops are set up from copied databases); other MMU deployments keep standard behaviour
+		@Value("${stoptb.enforce.vanid:false}")
+		private boolean stopTBLaptop;
 		@Autowired
 		private SyncDownloadMasterRepo syncDownloadMasterRepo;
 		@Autowired
@@ -95,6 +101,14 @@ import com.iemr.mmu.utils.mapper.InputMapper;
 		 */
 		public String downloadMasterDataFromServer(String ServerAuthorization, String jwtToken, Integer vanID, Integer psmID)
 				throws Exception {
+			return downloadMasterDataFromServer(ServerAuthorization, jwtToken, vanID, psmID, null);
+		}
+
+		/**
+		 * @param onlyTables master tables to download (case-insensitive), or null for all of m_downloadmastertable
+		 */
+		public String downloadMasterDataFromServer(String ServerAuthorization, String jwtToken, Integer vanID, Integer psmID,
+				Set<String> onlyTables) throws Exception {
 
 			if (totalCounter != progressCounter) {
 				return "inProgress";
@@ -103,6 +117,10 @@ import com.iemr.mmu.utils.mapper.InputMapper;
 			String successFlag = " Master download started ";
 
 			ArrayList<SyncDownloadMaster> downloadMasterList = syncDownloadMasterRepo.getDownloadTables();
+			if (onlyTables != null && downloadMasterList != null) {
+				downloadMasterList.removeIf(t -> t.getTableName() == null
+						|| !onlyTables.contains(t.getTableName().toLowerCase()));
+			}
 
 			totalCounter = downloadMasterList.size();
 			progressCounter = 0;
@@ -178,6 +196,8 @@ import com.iemr.mmu.utils.mapper.InputMapper;
 		private int downloadDataFromServer(SyncDownloadMaster syncDownloadMaster,String ServerAuthorization, String jwtToken)
 				throws Exception {
 			int successFlag = 0;
+			if (stopTBLaptop)
+				fullDownloadForLineAndVanMasters(syncDownloadMaster);
 			// initializing RestTemplate
 			RestTemplate restTemplate = new RestTemplate();
 			// Provide the required second argument, e.g., an empty string or appropriate authorization token
@@ -208,6 +228,18 @@ import com.iemr.mmu.utils.mapper.InputMapper;
 			// response is null or not valid
 		}
 		return successFlag;
+	}
+
+	/**
+	 * StopTB laptops only. Service-line (P) and van (V) masters - hubs, vans, service points, stores, items, item-store mapping, roles -
+	 * are always downloaded in full for this van's line: they are small, and a laptop set up from a copied database
+	 * can carry download dates newer than central rows it never received (missing hub -> its vans fail on the
+	 * foreign key). Rows are inserted/updated by ID, so repeating them is harmless. Masters shared by all lines (A,
+	 * e.g. 661k villages) stay incremental.
+	 */
+	static void fullDownloadForLineAndVanMasters(SyncDownloadMaster table) {
+		if ("P".equalsIgnoreCase(table.getMasterType()) || "V".equalsIgnoreCase(table.getMasterType()))
+			table.setLastDownloadDate(null);
 	}
 
 	private int updateMastersWithLatestData(MasterDownloadDataDigester masterDownloadDataDigester,
@@ -326,6 +358,10 @@ import com.iemr.mmu.utils.mapper.InputMapper;
 	public int callCentralAPIToGenerateBenIDAndimportToLocal(String requestOBJ, String Authorization,
 			String ServerAuthorization, String token) throws Exception {
 		int i = 0, i1 = 0;
+		// never run together with the automatic top-up, so the same IDs are not requested twice
+		if (!BenIdAutoTopUpService.GENERATION_LOCK.tryLock(2, TimeUnit.MINUTES)) {
+			throw new Exception("BenID generation is already running, please try again in a few minutes");
+		}
 		try{
 			JSONObject originalRequest = new JSONObject(requestOBJ);
         BigInteger vanID = null;
@@ -378,6 +414,8 @@ import com.iemr.mmu.utils.mapper.InputMapper;
 		} catch (Exception e) {
 			logger.error("Error while generating catch UNIQUE_ID at central server: " + e.getMessage());
 			throw new Exception("Error while generating catch UNIQUE_ID at central server: " + e.getMessage());
+		} finally {
+			BenIdAutoTopUpService.GENERATION_LOCK.unlock();
 		}
 			return i;
 		}

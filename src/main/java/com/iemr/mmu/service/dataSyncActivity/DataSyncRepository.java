@@ -23,9 +23,11 @@ package com.iemr.mmu.service.dataSyncActivity;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import java.sql.PreparedStatement;
 
@@ -40,6 +42,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Service;
 
+import com.iemr.mmu.data.syncActivity_syncLayer.SyncUtilityClass;
 import com.iemr.mmu.repo.syncActivity_syncLayer.SyncUtilityClassRepo;
 import com.iemr.mmu.utils.validator.SqlIdentifierValidator;
 
@@ -127,9 +130,103 @@ public class DataSyncRepository {
 
 	}
 
+	/** Service line (MMU) of the van, used for an automatic master download. */
+	public Integer getVanProviderServiceMapID(int vanID) {
+		List<Integer> psm = getJdbcTemplate().queryForList(
+				"SELECT ProviderServiceMapID FROM db_iemr.m_van WHERE VanID = ? AND Deleted = false", Integer.class,
+				vanID);
+		return psm.isEmpty() ? null : psm.get(0);
+	}
+
+	/**
+	 * Rows central rejected on upload (Processed = 'F'), per sync table and reason. They are sent again on every
+	 * upload until central accepts them.
+	 */
+	public List<Map<String, Object>> getSyncFailures() {
+		jdbcTemplate = getJdbcTemplate();
+		List<Map<String, Object>> result = new ArrayList<>();
+		Set<String> seen = new HashSet<>();
+		for (SyncUtilityClass table : syncutilityClassRepo.findByDeletedOrderBySyncTableDetailID(false)) {
+			if (Boolean.TRUE.equals(table.getIsMaster()) || table.getSchemaName() == null
+					|| table.getTableName() == null)
+				continue;
+			String qualified = SqlIdentifierValidator.validatedSchemaName(table.getSchemaName()) + "."
+					+ SqlIdentifierValidator.validatedTableName(table.getTableName());
+			if (!seen.add(qualified.toLowerCase()))
+				continue;
+			try {
+				List<Map<String, Object>> rows = jdbcTemplate.queryForList("SELECT '" + table.getTableName()
+						+ "' AS tableName, SyncFailureReason AS reason, COUNT(*) AS failedRows, DATE_FORMAT(MAX(SyncedDate), '%d-%m-%Y %H:%i') AS lastTried "
+						+ "FROM " + qualified + " WHERE Processed = 'F' GROUP BY SyncFailureReason");
+				result.addAll(rows);
+			} catch (Exception e) {
+				logger.warn("Sync failure check skipped for {}: {}", qualified, e.getMessage());
+			}
+		}
+		return result;
+	}
+
 	// ---------------------------------- End of Upload repository
 
 	// ---------------------------------- Download Repository
+
+	/**
+	 * Down-sync copies the beneficiary tables but not i_ben_flow_outreach, and the tab download
+	 * (FLW-API getBeneficiaryData) only serves beneficiaries that have a worklist row. So a
+	 * beneficiary registered elsewhere and down-synced here never reached this laptop's tabs.
+	 * Creates the missing worklist row for this van's beneficiaries, filled as TM-API does at
+	 * registration. Processed = 'P' so it is not uploaded back: central already has its own row.
+	 */
+	public int createMissingWorklistRows(int vanID, int providerServiceMapID) {
+		jdbcTemplate = getJdbcTemplate();
+
+		String village = "(SELECT h.%s FROM db_identity.i_beneficiarydetails_rmnch r "
+				+ " JOIN db_identity.i_householddetails h ON h.houseoldId = r.houseoldId "
+				+ " WHERE r.BeneficiaryRegID = bm.BenRegId LIMIT 1)";
+
+		String insert = "INSERT INTO db_iemr.i_ben_flow_outreach "
+				+ " (beneficiary_reg_id, beneficiary_id, visit_no, ben_name, ben_age, ben_dob, ben_gender, "
+				+ "  ben_gender_val, ben_age_val, ben_phone_no, father_name, spouse_name, nurse_flag, doctor_flag, "
+				+ "  pharmacist_flag, doctor_signature_flag, BenArrivedFlag, created_by, created_date, modified_by, "
+				+ "  modified_date, registrationDate, districtID, district, villageID, village, "
+				+ "  providerServiceMapID, vanID, Processed, deleted) "
+				+ " SELECT * FROM ( SELECT bm.BenRegId, rg.BeneficiaryID, 1 AS visit_no, "
+				+ "  TRIM(CONCAT_WS(' ', d.FirstName, NULLIF(d.MiddleName, ''), d.LastName)) AS ben_name, "
+				+ "  CONCAT(TIMESTAMPDIFF(YEAR, d.DOB, bm.CreatedDate), ' years - ', "
+				+ "         MOD(TIMESTAMPDIFF(MONTH, d.DOB, bm.CreatedDate), 12), ' months') AS ben_age, "
+				+ "  d.DOB, d.Gender, d.GenderId, TIMESTAMPDIFF(YEAR, d.DOB, bm.CreatedDate) AS ben_age_val, "
+				+ "  COALESCE(c.PreferredPhoneNum, c.PhoneNum1) AS phone, "
+				+ "  COALESCE(d.FatherName, '') AS father, COALESCE(d.SpouseName, '') AS spouse, "
+				+ "  1 AS nf, 0 AS df, 0 AS pf, 0 AS dsf, 0 AS baf, bm.CreatedBy, bm.CreatedDate AS cdate, "
+				+ "  'downsync' AS mby, NOW() AS mdate, bm.CreatedDate AS rdate, "
+				+ "  COALESCE(a.CurrDistrictId, a.PermDistrictId) AS districtID, "
+				+ "  COALESCE(a.CurrDistrict, a.PermDistrict) AS district, "
+				+ "  COALESCE(" + String.format(village, "villageid") + ", a.CurrVillageId, a.PermVillageId) AS villageID, "
+				+ "  COALESCE(" + String.format(village, "village") + ", a.CurrVillage, a.PermVillage) AS village, "
+				+ "  ? AS psm, bm.VanID, 'P' AS processed, 0 AS deleted "
+				+ " FROM db_identity.i_beneficiarymapping bm "
+				+ " JOIN db_identity.m_beneficiaryregidmapping rg ON rg.BenRegId = bm.BenRegId "
+				+ " JOIN db_identity.i_beneficiarydetails d ON d.BeneficiaryDetailsId = bm.BenDetailsId "
+				+ " LEFT JOIN db_identity.i_beneficiarycontacts c ON c.BenContactsID = bm.BenContactsId "
+				+ " LEFT JOIN db_identity.i_beneficiaryaddress a ON a.BenAddressID = bm.BenAddressId "
+				+ " WHERE bm.VanID = ? AND bm.Deleted = false "
+				// the van can hold beneficiaries of other service lines; only its own get a row
+				+ "   AND (SELECT r.ProviderServiceMapID FROM db_identity.i_beneficiarydetails_rmnch r "
+				+ "        WHERE r.BeneficiaryRegID = bm.BenRegId LIMIT 1) = ? "
+				+ "   AND NOT EXISTS (SELECT 1 FROM db_iemr.i_ben_flow_outreach f "
+				+ "                   WHERE f.beneficiary_reg_id = bm.BenRegId) ) x "
+				+ " WHERE x.villageID IS NOT NULL";
+
+		int inserted = jdbcTemplate.update(insert, providerServiceMapID, vanID, providerServiceMapID);
+
+		if (inserted > 0)
+			// same convention as TM-API: VanSerialNo is the row's own id
+			jdbcTemplate.update("UPDATE db_iemr.i_ben_flow_outreach SET VanSerialNo = ben_flow_id "
+					+ " WHERE modified_by = 'downsync' AND VanSerialNo IS NULL");
+
+		return inserted;
+	}
+
 	public int[] updateLatestMasterInLocal(String query, List<Object[]> syncDataList) {
 		int[] i = null;
 		// get JDBC template
@@ -174,6 +271,17 @@ public class DataSyncRepository {
 
 		List<String> found = jdbcTemplate.queryForList(query, String.class, schema, table);
 		return (found == null || found.isEmpty()) ? null : found.get(0);
+	}
+
+	public Set<String> getTableColumns(String schema, String table) {
+		jdbcTemplate = getJdbcTemplate();
+
+		String query = " SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? ";
+
+		Set<String> columns = new HashSet<>();
+		for (String c : jdbcTemplate.queryForList(query, String.class, schema, table))
+			columns.add(c.toLowerCase());
+		return columns;
 	}
 
 	public List<String> getDownSyncColumns(String schema, String table) {
