@@ -69,12 +69,43 @@ public class DataSyncRepository {
 
 	}
 
+	// STOP-855: tables where a row that was created and deleted on this laptop before it was ever
+	// uploaded is not sent to central. Stop TB OPD re-sends left lakhs of such deleted copies here.
+	private static final Set<String> SKIP_DELETED_BEFORE_UPLOAD = Set.of("t_prescription", "t_prescribeddrug",
+			"t_benchiefcomplaint");
+	static final String SKIPPED_DELETED_REASON = "Skipped: deleted on this laptop before upload (STOP-855)";
+
+	/**
+	 * Marks rows deleted on this laptop before any upload attempt as processed, so they are not sent.
+	 * Central never had them, so there is nothing to tell central. A row is left to upload when it was
+	 * ever tried before (SyncedDate set: central may have it and must learn of the delete) or when it
+	 * came from central by down-sync (CentralID set).
+	 *
+	 * @return rows marked, 0 for tables not in the list
+	 */
+	int skipRowsDeletedBeforeUpload(String schema, String table) {
+		if (table == null || !SKIP_DELETED_BEFORE_UPLOAD.contains(table.toLowerCase())) return 0;
+		JdbcTemplate template = getJdbcTemplate();
+		Integer centralIdColumns = template.queryForObject(
+				"SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND LOWER(TABLE_NAME) = LOWER(?) "
+						+ "AND LOWER(COLUMN_NAME) = 'centralid'",
+				Integer.class, schema, table);
+		String fromCentral = centralIdColumns != null && centralIdColumns > 0 ? " AND CentralID IS NULL" : "";
+		int marked = template.update("UPDATE " + schema + "." + table
+				+ " SET processed = 'P', SyncFailureReason = ? WHERE Deleted = 1 AND processed != 'P'"
+				+ " AND SyncedDate IS NULL" + fromCentral, SKIPPED_DELETED_REASON);
+		if (marked > 0) logger.info("{}.{}: {} row(s) deleted before upload marked processed, not sent", schema,
+				table, marked);
+		return marked;
+	}
+
 	// ---------------------------- Upload repository
 	public List<Map<String, Object>> getDataForGivenSchemaAndTable(String schema, String table, String columnNames)
 			throws Exception {
 		jdbcTemplate = getJdbcTemplate();
 		String baseQuery;
 		List<Map<String, Object>> resultSetList = new ArrayList<>();
+		skipRowsDeletedBeforeUpload(schema, table);
 
 		if (table != null && table.equalsIgnoreCase("m_beneficiaryregidmapping")) {
 			baseQuery = " SELECT " + columnNames + " FROM " + schema + "." + table
