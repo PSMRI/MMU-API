@@ -69,38 +69,47 @@ public class DataSyncRepository {
 
 	}
 
-	// STOP-855: tables where a row that was created and deleted on this laptop before it was ever
-	// uploaded is not sent to central. Stop TB OPD re-sends left lakhs of such deleted copies here.
-	private static final Set<String> SKIP_DELETED_BEFORE_UPLOAD = Set.of("t_prescription", "t_prescribeddrug",
-			"t_benchiefcomplaint");
+	// STOP-855: a row that was created and deleted on this laptop before it was ever uploaded is not sent to
+	// central. Stop TB OPD re-sends left lakhs of such deleted copies in these db_iemr tables.
 	static final String SKIPPED_DELETED_REASON = "Skipped: deleted on this laptop before upload (STOP-855)";
-	private static final java.util.regex.Pattern SAFE_IDENTIFIER = java.util.regex.Pattern.compile("[A-Za-z0-9_]+");
+	private static final String SKIP_SET = " SET processed = 'P', SyncFailureReason = ? WHERE Deleted = 1"
+			+ " AND processed != 'P' AND SyncedDate IS NULL AND CentralID IS NULL";
+
+	/**
+	 * Fixed statement for each table in scope, null for any other table. Central never had these rows, so
+	 * there is nothing to tell central. A row is still uploaded when it was ever tried before (SyncedDate
+	 * set: central may have it and must learn of the delete) or when it came from central (CentralID set).
+	 */
+	private static String skipDeletedSql(String schema, String table) {
+		if (!"db_iemr".equalsIgnoreCase(schema) || table == null) return null;
+		switch (table.toLowerCase()) {
+		case "t_prescription":
+			return "UPDATE db_iemr.t_prescription" + SKIP_SET;
+		case "t_prescribeddrug":
+			return "UPDATE db_iemr.t_prescribeddrug" + SKIP_SET;
+		case "t_benchiefcomplaint":
+			return "UPDATE db_iemr.t_benchiefcomplaint" + SKIP_SET;
+		default:
+			return null;
+		}
+	}
 
 	/**
 	 * Marks rows deleted on this laptop before any upload attempt as processed, so they are not sent.
-	 * Central never had them, so there is nothing to tell central. A row is left to upload when it was
-	 * ever tried before (SyncedDate set: central may have it and must learn of the delete) or when it
-	 * came from central by down-sync (CentralID set).
 	 *
-	 * @return rows marked, 0 for tables not in the list
+	 * @return rows marked, 0 for tables not in scope
 	 */
 	int skipRowsDeletedBeforeUpload(String schema, String table) {
-		if (table == null || !SKIP_DELETED_BEFORE_UPLOAD.contains(table.toLowerCase())) return 0;
-		// Identifiers cannot be bound as parameters. The table is one of the three names above (any case);
-		// the schema comes from m_synctabledetail and must be a plain identifier.
-		if (schema == null || !SAFE_IDENTIFIER.matcher(schema).matches()) {
-			logger.warn("Skipping STOP-855 deleted-row check: unexpected schema name {}", schema);
+		String sql = skipDeletedSql(schema, table);
+		if (sql == null) return 0;
+		int marked;
+		try {
+			marked = getJdbcTemplate().update(sql, SKIPPED_DELETED_REASON);
+		} catch (org.springframework.dao.DataAccessException e) {
+			// e.g. a laptop DB older than AMRIT-DB V121 (no CentralID): upload everything as before.
+			logger.warn("{}.{}: STOP-855 deleted-row skip not applied: {}", schema, table, e.getMessage());
 			return 0;
 		}
-		JdbcTemplate template = getJdbcTemplate();
-		Integer centralIdColumns = template.queryForObject(
-				"SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND LOWER(TABLE_NAME) = LOWER(?) "
-						+ "AND LOWER(COLUMN_NAME) = 'centralid'",
-				Integer.class, schema, table);
-		String fromCentral = centralIdColumns != null && centralIdColumns > 0 ? " AND CentralID IS NULL" : "";
-		String skipSql = String.format("UPDATE `%s`.`%s` SET processed = 'P', SyncFailureReason = ? "
-				+ "WHERE Deleted = 1 AND processed != 'P' AND SyncedDate IS NULL%s", schema, table, fromCentral);
-		int marked = template.update(skipSql, SKIPPED_DELETED_REASON);
 		if (marked > 0) logger.info("{}.{}: {} row(s) deleted before upload marked processed, not sent", schema,
 				table, marked);
 		return marked;
