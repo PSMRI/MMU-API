@@ -74,6 +74,7 @@ public class DataSyncRepository {
 	private static final Set<String> SKIP_DELETED_BEFORE_UPLOAD = Set.of("t_prescription", "t_prescribeddrug",
 			"t_benchiefcomplaint");
 	static final String SKIPPED_DELETED_REASON = "Skipped: deleted on this laptop before upload (STOP-855)";
+	private static final java.util.regex.Pattern SAFE_IDENTIFIER = java.util.regex.Pattern.compile("[A-Za-z0-9_]+");
 
 	/**
 	 * Marks rows deleted on this laptop before any upload attempt as processed, so they are not sent.
@@ -85,15 +86,21 @@ public class DataSyncRepository {
 	 */
 	int skipRowsDeletedBeforeUpload(String schema, String table) {
 		if (table == null || !SKIP_DELETED_BEFORE_UPLOAD.contains(table.toLowerCase())) return 0;
+		// Identifiers cannot be bound as parameters. The table is one of the three names above (any case);
+		// the schema comes from m_synctabledetail and must be a plain identifier.
+		if (schema == null || !SAFE_IDENTIFIER.matcher(schema).matches()) {
+			logger.warn("Skipping STOP-855 deleted-row check: unexpected schema name {}", schema);
+			return 0;
+		}
 		JdbcTemplate template = getJdbcTemplate();
 		Integer centralIdColumns = template.queryForObject(
 				"SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND LOWER(TABLE_NAME) = LOWER(?) "
 						+ "AND LOWER(COLUMN_NAME) = 'centralid'",
 				Integer.class, schema, table);
 		String fromCentral = centralIdColumns != null && centralIdColumns > 0 ? " AND CentralID IS NULL" : "";
-		int marked = template.update("UPDATE " + schema + "." + table
-				+ " SET processed = 'P', SyncFailureReason = ? WHERE Deleted = 1 AND processed != 'P'"
-				+ " AND SyncedDate IS NULL" + fromCentral, SKIPPED_DELETED_REASON);
+		String skipSql = String.format("UPDATE `%s`.`%s` SET processed = 'P', SyncFailureReason = ? "
+				+ "WHERE Deleted = 1 AND processed != 'P' AND SyncedDate IS NULL%s", schema, table, fromCentral);
+		int marked = template.update(skipSql, SKIPPED_DELETED_REASON);
 		if (marked > 0) logger.info("{}.{}: {} row(s) deleted before upload marked processed, not sent", schema,
 				table, marked);
 		return marked;
