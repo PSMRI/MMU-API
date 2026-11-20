@@ -43,6 +43,7 @@ import com.iemr.mmu.service.dataSyncActivity.DownloadDataFromServerImpl;
 import com.iemr.mmu.service.dataSyncActivity.DownloadDataFromServerTransactionalImpl;
 import com.iemr.mmu.service.dataSyncActivity.AutoSyncService;
 import com.iemr.mmu.service.dataSyncActivity.UploadDataToServerImpl;
+import com.iemr.mmu.service.dataSyncActivity.UploadInProgressException;
 import com.iemr.mmu.service.dataSyncLayerCentral.DiagnosticDocumentFetchService;
 import com.iemr.mmu.service.dataSyncLayerCentral.DiagnosticDocumentPushServiceImpl;
 import com.iemr.mmu.utils.CookieUtil;
@@ -104,6 +105,8 @@ public class StartSyncActivity {
 			} else {
 				response.setError(5000, "Invalid request, Either of groupID or user is invalid or null");
 			}
+		} catch (UploadInProgressException e) {
+			response.setError(OutputResponse.CONFLICT, e.getMessage());
 		} catch (Exception e) {
 			logger.error("Error in data sync : " + e);
 			response.setError(e);
