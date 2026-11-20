@@ -346,6 +346,8 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
     List<Map<String, Object>> dataToBesync = syncUploadDataDigester.getSyncData();
     List<Object[]> syncDataListInsert = new ArrayList<>();
     List<Object[]> syncDataListUpdate = new ArrayList<>();
+    // same order as syncDataListInsert: what is needed to save a row one by one when the batch insert hits a duplicate
+    List<PendingInsert> pendingInserts = new ArrayList<>();
 
     Map<Integer, Integer> insertIndexMap = new HashMap<>();
     Map<Integer, Integer> updateIndexMap = new HashMap<>();
@@ -503,26 +505,15 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
                 syncUploadDataDigester.getSyncedBy(), false, "Pending"));
         vanIDByResultIndex.put(currentSyncResultIndex, vanID);
 
+        Object[] updateParams = buildUpdateParams(objArr, vanSerialNo, syncTableName, cleanRecord, vanID);
+
         if (recordCheck == 0) {
             insertIndexMap.put(currentSyncResultIndex, syncDataListInsert.size());
             syncDataListInsert.add(objArr);
+            pendingInserts.add(new PendingInsert(objArr, updateParams, vanSerialNo, vanID, syncFacilityID));
         } else {
-            List<Object> updateParams = new ArrayList<>(Arrays.asList(objArr));
-            updateParams.add(String.valueOf(vanSerialNo));
-            if (Arrays.asList("t_patientissue", "t_physicalstockentry", "t_stockadjustment", "t_saitemmapping",
-                    "t_stocktransfer", "t_patientreturn", "t_facilityconsumption", "t_indent",
-                    "t_indentorder", "t_indentissue", "t_itemstockentry", "t_itemstockexit")
-                    .contains(syncTableName.toLowerCase()) && cleanRecord.containsKey("SyncFacilityID")) {
-                        logger.info("Adding SyncFacilityID to update params for table {}", syncTableName);
-                updateParams.add(String.valueOf(cleanRecord.get("SyncFacilityID")));
-            } else {
-                logger.info("Adding VanID to update params for table {}", syncTableName);
-                updateParams.add(String.valueOf(vanID));
-            }
-
             updateIndexMap.put(currentSyncResultIndex, syncDataListUpdate.size());
-            logger.info("Update Params=",updateParams.toArray());
-            syncDataListUpdate.add(updateParams.toArray());
+            syncDataListUpdate.add(updateParams);
         }
     }
 
@@ -563,7 +554,25 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
         } catch (Exception e) {
             String mainErrorReason = extractMainErrorReason(e);
             logger.info("Batch insert failed for table {}: {}", syncTableName, mainErrorReason, e);
-            
+
+            if (isDuplicateKey(e)) {
+                // a row of this batch is already on central (the same upload arrived twice, or rows of the
+                // failed batch were inserted before the error): save the rows one by one, updating those that
+                // are already there instead of storing a second copy
+                logger.warn("Duplicate key in batch insert for table {} - saving its {} rows one by one",
+                        syncTableName, insertIndexMap.size());
+                String queryUpdate = getQueryToUpdateDataToServerDB(schemaName, serverColumns, syncTableName);
+                for (Map.Entry<Integer, Integer> entry : insertIndexMap.entrySet()) {
+                    SyncResult rowResult = insertOrUpdateRow(schemaName, syncTableName, vanAutoIncColumnName,
+                            serverColumns, queryInsert, queryUpdate, pendingInserts.get(entry.getValue()),
+                            syncUploadDataDigester.getSyncedBy());
+                    syncResults.set(entry.getKey(), rowResult);
+                    if (!rowResult.isSuccess()) {
+                        insertSuccess = false;
+                        overallSuccess = false;
+                    }
+                }
+            } else {
             // Mark ALL inserts as failed
             for (Map.Entry<Integer, Integer> entry : insertIndexMap.entrySet()) {
                 int syncResultIndex = entry.getKey();
@@ -575,6 +584,7 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
             }
             insertSuccess = false;
             overallSuccess = false;
+            }
         }
     }
 
@@ -635,7 +645,105 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
 
     return overallSuccess;
 }
-   
+
+    private static final List<String> FACILITY_KEYED_TABLES = Arrays.asList("t_patientissue",
+            "t_physicalstockentry", "t_stockadjustment", "t_saitemmapping", "t_stocktransfer", "t_patientreturn",
+            "t_facilityconsumption", "t_indent", "t_indentorder", "t_indentissue", "t_itemstockentry",
+            "t_itemstockexit");
+
+    // MySQL error code for "Duplicate entry ... for key ..."
+    private static final int MYSQL_DUPLICATE_ENTRY = 1062;
+
+    /** A row of the insert batch, with what is needed to save it on its own. */
+    static final class PendingInsert {
+        final Object[] insertParams;
+        final Object[] updateParams;
+        final String vanSerialNo;
+        final String vanID;
+        final int syncFacilityID;
+
+        PendingInsert(Object[] insertParams, Object[] updateParams, String vanSerialNo, String vanID,
+                int syncFacilityID) {
+            this.insertParams = insertParams;
+            this.updateParams = updateParams;
+            this.vanSerialNo = vanSerialNo;
+            this.vanID = vanID;
+            this.syncFacilityID = syncFacilityID;
+        }
+    }
+
+    /** Parameters of getQueryToUpdateDataToServerDB: the column values, then VanSerialNo and VanID/SyncFacilityID. */
+    private Object[] buildUpdateParams(Object[] values, String vanSerialNo, String syncTableName,
+            Map<String, Object> cleanRecord, String vanID) {
+        List<Object> updateParams = new ArrayList<>(Arrays.asList(values));
+        updateParams.add(String.valueOf(vanSerialNo));
+        if (FACILITY_KEYED_TABLES.contains(syncTableName.toLowerCase()) && cleanRecord.containsKey("SyncFacilityID"))
+            updateParams.add(String.valueOf(cleanRecord.get("SyncFacilityID")));
+        else
+            updateParams.add(String.valueOf(vanID));
+        return updateParams.toArray();
+    }
+
+    /**
+     * Saves one row after its batch insert failed on a duplicate key: updates it when the row (same VanSerialNo and
+     * VanID / SyncFacilityID) is already on central, otherwise inserts it. A duplicate of some other row (not this
+     * van row) is still reported as a failure.
+     */
+    SyncResult insertOrUpdateRow(String schemaName, String tableName, String vanAutoIncColumnName,
+            String serverColumns, String queryInsert, String queryUpdate, PendingInsert row, String syncedBy) {
+        try {
+            if (isRowOnCentral(schemaName, tableName, vanAutoIncColumnName, row))
+                return updateExistingRow(schemaName, tableName, serverColumns, queryUpdate, row, syncedBy);
+
+            int[] inserted = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, tableName, serverColumns,
+                    queryInsert, java.util.Collections.singletonList(row.insertParams));
+            boolean success = inserted.length > 0 && inserted[0] > 0;
+            return new SyncResult(schemaName, tableName, row.vanSerialNo, syncedBy, success,
+                    success ? null : "Insert failed (code: " + (inserted.length > 0 ? inserted[0] : "unknown") + ")");
+        } catch (Exception e) {
+            // the row arrived from another request between the check and the insert
+            if (isDuplicateKey(e)) {
+                try {
+                    if (isRowOnCentral(schemaName, tableName, vanAutoIncColumnName, row))
+                        return updateExistingRow(schemaName, tableName, serverColumns, queryUpdate, row, syncedBy);
+                } catch (Exception again) {
+                    e = again;
+                }
+            }
+            logger.warn("Row VanSerialNo={} VanID={} of table {} not saved: {}", row.vanSerialNo, row.vanID,
+                    tableName, e.getMessage());
+            return new SyncResult(schemaName, tableName, row.vanSerialNo, syncedBy, false,
+                    "INSERT: " + extractMainErrorReason(e));
+        }
+    }
+
+    private boolean isRowOnCentral(String schemaName, String tableName, String vanAutoIncColumnName,
+            PendingInsert row) {
+        return dataSyncRepositoryCentral.checkRecordIsAlreadyPresentOrNot(schemaName, tableName, row.vanSerialNo,
+                row.vanID, vanAutoIncColumnName, row.syncFacilityID) > 0;
+    }
+
+    private SyncResult updateExistingRow(String schemaName, String tableName, String serverColumns,
+            String queryUpdate, PendingInsert row, String syncedBy) {
+        logger.info("Row VanSerialNo={} VanID={} of table {} is already on central - updated, not inserted again",
+                row.vanSerialNo, row.vanID, tableName);
+        int[] updated = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, tableName, serverColumns,
+                queryUpdate, java.util.Collections.singletonList(row.updateParams));
+        boolean success = updated.length > 0 && updated[0] > 0;
+        return new SyncResult(schemaName, tableName, row.vanSerialNo, syncedBy, success,
+                success ? null : "No matching row (0 rows updated)");
+    }
+
+    static boolean isDuplicateKey(Throwable e) {
+        for (Throwable t = e; t != null; t = t.getCause() == t ? null : t.getCause()) {
+            if (t instanceof org.springframework.dao.DuplicateKeyException)
+                return true;
+            if (t instanceof java.sql.SQLException && ((java.sql.SQLException) t).getErrorCode() == MYSQL_DUPLICATE_ENTRY)
+                return true;
+        }
+        return false;
+    }
+
     /**
      * m_synctabledetail maps van columns to server columns by position: the van's own ID (VanAutoIncColumnName,
      * e.g. BenVisitID, ItemStockEntryID) sits where the server list has VanSerialNo. Records are filled by name, so
