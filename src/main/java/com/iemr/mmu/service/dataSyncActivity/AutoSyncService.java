@@ -158,6 +158,9 @@ public class AutoSyncService {
 			benIdAutoTopUpService.triggerNow();
 			if (inventoryDownloadEnabled)
 				inventoryDownload(vanID, key);
+		} catch (UploadInProgressException e) {
+			// a manual upload is running; it uploads the same rows, so this round is simply skipped
+			logger.info("Upload already running (manual) - skipping the automatic one");
 		} catch (Exception e) {
 			lastError = "Upload: " + e.getMessage();
 			logger.warn("Automatic upload failed: {}", e.getMessage());
@@ -219,6 +222,7 @@ public class AutoSyncService {
 		JSONObject s = new JSONObject();
 		s.put("enabled", centralAuthService.isEnabled());
 		s.put("uploadEnabled", uploadEnabled);
+		s.put("uploadInProgress", uploadDataToServerImpl.isUploadInProgress());
 		s.put("masterDownloadEnabled", masterDownloadEnabled);
 		s.put("lastUploadAt", lastUploadAt);
 		s.put("lastUploadResult", lastUploadResult == null ? JSONObject.NULL : lastUploadResult);

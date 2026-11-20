@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -99,6 +100,9 @@ public class UploadDataToServerImpl implements UploadDataToServer {
     private CookieUtil cookieUtil;
     boolean criticalTableFailure = false; // Add this flag
 
+    // held for the whole upload; shared by the Data Sync button and the automatic upload
+    private final ReentrantLock uploadLock = new ReentrantLock();
+
     /**
      * 
      * @param groupName
@@ -106,9 +110,23 @@ public class UploadDataToServerImpl implements UploadDataToServer {
      * @return
      */
     public String getDataToSyncToServer(int vanID, String user, String Authorization, String token) throws Exception {
-        String syncData = null;
-        syncData = syncIntercepter(vanID, user, Authorization, token);
-        return syncData;
+        // one upload at a time: a second upload started while the first is still running (double click, second
+        // tab, retry of a slow request, automatic upload) reads the same unprocessed rows, and central inserts
+        // each of them twice
+        if (!uploadLock.tryLock()) {
+            logger.warn("Upload for vanID {} requested by {} while another upload is running - rejected", vanID,
+                    user);
+            throw new UploadInProgressException();
+        }
+        try {
+            return syncIntercepter(vanID, user, Authorization, token);
+        } finally {
+            uploadLock.unlock();
+        }
+    }
+
+    public boolean isUploadInProgress() {
+        return uploadLock.isLocked();
     }
 
     /**

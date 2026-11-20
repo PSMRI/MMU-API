@@ -24,6 +24,7 @@ package com.iemr.mmu.controller.dataSyncActivity;
 import com.iemr.mmu.service.dataSyncActivity.DownloadDataFromServerImpl;
 import com.iemr.mmu.service.dataSyncActivity.DownloadDataFromServerTransactionalImpl;
 import com.iemr.mmu.service.dataSyncActivity.UploadDataToServerImpl;
+import com.iemr.mmu.service.dataSyncActivity.UploadInProgressException;
 import com.iemr.mmu.utils.CookieUtil;
 import com.iemr.mmu.utils.response.OutputResponse;
 import com.google.gson.Gson;
@@ -92,6 +93,24 @@ public class StartSyncActivityTest {
         .content(requestJson))
         .andExpect(status().isOk())
         .andExpect(content().string(org.hamcrest.Matchers.containsString("Invalid request")));
+    }
+
+    @Test
+    void testStartSyncActivity_uploadAlreadyRunning() throws Exception {
+        String requestJson = "{\"vanID\":1,\"user\":\"testUser\",\"groupID\":2}";
+        try (MockedStatic<CookieUtil> cookieUtilMockedStatic = org.mockito.Mockito.mockStatic(CookieUtil.class)) {
+            cookieUtilMockedStatic.when(() -> CookieUtil.getJwtTokenFromCookie(any())).thenReturn("jwtToken");
+            when(uploadDataToServerImpl.getDataToSyncToServer(eq(1), eq("testUser"), anyString(), anyString()))
+                    .thenThrow(new UploadInProgressException());
+            mockMvc.perform(post("/dataSyncActivity/van-to-server")
+                .contentType("application/json")
+                .accept("application/json")
+                .header("Authorization", "auth")
+                .header("ServerAuthorization", "serverAuth")
+                .content(requestJson))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("already in progress")));
+        }
     }
 
     @Test
