@@ -39,6 +39,8 @@ public class OutputResponse {
 	private Object data;
 	Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 	public static final int SUCCESS = 200;
+	// the same operation is already running (e.g. a data sync); the caller should wait for it to finish
+	public static final int CONFLICT = 409;
 	public static final int GENERIC_FAILURE = 5000;
 	public static final int OBJECT_FAILURE = 5001;
 	public static final int USERID_FAILURE = 5002;

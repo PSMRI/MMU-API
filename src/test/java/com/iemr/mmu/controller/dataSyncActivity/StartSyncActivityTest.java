@@ -109,7 +109,8 @@ public class StartSyncActivityTest {
                 .header("ServerAuthorization", "serverAuth")
                 .content(requestJson))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("already in progress")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("already in progress")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"statusCode\":409")));
         }
     }
 

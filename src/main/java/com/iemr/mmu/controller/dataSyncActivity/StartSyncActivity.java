@@ -106,7 +106,7 @@ public class StartSyncActivity {
 				response.setError(5000, "Invalid request, Either of groupID or user is invalid or null");
 			}
 		} catch (UploadInProgressException e) {
-			response.setError(5000, e.getMessage());
+			response.setError(OutputResponse.CONFLICT, e.getMessage());
 		} catch (Exception e) {
 			logger.error("Error in data sync : " + e);
 			response.setError(e);
