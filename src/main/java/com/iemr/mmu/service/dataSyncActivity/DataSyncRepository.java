@@ -69,12 +69,59 @@ public class DataSyncRepository {
 
 	}
 
+	// STOP-855: a row that was created and deleted on this laptop before it was ever uploaded is not sent to
+	// central. Stop TB OPD re-sends left lakhs of such deleted copies in these db_iemr tables.
+	static final String SKIPPED_DELETED_REASON = "Skipped: deleted on this laptop before upload (STOP-855)";
+	private static final String SKIP_SET = " SET processed = 'P', SyncFailureReason = ? WHERE Deleted = 1"
+			+ " AND processed != 'P' AND SyncedDate IS NULL AND CentralID IS NULL";
+
+	/**
+	 * Fixed statement for each table in scope, null for any other table. Central never had these rows, so
+	 * there is nothing to tell central. A row is still uploaded when it was ever tried before (SyncedDate
+	 * set: central may have it and must learn of the delete) or when it came from central (CentralID set).
+	 */
+	private static String skipDeletedSql(String schema, String table) {
+		if (!"db_iemr".equalsIgnoreCase(schema) || table == null) return null;
+		switch (table.toLowerCase()) {
+		case "t_prescription":
+			return "UPDATE db_iemr.t_prescription" + SKIP_SET;
+		case "t_prescribeddrug":
+			return "UPDATE db_iemr.t_prescribeddrug" + SKIP_SET;
+		case "t_benchiefcomplaint":
+			return "UPDATE db_iemr.t_benchiefcomplaint" + SKIP_SET;
+		default:
+			return null;
+		}
+	}
+
+	/**
+	 * Marks rows deleted on this laptop before any upload attempt as processed, so they are not sent.
+	 *
+	 * @return rows marked, 0 for tables not in scope
+	 */
+	int skipRowsDeletedBeforeUpload(String schema, String table) {
+		String sql = skipDeletedSql(schema, table);
+		if (sql == null) return 0;
+		int marked;
+		try {
+			marked = getJdbcTemplate().update(sql, SKIPPED_DELETED_REASON);
+		} catch (org.springframework.dao.DataAccessException e) {
+			// e.g. a laptop DB older than AMRIT-DB V121 (no CentralID): upload everything as before.
+			logger.warn("{}.{}: STOP-855 deleted-row skip not applied: {}", schema, table, e.getMessage());
+			return 0;
+		}
+		if (marked > 0) logger.info("{}.{}: {} row(s) deleted before upload marked processed, not sent", schema,
+				table, marked);
+		return marked;
+	}
+
 	// ---------------------------- Upload repository
 	public List<Map<String, Object>> getDataForGivenSchemaAndTable(String schema, String table, String columnNames)
 			throws Exception {
 		jdbcTemplate = getJdbcTemplate();
 		String baseQuery;
 		List<Map<String, Object>> resultSetList = new ArrayList<>();
+		skipRowsDeletedBeforeUpload(schema, table);
 
 		if (table != null && table.equalsIgnoreCase("m_beneficiaryregidmapping")) {
 			baseQuery = " SELECT " + columnNames + " FROM " + schema + "." + table
