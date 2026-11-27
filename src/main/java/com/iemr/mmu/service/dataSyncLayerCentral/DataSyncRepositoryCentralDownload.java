@@ -59,6 +59,9 @@ public class DataSyncRepositoryCentralDownload {
 
 	private static final String DOWN_SYNC_TRANSACTIONAL = "TRANSACTIONAL";
 
+	// VisitCode identifies one visit, so the laptop can find its own visit even without VanSerialNo
+	private static final String VISIT_TABLE = "t_benvisitdetail";
+
 	// Data Upload Repository
 	public int checkRecordIsAlreadyPresentOrNot(String schemaName, String tableName, String vanSerialNo, String vanID,
 			String vanAutoIncColumnName, int syncFacilityID) {
@@ -258,6 +261,13 @@ public class DataSyncRepositoryCentralDownload {
 					.append(" AND ( DownSyncFailureReason IS NULL OR DownSyncFailureReason <> '")
 					.append(DownSyncRecordAck.CONFLICT).append("' ) ");
 
+			// a row the laptop uploaded (SyncedDate set) but whose VanSerialNo central never got cannot be matched
+			// to the laptop's own row, so sending it back saves it there a second time. Visits are the exception:
+			// the laptop matches them by VisitCode.
+			if (!VISIT_TABLE.equalsIgnoreCase(validTable) && hasColumn(validSchema, validTable, "SyncedDate")
+					&& hasColumn(validSchema, validTable, "VanSerialNo"))
+				query.append(" AND NOT ( VanSerialNo IS NULL AND SyncedDate IS NOT NULL ) ");
+
 			List<Object> params = new ArrayList<>();
 			params.add(vanID);
 
@@ -326,9 +336,12 @@ public class DataSyncRepositoryCentralDownload {
 		int updatedRows = 0;
 
 		if (!successWithSerialNo.isEmpty()) {
+			logVanSerialNoMismatches(validSchema, validTable, validPkColumn, successWithSerialNo);
+			// VanSerialNo is the link to the laptop's original row: only filled when empty, never overwritten
 			String query = " UPDATE " + validSchema + "." + validTable
-					+ " SET DownSynced = 'P', DownSyncDate = now(), DownSyncFailureReason = NULL, VanSerialNo = ? "
-					+ holdLastModDate + " WHERE " + validPkColumn + " = ? ";
+					+ " SET DownSynced = 'P', DownSyncDate = now(), DownSyncFailureReason = NULL,"
+					+ " VanSerialNo = COALESCE(VanSerialNo, ?) " + holdLastModDate + " WHERE " + validPkColumn
+					+ " = ? ";
 			updatedRows += countUpdatedRows(jdbcTemplate.batchUpdate(query, successWithSerialNo));
 		}
 
@@ -375,6 +388,42 @@ public class DataSyncRepositoryCentralDownload {
 				+ " SET DownSynced = 'P', DownSyncDate = now(), DownSyncFailureReason = NULL " + holdLastModDate
 				+ " WHERE VanSerialNo = ? AND VanID = ? ";
 		return countUpdatedRows(jdbcTemplate.batchUpdate(query, vanSerialNoAndVanID));
+	}
+
+	private boolean hasColumn(String schema, String table, String column) {
+		List<String> found = jdbcTemplate.queryForList(" SELECT COLUMN_NAME FROM information_schema.COLUMNS "
+				+ " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ? ", String.class, schema, table,
+				column);
+		return found != null && !found.isEmpty();
+	}
+
+	/** Logs the acks whose VanSerialNo differs from the one central already holds; those are kept, not replaced. */
+	private void logVanSerialNoMismatches(String schema, String table, String pkColumn, List<Object[]> serialNoAndID) {
+		Map<Long, Long> ackedSerialNoByID = new java.util.HashMap<>();
+		for (Object[] pair : serialNoAndID)
+			ackedSerialNoByID.put(((Number) pair[1]).longValue(), ((Number) pair[0]).longValue());
+		String placeHolders = String.join(", ", java.util.Collections.nCopies(ackedSerialNoByID.size(), "?"));
+
+		List<Map<String, Object>> rows = jdbcTemplate.queryForList(" SELECT " + pkColumn + " AS id, VanSerialNo FROM "
+				+ schema + "." + table + " WHERE VanSerialNo IS NOT NULL AND " + pkColumn + " IN ( " + placeHolders
+				+ " ) ", ackedSerialNoByID.keySet().toArray());
+		if (rows == null)
+			return;
+
+		int mismatches = 0;
+		for (Map<String, Object> row : rows) {
+			Long id = ((Number) row.get("id")).longValue();
+			Long held = ((Number) row.get("VanSerialNo")).longValue();
+			Long acked = ackedSerialNoByID.get(id);
+			if (acked != null && !acked.equals(held)) {
+				mismatches++;
+				logger.warn("Down-sync ack for {}.{} id {} reports VanSerialNo {} but central holds {} - kept {}",
+						schema, table, id, acked, held, held);
+			}
+		}
+		if (mismatches > 0)
+			logger.warn("Down-sync ack for {}.{}: {} VanSerialNo mismatch(es); the laptop may hold a duplicate row",
+					schema, table, mismatches);
 	}
 
 	private int countUpdatedRows(int[] batchResult) {

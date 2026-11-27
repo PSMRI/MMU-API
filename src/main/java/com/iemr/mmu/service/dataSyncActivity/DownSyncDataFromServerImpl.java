@@ -77,6 +77,10 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 	private static final String RESERVED_FOR = "ReservedFor";
 	private static final String RESERVED_BY_ID = "ReservedById";
 	private static final String RESERVED_ON = "ReservedOn";
+	// VisitCode identifies one visit only in the visit table; child tables repeat it on many rows
+	private static final String VISIT_TABLE = "t_benvisitdetail";
+	private static final String VISIT_CODE = "VisitCode";
+	private static final String BENEFICIARY_REG_ID = "BeneficiaryRegID";
 	
 	private static final int ACK_BATCH_SIZE = 500;
 	
@@ -475,6 +479,11 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 						tableDetail.getSchemaName(), tableDetail.getTableName(), pkColumn, centralID, vanID,
 						lastModColumn, tableDetail.isPreserveCentralPK());
 
+				// a row this van uploaded itself has no CentralID here; find it by its own key
+				// so it is updated in place rather than saved again as a copy
+				if (localRecord == null && !tableDetail.isPreserveCentralPK())
+					localRecord = findOwnLocalRecord(tableDetail, pkColumn, record, vanID, lastModColumn);
+
 				// a pointer at another table's primary key means a different number here
 				// than at central, so it is rewritten before the row is written
 				StringBuilder unresolved = new StringBuilder();
@@ -542,6 +551,33 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 		}
 
 		return acks;
+	}
+
+	/***
+	 * Looks for the laptop's own original of a central row: by VanSerialNo + VanID, or for a visit whose VanSerialNo
+	 * central never received, by VisitCode + BeneficiaryRegID. Only a row central says belongs to this van is looked
+	 * up.
+	 */
+	private Map<String, Object> findOwnLocalRecord(DownSyncTableDetail tableDetail, String pkColumn,
+			Map<String, Object> record, Integer vanID, String lastModColumn) {
+		Long centralVanID = toLong(valueIgnoringCase(record, VAN_ID));
+		if (vanID == null || (centralVanID != null && centralVanID.longValue() != vanID.longValue()))
+			return null;
+
+		Long vanSerialNo = toLong(valueIgnoringCase(record, VAN_SERIAL_NO));
+		Object visitCode = null;
+		Object beneficiaryRegID = null;
+		if (vanSerialNo == null && VISIT_TABLE.equalsIgnoreCase(tableDetail.getTableName())) {
+			visitCode = normalize(valueIgnoringCase(record, VISIT_CODE));
+			beneficiaryRegID = normalize(valueIgnoringCase(record, BENEFICIARY_REG_ID));
+		}
+
+		Map<String, Object> own = dataSyncRepository.getOwnLocalRecordForDownSync(tableDetail.getSchemaName(),
+				tableDetail.getTableName(), pkColumn, vanSerialNo, vanID, visitCode, beneficiaryRegID, lastModColumn);
+		if (own != null)
+			logger.info("Down-sync: {}.{} central row matched the van's own row {} - updating it, not inserting",
+					tableDetail.getSchemaName(), tableDetail.getTableName(), own.get(pkColumn));
+		return own;
 	}
 
 	private boolean isCentralCopyNewer(Map<String, Object> centralRecord, Map<String, Object> localRecord,
@@ -822,6 +858,11 @@ public class DownSyncDataFromServerImpl implements DownSyncDataFromServer {
 				return key;
 		}
 		return null;
+	}
+
+	private Object valueIgnoringCase(Map<String, Object> record, String column) {
+		String key = resolveKeyIgnoringCase(record, column);
+		return key == null ? null : record.get(key);
 	}
 
 	private boolean containsIgnoringCase(java.util.Set<String> columns, String column) {

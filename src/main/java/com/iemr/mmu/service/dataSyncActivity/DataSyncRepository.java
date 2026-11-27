@@ -333,6 +333,47 @@ public class DataSyncRepository {
 	}
 
 	/***
+	 * Finds a row this van created itself, for a central row that the CentralID match missed. A row created on the
+	 * laptop has no CentralID, so without this lookup down-sync inserts a second copy of the van's own record.
+	 *
+	 * The match is by VanSerialNo + VanID (VanSerialNo is the laptop's own key; older rows may have it empty, so the
+	 * primary key is compared too). When central has no VanSerialNo for the row, a visit is matched by VisitCode +
+	 * BeneficiaryRegID instead. Only rows not yet linked to another central row (CentralID IS NULL) are matched.
+	 */
+	public Map<String, Object> getOwnLocalRecordForDownSync(String schema, String table, String autoIncColumnName,
+			Object vanSerialNo, Object vanID, Object visitCode, Object beneficiaryRegID, String lastModColumn) {
+		if (vanID == null)
+			return null;
+
+		jdbcTemplate = getJdbcTemplate();
+		// schema, table & column names cannot be bound as query parameters, so each of
+		// them is validated before it is concatenated into the query
+		String validSchema = SqlIdentifierValidator.validatedSchemaName(schema);
+		String validTable = SqlIdentifierValidator.validatedTableName(table);
+		String validPkColumn = SqlIdentifierValidator.validatedColumnName(autoIncColumnName);
+		String validLastModColumn = SqlIdentifierValidator.validatedColumnName(lastModColumn);
+
+		String select = " SELECT " + validPkColumn + ", CentralID, Processed, " + validLastModColumn
+				+ " AS LastModDate, LastDownSyncDate FROM " + validSchema + "." + validTable
+				+ " WHERE VanID = ? AND CentralID IS NULL AND ";
+
+		List<Map<String, Object>> resultSet = null;
+		if (vanSerialNo != null) {
+			resultSet = jdbcTemplate.queryForList(select + " ( VanSerialNo = ? OR ( VanSerialNo IS NULL AND "
+					+ validPkColumn + " = ? ) ) ORDER BY " + validPkColumn + " LIMIT 1 ", vanID, vanSerialNo,
+					vanSerialNo);
+		} else if (visitCode != null && beneficiaryRegID != null) {
+			resultSet = jdbcTemplate.queryForList(
+					select + " VisitCode = ? AND BeneficiaryRegID = ? ORDER BY " + validPkColumn + " LIMIT 1 ", vanID,
+					visitCode, beneficiaryRegID);
+		}
+
+		if (resultSet == null || resultSet.isEmpty())
+			return null;
+		return resultSet.get(0);
+	}
+
+	/***
 	 * Stamps the central key on a local row that was matched by its primary key, so
 	 * the later runs of the down-sync find it on the CentralID match itself.
 	 */
