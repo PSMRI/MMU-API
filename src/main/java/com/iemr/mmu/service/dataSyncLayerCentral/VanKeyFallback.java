@@ -119,10 +119,13 @@ public class VanKeyFallback {
 		return tableName != null && TABLE_KEYS.containsKey(tableName.toLowerCase());
 	}
 
-	/** Find central's row for this van row by business key, and whether it should take the van's key. */
+	private static boolean coversSchema(String schemaName) {
+		return schemaName != null && VALID_SCHEMAS.contains(schemaName.toLowerCase());
+	}
+
 	public Outcome find(String schemaName, String tableName, Map<String, Object> record, String vanSerialNo,
 			String vanID) {
-		if (!handles(tableName) || isEmpty(vanSerialNo) || isEmpty(vanID))
+		if (!handles(tableName) || !coversSchema(schemaName) || isEmpty(vanSerialNo) || isEmpty(vanID))
 			return Outcome.NOT_APPLICABLE;
 		String table = table(schemaName, tableName);
 
