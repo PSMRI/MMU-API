@@ -24,6 +24,7 @@ package com.iemr.mmu.service.dataSyncLayerCentral;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -61,6 +62,9 @@ public class GetDataFromVanAndSyncToDBImpl implements GetDataFromVanAndSyncToDB 
     // replace van IDs in link columns by central IDs (see translateVanLinks); off by default, on for StopTB central
     @Value("${dataSync.translateVanLinks:false}")
     private boolean translateVanLinksEnabled;
+
+    @Autowired
+    private VanKeyFallback vanKeyFallback;
 
     // link column -> {table it points to, that table's ID column}
     private static final Map<String, String[]> VAN_LINKS = new LinkedHashMap<>();
@@ -482,6 +486,28 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
             continue;
         }
 
+        // not on central under the van key: diagnostic rows may still be there under external_order_id
+        VanKeyFallback.Outcome byBusinessKey = null;
+        if (recordCheck == 0 && vanKeyFallback != null && vanKeyFallback.handles(syncTableName)) {
+            try {
+                byBusinessKey = vanKeyFallback.find(schemaName, syncTableName, cleanRecord, vanSerialNo, vanID);
+            } catch (Exception e) {
+                logger.error("Lookup by business key failed for {} VanSerialNo={} VanID={}: {}", syncTableName,
+                        vanSerialNo, vanID, e.getMessage(), e);
+                syncResults.add(new SyncResult(schemaName, syncTableName, vanSerialNo,
+                        syncUploadDataDigester.getSyncedBy(), false,
+                        "Lookup by business key failed: " + extractMainErrorReason(e)));
+                overallSuccess = false;
+                continue;
+            }
+            if (byBusinessKey.status() == VanKeyFallback.Status.REFUSED) {
+                syncResults.add(new SyncResult(schemaName, syncTableName, vanSerialNo,
+                        syncUploadDataDigester.getSyncedBy(), false, "Central row conflict: " + byBusinessKey.reason()));
+                overallSuccess = false;
+                continue;
+            }
+        }
+
         List<Object> currentRecordValues = new ArrayList<>();
         for (String column : serverColumnsList) {
             logger.debug("Column="+column);
@@ -497,6 +523,17 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
         }
 
         Object[] objArr = currentRecordValues.toArray();
+
+        if (byBusinessKey != null && byBusinessKey.status() == VanKeyFallback.Status.FOUND) {
+            SyncResult result = syncOntoRowFoundByBusinessKey(schemaName, syncTableName, serverColumnsList, objArr,
+                    byBusinessKey, vanSerialNo, vanID, syncUploadDataDigester.getSyncedBy());
+            if (result.isSuccess() && byBusinessKey.writeKey())
+                vanIDByResultIndex.put(syncResults.size(), vanID); // now findable by the van key for down-sync
+            syncResults.add(result);
+            if (!result.isSuccess())
+                overallSuccess = false;
+            continue;
+        }
 
         int currentSyncResultIndex = syncResults.size();
         syncResults.add(new SyncResult(schemaName, syncTableName, vanSerialNo,
@@ -636,6 +673,32 @@ private boolean performGenericTableSync(SyncUploadDataDigester syncUploadDataDig
     return overallSuccess;
 }
    
+    /**
+     * The van row is synced onto central's row found by business key (see VanKeyFallback): the normal update, same
+     * columns and values, matched on central's id. vanSerialNo / vanID are written only when central's row has none.
+     */
+    private SyncResult syncOntoRowFoundByBusinessKey(String schemaName, String tableName, List<String> serverColumns,
+            Object[] values, VanKeyFallback.Outcome found, String vanSerialNo, String vanID, String syncedBy) {
+        String query = vanKeyFallback.updateQuery(schemaName, tableName, serverColumns, found.writeKey());
+        Object[] params = vanKeyFallback.updateParams(serverColumns, values, found.writeKey(), vanSerialNo, vanID,
+                found.centralId());
+        try {
+            int[] updated = dataSyncRepositoryCentral.syncDataToCentralDB(schemaName, tableName,
+                    String.join(",", serverColumns), query, Collections.singletonList(params));
+            if (updated.length == 1 && updated[0] > 0) {
+                vanKeyFallback.logSynced(schemaName, tableName, found, vanSerialNo, vanID);
+                return new SyncResult(schemaName, tableName, vanSerialNo, syncedBy, true, null);
+            }
+            return new SyncResult(schemaName, tableName, vanSerialNo, syncedBy, false,
+                    "Central row " + found.centralId() + " (" + found.keyText()
+                            + ") changed during sync; sent again on next upload");
+        } catch (Exception e) {
+            logger.error("Sync by business key failed for {} {}: {}", tableName, found.keyText(), e.getMessage(), e);
+            return new SyncResult(schemaName, tableName, vanSerialNo, syncedBy, false,
+                    "UPDATE: " + extractMainErrorReason(e));
+        }
+    }
+
     /**
      * m_synctabledetail maps van columns to server columns by position: the van's own ID (VanAutoIncColumnName,
      * e.g. BenVisitID, ItemStockEntryID) sits where the server list has VanSerialNo. Records are filled by name, so
